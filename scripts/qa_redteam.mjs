@@ -1,0 +1,23 @@
+import { DatabaseSync } from 'node:sqlite';
+const BASE=process.env.BASE||'http://127.0.0.1:3200';
+const req=async(p,o={})=>{const r=await fetch(BASE+p,o);const t=await r.text();let d;try{d=JSON.parse(t)}catch{d=t}return{s:r.status,d}};
+const auth=(t,p,o={})=>req(p,{...o,headers:{'content-type':'application/json',...(t?{authorization:`Bearer ${t}`}:{})}});
+const login=async(e,p)=>{const r=await req('/api/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:e,password:p})});if(r.s!==200)throw Error('login');return r.d.token};
+const A=(x,m)=>{if(!x)throw Error(m)};
+const admin=await login('admin@xiquimvargas.local','Admin@123');const seller=await login('vendedor@xiquimvargas.local','Vendedor@123');const driver=await login('motorista@xiquimvargas.local','Motorista@123');const web=await login('cliente@xiquimvargas.local','Cliente@123');
+A((await req('/storage/../../package.json')).s!==200,'path traversal');
+A((await auth(seller,'/api/audit')).s===403,'audit isolation');
+A((await auth(driver,'/api/clients')).s===403,'driver client isolation');
+A((await auth(web,'/api/dashboard')).s===403,'web admin isolation');
+A((await auth(admin,'/api/products',{method:'POST',body:JSON.stringify({nome:'x'.repeat(1000),sku:'RT-'+Date.now(),preco_base:-5})})).s===400,'negative price');
+const prod=(await auth(admin,'/api/products')).d.items.find(x=>x.quantidade_disponivel>30);A(prod,'product');
+const before=Number((await auth(admin,'/api/stock')).d.items.find(x=>x.id===prod.id).quantidade_disponivel);
+const clients=(await auth(seller,'/api/clients')).d.items;const c=clients[0];
+const low=(await auth(admin,'/api/clients',{method:'POST',body:JSON.stringify({razao_social:'Cliente Limite RedTeam',cnpj_cpf:'RT-'+Date.now(),endereco:'Rua RT',limite_credito:1,vendedor_id:(await auth(admin,'/api/users')).d.items.find(x=>x.role==='seller').id})})).d.item;
+A((await auth(seller,'/api/orders',{method:'POST',body:JSON.stringify({cliente_id:low.id,itens:[{produto_id:prod.id,quantidade:1}],origem:'VENDEDOR'})})).s===409,'credit limit');
+const webClients=(await auth(web,'/api/clients')).d.items;A(webClients.length===1&&webClients[0].id===c.id,'web client mapping isolation');
+const duplicate=(await auth(admin,'/api/products',{method:'POST',body:JSON.stringify({nome:'dup',sku:prod.sku,preco_base:1})}));A(duplicate.s>=400,'duplicate sku');
+const concurrent=await Promise.all(Array.from({length:8},()=>auth(seller,'/api/orders',{method:'POST',body:JSON.stringify({cliente_id:c.id,itens:[{produto_id:prod.id,quantidade:1}],origem:'VENDEDOR'})})));A(concurrent.filter(x=>x.s===201).length===8,'concurrent orders');
+const ids=concurrent.filter(x=>x.s===201).map(x=>x.d.item.id);for(const oid of ids){A((await auth(admin,`/api/orders/${oid}/status`,{method:'POST',body:JSON.stringify({status:'SEPARACAO'})})).s===200,'transition');const users=(await auth(admin,'/api/users')).d.items;const did=users.find(x=>x.role==='driver').id;A((await auth(admin,'/api/logistics/routes',{method:'POST',body:JSON.stringify({pedido_ids:[oid],motorista_id:did})})).s===201,'route');A((await auth(driver,`/api/logistics/orders/${oid}/complete`,{method:'POST',body:'{}'})).s===200,'complete')}
+const db=new DatabaseSync('storage/xiquim-vargas.db');A(db.prepare('PRAGMA integrity_check').get().integrity_check==='ok','sqlite integrity');A(!db.prepare('PRAGMA foreign_key_check').all().length,'foreign keys');const st=db.prepare('SELECT quantidade_disponivel,quantidade_reservada FROM estoque WHERE produto_id=?').get(prod.id);A(st.quantidade_disponivel>=0&&st.quantidade_reservada>=0,'stock nonnegative');db.close();
+console.log('RED TEAM PASS: traversal, RBAC, credit, web isolation, duplicate SKU, concurrency, transitions, routes, delivery, SQLite integrity');

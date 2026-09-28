@@ -1,0 +1,23 @@
+{
+  "name": "xiquim-vargas-erp",
+  "version": "1.7.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "seed": "node scripts/seed.js",
+    "qa": "node scripts/qa.mjs",
+    "qa:50": "node scripts/qa_50_loops.mjs",
+    "qa:redteam": "node scripts/qa_redteam.mjs",
+    "qa:block12": "node scripts/qa_block12.mjs",
+    "qa:final50": "node scripts/qa_50_cycles_final.mjs",
+    "backup": "node scripts/backup.mjs",
+    "qa:50:v17": "node scripts/qa_50_cycles_v1_7.mjs",
+    "qa:redteam:v17": "node scripts/qa_redteam_v1_7.mjs",
+    "qa:pdf:v17": "node scripts/qa_pdf_v1_7.mjs"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}
