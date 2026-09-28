@@ -1,5 +1,4 @@
-node_modules/
+﻿node_modules/
 .env
-storage/*.db
 storage/pdfs/*.pdf
 storage/proofs/*
