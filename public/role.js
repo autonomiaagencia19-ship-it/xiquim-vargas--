@@ -243,8 +243,7 @@ window.sellerRepeatClient = async function(clientId) {
 };
 
 async function seller(tab = null){
-  if(tab) window.sellerCurrentTab = tab;
-  window.sellerCurrentTab = window.sellerCurrentTab || 'crm';
+  window.sellerCurrentTab = tab || 'list';
   window.sellerCrmRfmFilter = window.sellerCrmRfmFilter || 'ALL';
 
   let c, crm;
@@ -277,17 +276,15 @@ async function seller(tab = null){
           <button class="btn" onclick="sellerDashboard()">▦ Painel do mês</button>
           <button class="btn" onclick="sellerOrders()">▣ Pedidos</button>
           <button class="btn" onclick="sellerMyRoutes()">🚚 Minhas Rotas</button>
-          <button class="btn" onclick="sellerRefreshCrm()">↻ Atualizar</button>
-          <span class="badge">${navigator.onLine?'ONLINE':'OFFLINE'}</span>
         </div>
 
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:16px;margin-bottom:14px;">
           <div style="display:flex;gap:8px;align-items:center;">
-            <button type="button" class="crm-tab-btn ${window.sellerCurrentTab==='crm'?'active':''}" onclick="window.sellerCurrentTab='crm';document.querySelectorAll('.crm-tab-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active');renderSellerClientsUI()">
-              📊 Saúde da Carteira (CRM)
-            </button>
             <button type="button" class="crm-tab-btn ${window.sellerCurrentTab==='list'?'active':''}" onclick="window.sellerCurrentTab='list';document.querySelectorAll('.crm-tab-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active');renderSellerClientsUI()">
               📋 Cadastro & Carteira Geral
+            </button>
+            <button type="button" class="crm-tab-btn ${window.sellerCurrentTab==='crm'?'active':''}" onclick="window.sellerCurrentTab='crm';document.querySelectorAll('.crm-tab-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active');renderSellerClientsUI()">
+              📊 Saúde da Carteira (CRM)
             </button>
           </div>
           <span class="muted" id="sellerClientCount" style="font-weight:750;font-size:13px;">${window.sellerClients.length} clientes na carteira</span>
@@ -320,7 +317,7 @@ async function seller(tab = null){
 }
 
 function renderSellerClientsUI() {
-  const tab = window.sellerCurrentTab || 'crm';
+  const tab = window.sellerCurrentTab || 'list';
   const sq = ($('#sellerClientSearch')?.value || '').trim().toLowerCase();
   const bairro = $('#sellerClientBairro')?.value || '';
   const periodoSelect = $('#sellerClientPeriodo');
@@ -778,7 +775,7 @@ async function driver(){const [r,o]=await Promise.all([api('/api/logistics/route
 async function driverCompletedRoutes(){try{const x=await api('/api/logistics/completed-routes');const groups=x.groups||[];document.body.innerHTML=`<div class="mobile-shell mobile-dark"><div class="mobile-content">${mobileHeader('Rotas concluídas',`${esc(me.nome)} · Histórico de entregas`,'/assets/brand/logo-admin.jpg',true)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="driver()">← Fila do dia</button><button class="btn primary" onclick="driverCompletedRoutes()">↻ Atualizar</button><button class="btn" onclick="logout()">Sair</button></div>${groups.length?groups.map(g=>`<section class="driver-history-day"><div class="section-title"><h2>${formatDriverDate(g.data)}</h2><span class="badge">${g.rotas.length} ${g.rotas.length===1?'rota':'rotas'}</span></div>${g.rotas.map(route=>`<article class="mobile-card completed-route-card"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start"><div><div class="route-status">Rota concluída</div><h3 style="margin:4px 0">${esc(route.nome||'Rota')}</h3><div class="muted">Realizada em ${formatDriverDateTime(route.concluida_em||route.updated_at)}</div></div><strong>${route.stops.length} ${route.stops.length===1?'parada':'paradas'}</strong></div><div class="completed-stop-list">${route.stops.map(stop=>`<div class="completed-stop"><span class="route-number">${stop.ordem}</span><div style="flex:1"><strong>${esc(stop.cliente_nome)}</strong><div class="muted">Pedido ${esc(stop.pedido_numero)} · ${money(stop.total)}</div><div class="muted">${esc(stop.endereco||'Endereço não informado')}${stop.bairro?` · ${esc(stop.bairro)}`:''}</div></div><span class="badge status-concluido">Concluída</span></div>`).join('')}</div></article>`).join('')}</section>`).join(''):'<div class="mobile-card empty-state">Nenhuma rota concluída registrada.</div>'}</div></div>`}catch(e){alert(e.message)}}
 function formatDriverDate(date){if(!date)return 'Data não informada';const d=new Date(String(date).length===10?date+'T12:00:00':date);return Number.isNaN(d.getTime())?esc(date):d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})}
 function formatDriverDateTime(date){if(!date)return 'Horário não informado';const d=new Date(date);return Number.isNaN(d.getTime())?esc(date):d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}
-async function uploadProof(id,input){const file=input.files?.[0];if(!file)return;if(file.size>8*1024*1024){alert('A foto precisa ter no m�ximo 8 MB.');input.value='';return}const reader=new FileReader();reader.onload=async()=>{try{await api('/api/logistics/orders/'+id+'/proof',{method:'POST',body:JSON.stringify({data_url:reader.result})});alert('Comprovante anexado.');driver()}catch(e){alert(e.message)}};reader.readAsDataURL(file)}
+async function uploadProof(id,input){const file=input.files?.[0];if(!file)return;if(file.size>8*1024*1024){alert('A foto precisa ter no m�ximo 8 MB.');input.value='';return}const reader=new FileReader();reader.onload=async()=>{try{await api('/api/logistics/orders/'+id+'/proof',{method:'POST',body:JSON.stringify({data_url:reader.result})});alert('Comprovante anexado.');driver()}catch(e){alert(e.message)}};reader.readAsDataURL(file)}
 async function completeDriver(id){
   const btn=document.querySelector(`button[onclick*="completeDriver('${id}')"]`);
   const card=btn?.closest('.route-card');

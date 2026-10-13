@@ -218,4 +218,40 @@ describe('Suppliers and Inbound Receiving API', () => {
     expect(manualMov).toBeDefined();
     expect(manualMov.quantidade).toBe(15);
   });
+
+  it('should resolve product barcode in inbound receiving via GET /api/inbound/barcode', async () => {
+    const barcode = `789${Date.now().toString().slice(-10)}`;
+    db.prepare('UPDATE produtos SET codigo_barras=? WHERE id=?').run(barcode, testProductId);
+
+    // 1. Success with purchase id
+    const res = await request(server)
+      .get(`/api/inbound/barcode?code=${barcode}&compra_id=${testPurchaseId}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.item).toBeDefined();
+    expect(res.body.item.produto_id).toBe(testProductId);
+
+    // 2. Error when barcode does not belong to purchase
+    const otherBarcode = '7890009998881';
+    const otherProdId = 'prod-other-' + Date.now();
+    db.prepare('INSERT INTO produtos (id, nome, preco_base, codigo_barras) VALUES (?, ?, ?, ?)').run(
+      otherProdId, 'Produto Fora da Compra', 10.0, otherBarcode
+    );
+
+    const errRes = await request(server)
+      .get(`/api/inbound/barcode?code=${otherBarcode}&compra_id=${testPurchaseId}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(errRes.status).toBe(404);
+    expect(errRes.body.error).toContain('não pertence a esta compra');
+
+    // 3. Error when barcode does not exist anywhere
+    const notFoundRes = await request(server)
+      .get(`/api/inbound/barcode?code=0000000000000&compra_id=${testPurchaseId}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(notFoundRes.status).toBe(404);
+    expect(notFoundRes.body.error).toContain('não cadastrado no catálogo');
+  });
 });

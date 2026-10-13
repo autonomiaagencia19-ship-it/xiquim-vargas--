@@ -808,6 +808,33 @@ if(method==='POST'&&p==='/api/admin/ia'){const user=requireRole(req,['admin']);c
     return send(res,200,{aguardando,hoje,atrasados,recebidosMes,valorMes});
   }
 
+  if(method==='GET'&&p==='/api/inbound/barcode'){
+    requireRole(req,['admin']);
+    const code=String(u.searchParams.get('code')||'').trim();
+    const compraId=String(u.searchParams.get('compra_id')||'').trim();
+    if(!code) throw Object.assign(new Error('Código de barras vazio'),{status:400});
+    if(compraId){
+      const item=one(`SELECT ci.*, p.nome produto_nome, p.sku produto_sku, p.codigo_barras, p.foto_url, e.quantidade_disponivel
+        FROM compra_itens ci
+        JOIN produtos p ON p.id=ci.produto_id
+        LEFT JOIN estoque e ON e.produto_id=p.id
+        WHERE ci.compra_id=? AND (TRIM(COALESCE(p.codigo_barras,''))=? OR TRIM(COALESCE(p.sku,''))=?)`,[compraId,code,code]);
+      if(!item){
+        const prodGlobal=one("SELECT nome FROM produtos WHERE TRIM(COALESCE(codigo_barras,''))=? OR TRIM(COALESCE(sku,''))=?",[code,code]);
+        if(prodGlobal){
+          throw Object.assign(new Error(`O produto "${prodGlobal.nome}" não pertence a esta compra`),{status:404});
+        }
+        throw Object.assign(new Error(`Código de barras "${code}" não cadastrado no catálogo`),{status:404});
+      }
+      return send(res,200,{item});
+    }
+    const matches=all(`SELECT p.*,e.quantidade_disponivel FROM produtos p LEFT JOIN estoque e ON e.produto_id=p.id WHERE TRIM(COALESCE(p.codigo_barras,''))=? OR TRIM(COALESCE(p.sku,''))=?`,[code,code]);
+    if(matches.length>1) throw Object.assign(new Error('Este código de barras está cadastrado em mais de um produto. Corrija o cadastro.'),{status:409});
+    const product=matches[0];
+    if(!product) throw Object.assign(new Error('Código de barras não cadastrado'),{status:404});
+    return send(res,200,{item:product});
+  }
+
 return send(res,404,{error:"Rota não encontrada"});
 }catch(e){const rid=req.headers[REQUEST_ID_HEADER]||null;event(e.status&&e.status<500?'WARN':'ERROR','REQUEST_ERROR',e.message||'Erro interno',{path:p,method,ip:req.socket?.remoteAddress||'unknown',stack:e.stack},rid);console.error(JSON.stringify({time:new Date().toISOString(),level:e.status&&e.status<500?'WARN':'ERROR',rid,method,path:p,error:e.message,stack:e.stack}));return send(res,e.status||500,{error:e.message||'Erro interno',request_id:rid})}}
 const server=http.createServer((req,res)=>{const rid=requestId(req);res.setHeader(REQUEST_ID_HEADER,rid);const start=Date.now();console.log(JSON.stringify({time:new Date().toISOString(),level:'INFO',rid,method:req.method,url:req.url,msg:'Request started'}));res.on('finish',()=>console.log(JSON.stringify({time:new Date().toISOString(),level:'INFO',rid,method:req.method,url:req.url,status:res.statusCode,durationMs:Date.now()-start,msg:'Request finished'})));Promise.resolve(route(req,res)).catch(e=>{console.error(JSON.stringify({time:new Date().toISOString(),level:'ERROR',rid,method:req.method,url:req.url,error:e.message,stack:e.stack}));if(!res.headersSent)send(res,e.status||500,{error:e.message||'Erro interno',request_id:rid});else res.destroy()})});let activeBackup=null;function scheduleDiskBackup(){

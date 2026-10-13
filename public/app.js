@@ -1887,7 +1887,7 @@ async function askAI(){
   }
 }
 function filterTable(input,id){const q=input.value.toLowerCase();document.querySelectorAll(`#${id} tbody tr`).forEach(r=>r.style.display=r.innerText.toLowerCase().includes(q)?'':'none')}
-function modal(title,body,width='700px'){const x=document.createElement('div');x.id='modal';x.style='position:fixed;inset:0;background:#000b;display:grid;place-items:center;z-index:100';x.innerHTML=`<div class="panel" style="width:min(${width},94vw);max-height:90vh;overflow:auto"><div class="top"><h2>${title}</h2><button class="btn" onclick="closeModal()">×</button></div>${body}</div>`;document.body.appendChild(x)}function closeModal(){document.querySelector('#modal')?.remove()}
+function modal(title,body,width='700px'){const x=document.createElement('div');x.id='modal';x.style='position:fixed;inset:0;background:#000b;display:grid;place-items:center;z-index:100';x.innerHTML=`<div class="panel" style="width:min(${width},94vw);max-height:90vh;overflow:auto"><div class="top"><h2>${title}</h2><button class="btn" onclick="closeModal()">×</button></div>${body}</div>`;document.body.appendChild(x)}function closeModal(){window.inboundBarcodeActive=false;document.querySelector('#modal')?.remove()}
 function roleLoginPage(role){document.body.innerHTML=`<div class="login"><div class="loginbox"><div class="brand">Xiquim <span>Vargas</span></div><h1>${role}</h1><p style="color:var(--muted)">Entre com suas credenciais.</p><form onsubmit="login(event)"><div class="field"><label>Email</label><input name="email" type="email" required></div><br><div class="field"><label>Senha</label><div style="display:flex;gap:6px"><input name="password" type="password" required style="flex:1"><button type="button" class="btn" tabindex="-1" onclick="const x=this.previousElementSibling; x.type=x.type==='password'?'text':'password'">👁</button></div></div><br><button class="btn primary" style="width:100%">Entrar</button></form><p style="color:var(--muted);font-size:16px">Servidor local: ${location.origin}</p></div></div><div id="toast" class="toast"></div>`}
 boot();
 
@@ -2640,9 +2640,20 @@ async function receivePurchaseOrderModal(cid){
         <div style="grid-column:1/-1;margin-top:10px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
             <h4 style="margin:0">Conferência Física dos Itens</h4>
-            <span class="muted" style="font-size:12px">Bipe o código de barras ou confira as quantidades abaixo:</span>
+            <span class="muted" style="font-size:12px">Conferência com leitor óptico USB ou manual:</span>
           </div>
-          <input id="barcodeReceiveInput" class="search" style="margin-bottom:10px" placeholder="🔍 Bipe ou digite o código de barras do produto para conferir..." onkeydown="onBarcodeReceiveKey(event)">
+
+          <div class="pdv-barcode-tools" style="background:#0a1422;border:1px solid #24344b;margin-bottom:12px">
+            <div class="pdv-barcode-row">
+              <button type="button" id="inboundBarcodeButton" class="btn" onclick="toggleInboundBarcode()">▣ Ler código de barras</button>
+              <div class="field">
+                <label style="color:#8193a9;font-size:12px">Quantidade por bipe</label>
+                <input id="inboundBarcodeQty" class="field-input" type="number" min="1" max="99999" step="1" value="1" inputmode="numeric" style="padding:7px;height:36px">
+              </div>
+            </div>
+            <div id="inboundBarcodeStatus" class="muted" style="font-size:12px;margin-top:6px">Leitor opcional. Conecte leitor físico USB/Bluetooth para bipagem contínua.</div>
+            <input id="barcodeReceiveInput" class="pdv-barcode-input" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="Clique em Ler código de barras para bipagem contínua" onkeydown="onBarcodeReceiveKey(event, '${cid}')">
+          </div>
 
           <div class="tablewrap" style="max-height:360px">
             <table class="table" id="receiveItemsTable">
@@ -2742,30 +2753,90 @@ async function executeQuickReceive(cid){
   }
 }
 
-function onBarcodeReceiveKey(e){
-  if(e.key === 'Enter'){
-    e.preventDefault();
-    const code = (e.target.value||'').trim();
-    if(!code) return;
-    const row = document.querySelector(`tr[data-barcode="${code}"]`);
+window.inboundBarcodeActive = false;
+
+function toggleInboundBarcode(){
+  const input = $('#barcodeReceiveInput');
+  const button = $('#inboundBarcodeButton');
+  const status = $('#inboundBarcodeStatus');
+  if(!input || !button) return;
+  const active = input.dataset.active === '1';
+  input.dataset.active = active ? '0' : '1';
+  window.inboundBarcodeActive = !active;
+  button.classList.toggle('good', !active);
+  button.textContent = active ? '▣ Ler código de barras' : '■ Leitor ativo — bipagem contínua';
+  if(status){
+    status.textContent = active 
+      ? 'Leitor desativado. Clique para ativar.' 
+      : 'Leitor contínuo ATIVO. Pode conferir produtos seguidos com o leitor físico USB sem clicar novamente.';
+  }
+  if(!active){
+    input.value = '';
+    input.focus();
+  }
+}
+
+if(!window._inboundBarcodeGlobalListener){
+  window._inboundBarcodeGlobalListener = true;
+  window.addEventListener('keydown', e => {
+    if(!window.inboundBarcodeActive) return;
+    const input = $('#barcodeReceiveInput');
+    if(!input || input.dataset.active !== '1') return;
+    const activeEl = document.activeElement;
+    const tag = activeEl ? activeEl.tagName.toLowerCase() : '';
+    const id = activeEl ? activeEl.id : '';
+    if((tag === 'input' || tag === 'textarea' || tag === 'select') && id !== 'barcodeReceiveInput') return;
+    if(activeEl !== input) input.focus();
+  });
+}
+
+async function onBarcodeReceiveKey(e, cid){
+  if(e.key !== 'Enter') return;
+  e.preventDefault();
+  const input = e.currentTarget || e.target;
+  const code = (input?.value || '').trim();
+  if(!code) return;
+
+  const qtyInput = $('#inboundBarcodeQty');
+  const qty = Math.max(1, Math.min(99999, Number(qtyInput?.value || 1)));
+  if(!Number.isInteger(qty)){
+    toast('Quantidade inválida.', true);
+    qtyInput?.focus();
+    return;
+  }
+
+  try {
+    const res = await api(`/api/inbound/barcode?code=${encodeURIComponent(code)}${cid ? `&compra_id=${encodeURIComponent(cid)}` : ''}`);
+    const item = res.item;
+
+    const row = document.querySelector(`tr[data-product-id="${item.produto_id}"]`) || document.querySelector(`tr[data-barcode="${code}"]`);
     if(row){
       const inp = row.querySelector('.receive-qty-input');
       if(inp){
-        const max = Number(inp.max||9999);
-        const cur = Number(inp.value||0);
-        if(cur < max){
-          inp.value = cur + 1;
-          row.classList.add('receive-row-highlight');
-          setTimeout(()=>row.classList.remove('receive-row-highlight'), 1000);
-          toast(`+1 bipado: ${row.querySelector('strong').textContent}`);
+        const max = Number(inp.max || 9999);
+        const cur = Number(inp.value || 0);
+        if(cur >= max && max > 0){
+          toast(`Quantidade total de "${item.produto_nome}" já conferida (${cur}/${max})!`, true);
         } else {
-          toast('Quantidade total deste item já conferida!', true);
+          const novoValor = Math.min(max, cur + qty);
+          inp.value = novoValor;
+          row.classList.add('receive-row-highlight');
+          setTimeout(() => row.classList.remove('receive-row-highlight'), 1000);
+          toast(`✓ +${qty} bipado(s): ${item.produto_nome} (${novoValor}/${max})`);
         }
       }
     } else {
-      toast(`Código de barras "${code}" não pertence a esta compra!`, true);
+      toast(`Item "${item.produto_nome}" não encontrado na tabela de conferência!`, true);
     }
-    e.target.value = '';
+  } catch(err) {
+    toast(err.message, true);
+  } finally {
+    if(input && (input.dataset.active === '1' || window.inboundBarcodeActive)){
+      input.value = '';
+      input.focus();
+    } else if(input) {
+      input.value = '';
+    }
   }
 }
 
