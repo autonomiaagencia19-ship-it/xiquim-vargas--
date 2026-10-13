@@ -2,8 +2,14 @@ node_modules/
 .env
 .env.*
 !.env.example
-storage/
-**/storage/
+
+# Dados temporarios e backups locais
+storage/backups/
+storage/pdfs/
+storage/proofs/
+*.db-wal
+*.db-shm
+
 **/local.properties
 **/.gradle/
 **/.kotlin/
@@ -11,14 +17,11 @@ storage/
 **/*.log
 **/debug.keystore
 **/release.keystore
-# Dados e artefatos locais que nao pertencem ao repositório
+
 /bootstrap/
-/storage/
 /coverage/
 /dist/
 /.android-sdk/
 /node_modules/
-/*.db
-/*.db-wal
-/*.db-shm
 *.zip
+

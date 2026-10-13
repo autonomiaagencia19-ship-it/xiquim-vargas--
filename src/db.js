@@ -9,6 +9,36 @@ function ensureStorage(){
   fs.mkdirSync(STORAGE,{recursive:true});
   fs.mkdirSync(path.join(STORAGE,'pdfs'),{recursive:true});
   fs.mkdirSync(path.join(STORAGE,'proofs'),{recursive:true});
+  fs.mkdirSync(path.join(STORAGE,'product-images'),{recursive:true});
+
+  if (process.env.NODE_ENV !== 'test') {
+    const bundledDb = path.join(ROOT, 'storage', 'xiquim-vargas.db');
+    const targetDb = path.join(STORAGE, 'xiquim-vargas.db');
+    if (path.resolve(bundledDb) !== path.resolve(targetDb) && fs.existsSync(bundledDb) && !fs.existsSync(targetDb)) {
+      try {
+        console.log(`[bootstrap] Inicializando banco persistente a partir do repositório (${bundledDb})...`);
+        fs.copyFileSync(bundledDb, targetDb);
+        console.log(`[bootstrap] Banco de dados copiado para ${targetDb}`);
+      } catch (err) {
+        console.error('[bootstrap] Erro ao copiar banco de dados:', err.message);
+      }
+    }
+
+    const bundledImages = path.join(ROOT, 'storage', 'product-images');
+    const targetImages = path.join(STORAGE, 'product-images');
+    if (path.resolve(bundledImages) !== path.resolve(targetImages) && fs.existsSync(bundledImages)) {
+      try {
+        const existing = fs.existsSync(targetImages) ? fs.readdirSync(targetImages) : [];
+        if (existing.length === 0) {
+          console.log(`[bootstrap] Copiando imagens de produtos para ${targetImages}...`);
+          fs.cpSync(bundledImages, targetImages, { recursive: true });
+          console.log(`[bootstrap] Imagens de produtos copiadas.`);
+        }
+      } catch (err) {
+        console.error('[bootstrap] Erro ao copiar imagens de produtos:', err.message);
+      }
+    }
+  }
 }
 ensureStorage();
 export const db = new DatabaseSync(path.join(STORAGE,'xiquim-vargas.db'));
