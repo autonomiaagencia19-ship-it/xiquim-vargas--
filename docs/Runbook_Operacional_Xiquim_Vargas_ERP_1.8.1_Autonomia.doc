@@ -1,0 +1,43 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=windows-1252"/>
+	<title></title>
+	<meta name="generator" content="Trio Office 6.2.8.2 (Windows)"/>
+	<meta name="created" content="00:00:00"/>
+	<meta name="changed" content="2026-10-09T02:05:34.136000000"/>
+	<meta name="" content=""/>
+	<style type="text/css">
+		h1 { margin-left: 1.06cm; margin-right: 1.06cm; color: #2c3e50; line-height: 160% }
+		h1.cjk { font-family: "Arial", sans-serif }
+		h1.ctl { font-family: "Arial", sans-serif }
+		p { margin-left: 1.06cm; margin-right: 1.06cm; font-family: "Arial", sans-serif; line-height: 160% }
+		h2 { margin-left: 1.06cm; margin-right: 1.06cm; border-top: none; border-bottom: 1px solid #cccccc; border-left: none; border-right: none; padding-top: 0cm; padding-bottom: 0.13cm; padding-left: 0cm; padding-right: 0cm; color: #34495e; line-height: 160% }
+		h2.cjk { font-family: "NSimSun" }
+		h2.ctl { font-family: "Arial" }
+		code.cjk { font-family: "NSimSun", monospace }
+	</style>
+</head>
+<body lang="pt-BR" dir="ltr">
+<ol><li><p align="center" style="margin-bottom: 0.79cm"><img src="Runbook_Operacional_Xiquim_Vargas_ERP_1.8.1_Autonomia_doc_23e2a4cb03224a53.png" name="Figura1" align="bottom" width="1672" height="786" border="0"/>
+</p>
+</ol>
+<h1 class="western">Runbook Operacional - DevOps Xiquim Vargas 1.8.1</h1>
+<h2 class="western">1. Nuvem Render (Hospedagem)</h2>
+<p>O ERP est&aacute; rodando em um servidor Node.js &gt;= 22.5.0 no
+Render. O banco de dados &eacute; um SQLite puro. Lembre-se que o
+Render precisa de um Disco Persistente (Storage) mapeado em
+<code class="western">/data/storage</code> para n&atilde;o perder os
+dados quando o servidor reiniciar.</p>
+<h2 class="western">2. Backup Autom&aacute;tico</h2>
+<p>Para agendar backups no seu notebook, basta criar uma Tarefa
+Agendada no Windows rodando um script PowerShell que faz download do
+banco de dados gerado pela rota segura do servidor, salvando os ZIPs
+na sua pasta de Meus Documentos diariamente.</p>
+<h2 class="western">3. Manuten&ccedil;&atilde;o dos Aplicativos</h2>
+<p>Os projetos ficam na pasta <code class="western">/mobile</code>.
+Para compilar novos APKs, abra a pasta no Android Studio com o SDK 35
+instalado e fa&ccedil;a o build normal. O banco de dados do Kotlin &eacute;
+autogerenci&aacute;vel.</p>
+</body>
+</html>

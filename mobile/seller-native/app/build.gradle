@@ -1,0 +1,14 @@
+plugins { id 'com.android.application' }
+
+android {
+ buildFeatures { buildConfig true }
+ namespace 'br.com.xiquimvargas.seller'; compileSdk 35
+ compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+ kotlin {
+     compilerOptions {
+         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+     }
+ }
+ defaultConfig { applicationId 'br.com.xiquimvargas.seller'; minSdk 26; targetSdk 35; versionCode 4; versionName '1.8.2'
+  buildConfigField 'String', 'API_BASE_URL', '"' + (project.findProperty('apiBaseUrl') ?: 'http://10.0.2.2:3000') + '"' }
+}

@@ -1,0 +1,76 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; margin: 40px; color: #333; }
+h1 { color: #1a5276; border-bottom: 2px solid #1a5276; padding-bottom: 5px; }
+h2 { color: #2980b9; margin-top: 30px; }
+h3 { color: #2471a3; }
+table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+th, td { border: 1px solid #bdc3c7; padding: 10px; text-align: left; }
+th { background-color: #ebedef; }
+.logo { text-align: center; margin-bottom: 30px; }
+.logo img { max-height: 120px; }
+blockquote { background: #f9f9f9; border-left: 5px solid #ccc; margin: 1.5em 10px; padding: 0.5em 10px; }
+</style></head><body>
+<div class="logo"><img src="file:///C:/Users/edini/Desktop/XiquimVargasERP_1.8.1_Entrega_Cliente_Render/docs/assets/logo-autonomia.svg.png" /></div>
+
+<h1>Runbook Operacional e Manutenção DevOps - Xiquim Vargas v1.8.1</h1>
+<p>Este documento é a bíblia de operações, resiliência e manutenção de infraestrutura do sistema ERP hospedado no PaaS Render. Desenvolvido para que Administradores de Banco de Dados (DBAs) e Engenheiros Cloud possam assumir a gestão sem curva de aprendizado.</p>
+
+<hr>
+<h2>1. Topologia da Nuvem (Render Cloud)</h2>
+<p>O sistema foi otimizado para operar em uma instância "Web Service" do Render rodando ambiente Nativo Node.js. O ERP repudia bancos externos pesados para economizar latência e custos de I/O.</p>
+
+<h3>1.1 Variáveis de Ambiente Críticas (Environment Variables)</h3>
+<p>No painel do Render > Settings > Environment, as seguintes variáveis mantêm o ecossistema respirando:</p>
+<ul>
+<li><strong>JWT_SECRET:</strong> A string criptográfica (salt) usada para assinar a permanência dos Vendedores e Motoristas. Atenção: Mudar isso invalida a sessão offline de todos os aplicativos de rua simultaneamente, forçando-os a relogar.</li>
+<li><strong>PORT:</strong> Monitorada pelo health check do Render. Se nula, usa porta 3000.</li>
+<li><strong>STORAGE_PATH:</strong> Caminho absoluto onde o disco persistente está montado na instância. Ex: <code>/data/storage</code>. Se isso não for definido, o SQLite será escrito na RAM/Disco efêmero e o banco será dizimado no primeiro deploy.</li>
+</ul>
+
+<h3>1.2 Discos Persistentes (Render Persistent Disks)</h3>
+<p>O disco anexado em <code>/data/storage</code> atua como o verdadeiro disco rígido da aplicação. A árvore de diretórios criada pelo sistema dentro dele engloba:</p>
+<ul>
+<li><code>xiquim.db</code> (Banco Principal de Produção)</li>
+<li><code>xiquim.db-wal</code> e <code>xiquim.db-shm</code> (Arquivos temporários do Write-Ahead Logging).</li>
+<li><code>product-images/</code> (Fotos comprimidas do catálogo).</li>
+<li><code>proofs/</code> (Fotos Base64 convertidas dos canhotos de motoristas).</li>
+<li><code>backups/</code> (Snapshots SQLite diários).</li>
+</ul>
+
+<hr>
+<h2>2. A Rotina de Backups Autônomos</h2>
+<p>A arquitetura v1.8.1 possui um script de snapshot inteligente integrado na raiz (<code>scripts/backup.mjs</code>).</p>
+
+<h3>O que o Script Interno Faz:</h3>
+<p>Ele aciona o comando cirúrgico <code>VACUUM INTO</code> do SQLite. O SQLite "pausa" sub-milissegundos as transações e clona o banco alinhado com a memória WAL para um arquivo, extraindo também um manifesto SHA-256 de todas as imagens do storage.</p>
+
+<h3>Como extrair para o Notebook da Empresa:</h3>
+<p>Para criar o Pull automático no Notebook/Windows:</p>
+<ol>
+<li>Abra o Agendador de Tarefas do Windows.</li>
+<li>Programe um script PowerShell para acionar o Webhook de backup interno usando <code>Invoke-WebRequest</code> injetando a chave de Autorização Bearer do Administrador.</li>
+<li>Salve a saída (`OutFile`) diretamente na pasta `C:\Backups\ERP_Data.zip`.</li>
+</ol>
+
+<hr>
+<h2>3. Guia de Troubleshooting (Resolução de Problemas Complexos)</h2>
+
+<h3>Anomalia A: Motorista envia o Canhoto, mas acusa "Erro de Rede"</h3>
+<p><strong>Causa:</strong> O servidor atingiu limite de payload (encode Base64 gigante da câmera HD). Express barra arquivos &gt; 10mb.</p>
+<p><strong>Solução:</strong> Checar o limitador <code>express.json</code> no <code>server.js</code> e as reduções de escala na câmera do Android.</p>
+
+<h3>Anomalia B: Preços de Atacado não sincronizam no Vendedor</h3>
+<p><strong>Causa:</strong> Vendedor abriu o app na estrada sem internet após alteração ser feita na Torre.</p>
+<p><strong>Solução:</strong> Aguardar ponto de conexão e ordenar o vendedor a pressionar "Atualizar Sincronização".</p>
+
+<h3>Anomalia C: Banco trava lançando "SQLITE_BUSY"</h3>
+<p><strong>Causa:</strong> Node.js enfileirou centenas de leituras concorrendo com gravações pesadas de final de mês.</p>
+<p><strong>Solução:</strong> A flag <code>PRAGMA busy_timeout = 5000</code> instalada na v1.8.1 dá tolerância. Em caos severo de rede, um manual Restart via Painel Render quebra o lock.</p>
+
+<hr>
+<h2>4. Scripts de Automação Interna (CLI)</h2>
+<ul>
+<li><code>node scripts/seed_data.cjs</code>: Popula mock data (apenas para homologação).</li>
+<li><code>node scripts/update_passwords.cjs</code>: Refaz o salt das senhas brutas no banco caso a base sofra suspeita de ataque de dicionário.</li>
+</ul>
+</body></html>

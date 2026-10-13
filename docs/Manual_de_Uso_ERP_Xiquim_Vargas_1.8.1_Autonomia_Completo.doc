@@ -1,0 +1,88 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; margin: 40px; color: #333; }
+h1 { color: #1a5276; border-bottom: 2px solid #1a5276; padding-bottom: 5px; }
+h2 { color: #2980b9; margin-top: 30px; }
+h3 { color: #2471a3; }
+table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+th, td { border: 1px solid #bdc3c7; padding: 10px; text-align: left; }
+th { background-color: #ebedef; }
+.logo { text-align: center; margin-bottom: 30px; }
+.logo img { max-height: 120px; }
+blockquote { background: #f9f9f9; border-left: 5px solid #ccc; margin: 1.5em 10px; padding: 0.5em 10px; }
+</style></head><body>
+<div class="logo"><img src="file:///C:/Users/edini/Desktop/XiquimVargasERP_1.8.1_Entrega_Cliente_Render/docs/assets/logo-autonomia.svg.png" /></div>
+
+<h1>Manual Completo de Uso do ERP Xiquim Vargas (v1.8.1)</h1>
+<p><strong>Criado e Revisado por: Autonomia</strong></p>
+<p>Este documento é o guia definitivo para todas as áreas da empresa: desde a gerência (usando a Torre de Controle) até os funcionários da rua (Motoristas e Vendedores). Nós escrevemos sem jargões difíceis para que você possa imprimir e entregar na mão da sua equipe como um manual de treinamento oficial.</p>
+<hr>
+<h2>PARTE 1: A Torre de Controle (O Coração da Empresa)</h2>
+<p>A Torre de Controle é o seu painel de comando. Ela pode ser acessada pelo Navegador do seu Computador (clicando no link do sistema) ou pelo aplicativo "Torre" no celular do gerente.</p>
+<h3>1.1 Painel de Vendas (Dashboard)</h3>
+<p>Assim que você entra, o sistema mostra o coração batendo:</p>
+<ul>
+<li><strong>Cards no topo:</strong> Faturamento total do dia, total de pedidos fechados, quantos clientes estão na base.</li>
+<li><strong>Funil Operacional:</strong> Você enxerga exatamente quantos pedidos estão "Pendentes", "Em Separação", "Na Rota do Motorista" e "Concluídos".</li>
+<li><strong>Top Produtos:</strong> Um ranking automático dizendo o que está vendendo mais e gerando mais dinheiro.</li>
+<li><strong>Origem das Vendas:</strong> Um comparativo visual para você saber quem está vendendo mais: O Vendedor da Rua, o Frente de Loja (PDV) ou a sua Loja Online.</li>
+</ul>
+
+<h3>1.2 Tabelas de Preço (O Segredo do Atacado)</h3>
+<p>Você não precisa mais quebrar a cabeça mudando os preços de cada cliente.</p>
+<ol>
+<li>Vá no menu esquerdo e clique em <strong>Tabelas de Preço</strong>.</li>
+<li>Clique em "Nova Tabela" (exemplo: <em>Tabela Supermercados</em>).</li>
+<li>Dentro dessa tabela, você escolhe produtos específicos e abaixa o preço deles.</li>
+<li>Depois, vá na aba <strong>Clientes</strong>, pegue o cadastro dos supermercados e vincule a eles essa Tabela.</li>
+</ol>
+<blockquote><strong>Mágica:</strong> Quando o seu vendedor visitar o supermercado, o celular dele vai aplicar o preço promocional sozinho, sem o vendedor precisar digitar descontos manuais!</blockquote>
+
+<h3>1.3 Gestão de Estoque</h3>
+<p>Dentro de <strong>Estoque Inteligente</strong>, você tem uma barra de vida para cada produto.</p>
+<ul>
+<li><em>Quantidade Disponível:</em> O que você de fato tem para vender.</li>
+<li><em>Em Separação:</em> Se um vendedor fechar um pedido na rua agora, o sistema automaticamente "tranca" essas unidades em separação, impedindo que outro vendedor venda o mesmo item e zere a sua prateleira sem você saber.</li>
+</ul>
+
+<h3>1.4 A Logística (Montando os Caminhões)</h3>
+<ol>
+<li>Clique na aba <strong>Logística</strong>. Você verá todos os pedidos que os vendedores enviaram e que o seu estoque já separou.</li>
+<li>Clique em "Nova Rota". Escolha o nome do Motorista.</li>
+<li>Arraste e solte os pedidos que vão para a caçamba dele na ordem exata que ele deve fazer as entregas (Roteirização).</li>
+<li>Assim que salvar, o celular do motorista irá apitar com o caminho pronto!</li>
+</ol>
+
+<h3>1.5 O Recurso de "Impersonation" (Visão de Raio-X)</h3>
+<p>Quer ver se o aplicativo do Vendedor "João" está funcionando direito? Na aba <strong>Vendedores</strong>, clique no botão <em>Entrar como</em>. O seu computador vai se transformar temporariamente na tela do João. Isso é perfeito para dar suporte se o seu funcionário estiver com dúvidas sobre como o aplicativo dele está parecendo.</p>
+
+<h3>1.6 O Que Acontece Se a Torre Ficar Sem Internet?</h3>
+<p>Diferente de sites comuns que caem e apagam tudo, o seu app da Torre de Controle tem um "Modo Escondido de Sobrevivência".</p>
+<p>Se o Wi-Fi oscilar enquanto você estiver arrastando uma rota:</p>
+<ul>
+<li>A tela não vai sair do ar. Ela vai puxar a memória do celular e mostrar a mensagem <em>"Conexão instável. Exibindo dados locais"</em>.</li>
+<li>Se você salvar a rota sem internet, ele vai avisar <em>"Ação Salva"</em> e vai ficar segurando a informação. Na hora que o 4G voltar, a sua Torre manda tudo para o servidor sozinha!</li>
+</ul>
+<hr>
+<h2>PARTE 2: Os Braços da Operação (Os Aplicativos Nativos)</h2>
+<h3>2.1 O Aplicativo do Vendedor Externo (seller-native)</h3>
+<p>O Vendedor pode ir para a fazenda mais isolada do Brasil. O aplicativo é <strong>100% Offline</strong>.</p>
+<ul>
+<li><strong>No começo do dia (Com internet):</strong> Ele abre o app, clica em "Atualizar", e o aplicativo chupa todo o estoque, clientes e preços mais novos para a memória do aparelho.</li>
+<li><strong>No Cliente (Sem internet):</strong> Ele clica em "Novo Pedido", adiciona os itens (mesmo sem sinal), preenche a quantidade, vê o valor total e aperta salvar. O pedido fica com um ícone de um reloginho (Pendente).</li>
+<li><strong>Fim do dia (Com internet):</strong> O aplicativo sozinho descarrega tudo para a nuvem da empresa.</li>
+</ul>
+
+<h3>2.2 O Aplicativo do Motorista (driver-native)</h3>
+<p>O foco do motorista não é vender, é entregar.</p>
+<ul>
+<li>A tela dele é uma "Fila do Dia" gigante. Mostra: <em>Parada 1, Parada 2, Parada 3</em>.</li>
+<li>Ele tem um botão <strong>Abrir Maps</strong> que joga o endereço do cliente direto pro Google Maps.</li>
+<li>Quando ele chega no local, ele clica em <strong>📷 Canhoto</strong>, tira uma foto do papel assinado e aperta Concluído. A foto vai direto para a tela do Administrador na aba de Pedidos, comprovando a entrega!</li>
+</ul>
+
+<h3>2.3 O Aplicativo Frente de Caixa / Balcão (pdv-native)</h3>
+<p>Fica instalado no tablet ou celular de quem fica na sua loja física. Ele é igual ao do vendedor, mas focado num fluxo rápido. No fim do dia, todos os relatórios do sistema vão separar perfeitamente quanto dinheiro entrou pelos Vendedores de Rua e quanto dinheiro entrou pelo Balcão (PDV).</p>
+<hr>
+<h2>PARTE 3: Backup Automático (A Sua Garantia)</h2>
+<p>Para sua tranquilidade, você não precisa confiar apenas na nuvem. Você pode configurar o seu Notebook (ou o computador de casa) para puxar um clone do sistema inteiro todos os dias. O desenvolvedor configurou uma tarefa no seu computador chamada "Agendador de Tarefas" (Task Scheduler). Todo dia em um horário marcado, o computador faz um download escondido, zipa todos os pedidos e fotos num pacote e salva na sua pasta de Meus Documentos. Se o mundo acabar, seu sistema inteiro está guardado fisicamente com você!</p>
+</body></html>

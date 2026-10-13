@@ -1,0 +1,24 @@
+{
+  "name": "xiquim-vargas-erp",
+  "version": "1.8.2",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:api": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --coverage",
+    "test:ui": "node scripts/seed-for-cypress.mjs && start-server-and-test start http-get://localhost:3000/admin.html \"cypress run\"",
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "backup": "node scripts/backup.mjs",
+    "qa:release": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qa_release.ps1",
+    "stress:5000": "node scripts/stress_5000.mjs"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "devDependencies": {
+    "cypress": "^16.1.1",
+    "jest": "^30.5.2",
+    "start-server-and-test": "^3.0.13",
+    "supertest": "^7.3.1"
+  }
+}

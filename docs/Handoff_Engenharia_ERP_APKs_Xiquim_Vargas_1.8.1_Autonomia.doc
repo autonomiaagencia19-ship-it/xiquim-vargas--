@@ -1,0 +1,70 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; margin: 40px; color: #333; }
+h1 { color: #1a5276; border-bottom: 2px solid #1a5276; padding-bottom: 5px; }
+h2 { color: #2980b9; margin-top: 30px; }
+h3 { color: #2471a3; }
+table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+th, td { border: 1px solid #bdc3c7; padding: 10px; text-align: left; }
+th { background-color: #ebedef; }
+.logo { text-align: center; margin-bottom: 30px; }
+.logo img { max-height: 120px; }
+blockquote { background: #f9f9f9; border-left: 5px solid #ccc; margin: 1.5em 10px; padding: 0.5em 10px; }
+</style></head><body>
+<div class="logo"><img src="file:///C:/Users/edini/Desktop/XiquimVargasERP_1.8.1_Entrega_Cliente_Render/docs/assets/logo-autonomia.svg.png" /></div>
+
+<h1>Handoff de Engenharia - Arquitetura e Mobile (v1.8.1)</h1>
+
+<h2>1. Visão Arquitetural Sistêmica</h2>
+<p>O Xiquim Vargas ERP evoluiu para a versão 1.8.1 adotando uma infraestrutura monolítica moderna no backend, suportada por um banco de dados leve e de altíssima performance, e pulverizada na ponta através de 4 frentes nativas Android.</p>
+<p>O objetivo do ecossistema é centralizar os dados no servidor, mas delegar o processamento e a sobrevivência operacional aos dispositivos locais caso haja interrupção de conectividade.</p>
+<blockquote>[Diagrama de C4 Architecture Omitido nesta versão de leitura - Veja o arquivo .md para o source Mermaid]</blockquote>
+<hr>
+
+<h2>2. A Camada de Backend (Node.js e SQLite)</h2>
+<p>O núcleo (Core) da aplicação roda sem a necessidade de ORMs pesados. As consultas SQL são redigidas nativamente garantindo que a complexidade do negócio (como cálculo de preço final baseado em tabelas de atacado) seja resolvida rapidamente no servidor.</p>
+<ul>
+<li><strong>Motor:</strong> Node.js v22.5.0+ utilizando o módulo embutido <code>node:sqlite</code>.</li>
+<li><strong>Performance:</strong> <code>PRAGMA journal_mode = WAL</code> (Write-Ahead Logging) está ativado, permitindo leituras simultâneas à gravação sem bloqueio do banco.</li>
+<li><strong>Camada de Rotas:</strong> Organizadas logicamente em domínios (auth, users, products, orders, logistics, prices).</li>
+<li><strong>Autenticação:</strong> Baseada em JWT (JSON Web Tokens) transportada via Header Bearer.</li>
+<li><strong>Idempotência:</strong> Requisições críticas (como POST orders) exigem um header <code>Idempotency-Key</code> (atrelado ao UUID offline). Se o app perder rádio e re-enviar, o backend ignora a duplicata com segurança financeira.</li>
+</ul>
+
+<hr>
+<h2>3. Os Aplicativos Android Nativos</h2>
+<p>O diretório <code>mobile/</code> abriga os quatro APKs independentes. Os módulos de força de rua compartilham a mesma espinha dorsal de engenharia.</p>
+
+<h3>3.1 Arquitetura Offline-First (seller, driver, pdv)</h3>
+<p>Estes apps não renderizam HTML, são escritos de forma programática em Kotlin manipulando Views estáticas e renderizando Layouts nativos.</p>
+<ol>
+<li><strong>O Coração do Offline (LocalDb.kt):</strong> Wrapper de SQLiteOpenHelper. Durante a conexão ativa, baixa produtos, tabelas, rotas e clientes.</li>
+<li><strong>Sincronização (sync):</strong> Se falhar, a variável <code>offline = true</code> é ativada, puxando cache instantaneamente.</li>
+<li><strong>A Fila de Envio (Outbox):</strong> Pedidos novos vão para a tabela <code>orders</code> local como PENDING. A rotina <code>syncOutbox()</code> fica tentando enviar em background até receber HTTP 200.</li>
+</ol>
+
+<h3>3.2 O Aplicativo da Torre de Controle (tower-native)</h3>
+<p>O módulo da Torre foi projetado usando um padrão WebViewWrapper ultra-sofisticado:</p>
+<ul>
+<li>O aplicativo inicia a MainActivity instanciando um WebEngine que chama <code>/admin.html</code>.</li>
+<li><strong>Interceptação Neural:</strong> No arquivo <code>app.js</code> da web, a função <code>api()</code> atua como Service Worker Lógico.</li>
+<li>Quedas de rádio ativam fallback para o <code>localStorage</code> (dados salvos), e comandos de gravação são interceptados e atirados para uma fila JavaScript.</li>
+<li>Assim que o listener de <code>online</code> desperta, o App dispara o replay fantasma das requisições atrasadas.</li>
+</ul>
+
+<hr>
+<h2>4. Regras de Negócio e Funcionalidades Core</h2>
+<h3>Tabelas de Preço (Pricing Engine)</h3>
+<p>A tabela <code>price_table_items</code> atua como modificador. Quando um <code>POST /api/orders</code> atinge o backend, ele checa se o cliente possui uma tabela vinculada e <strong>reescreve</strong> o valor unitário pelo servidor, evitando bypass de preço via client-side injection no celular.</p>
+
+<h3>Logística e Ordem</h3>
+<p>A variável <code>sequencia_json</code> da tabela de rotas contém a Array exata de ordenação [id_3, id_9]. O aplicativo do motorista lê este vetor e mapeia estritamente em tela.</p>
+
+<hr>
+<h2>5. Instruções de Empacotamento CI/CD</h2>
+<p>Assegure-se de que a máquina buildadora usa JDK 17+ e o Android SDK versão 35 (VanillaIceCream).</p>
+<ol>
+<li>Abra a pasta <code>mobile/</code> no Android Studio.</li>
+<li>Módulo isolado definido no <code>settings.gradle</code>.</li>
+<li>Gere o Bundle/APK usando <code>assembleRelease</code> e forneça a Keystore da empresa.</li>
+</ol>
+</body></html>
