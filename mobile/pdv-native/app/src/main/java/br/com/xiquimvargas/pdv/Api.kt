@@ -1,9 +1,6 @@
 package br.com.xiquimvargas.pdv
 
 import android.content.Context
-import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
 
 object Api {
     private const val PREFS = "xv_config"
@@ -22,34 +19,5 @@ object Api {
         val clean = url.trim().trimEnd('/')
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, clean).apply()
         base = clean
-    }
-
-    fun request(path: String, method: String = "GET", token: String? = null, body: String? = null, extraHeaders: Map<String, String> = emptyMap()): String {
-        val connection = URL(getBaseUrl() + path).openConnection() as HttpURLConnection
-        connection.requestMethod = method
-        connection.connectTimeout = 8000
-        connection.readTimeout = 15000
-        connection.setRequestProperty("Accept", "application/json")
-        connection.setRequestProperty("Content-Type", "application/json")
-        token?.let { connection.setRequestProperty("Authorization", "Bearer $it") }
-        extraHeaders.forEach { (key, value) -> connection.setRequestProperty(key, value) }
-        if (body != null) { connection.doOutput = true; connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) } }
-        val code = connection.responseCode
-        val stream = if (code in 200..299) connection.inputStream else connection.errorStream
-        val text = stream?.bufferedReader()?.use { it.readText() } ?: ""
-        connection.disconnect()
-        if (code !in 200..299) throw IllegalStateException(runCatching { JSONObject(text).optString("error", "HTTP $code") }.getOrDefault("HTTP $code"))
-        return text
-    }
-
-    fun fetchBytes(pathOrUrl: String): ByteArray {
-        val full = if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://")) pathOrUrl else getBaseUrl() + pathOrUrl
-        val connection = URL(full).openConnection() as HttpURLConnection
-        connection.connectTimeout = 8000
-        connection.readTimeout = 15000
-        try {
-            if (connection.responseCode !in 200..299) throw IllegalStateException("HTTP ${connection.responseCode}")
-            return connection.inputStream.use { it.readBytes() }
-        } finally { connection.disconnect() }
     }
 }

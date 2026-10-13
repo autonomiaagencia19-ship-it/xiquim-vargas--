@@ -1,34 +1,40 @@
 package br.com.xiquimvargas.tower
 
+import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
+import android.view.View
 import android.view.ViewGroup
-import android.webkit.ValueCallback
-import android.webkit.WebChromeClient
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import android.widget.Button
-import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
-import android.widget.Toast
+import android.webkit.*
+import android.widget.*
 
 class MainActivity : Activity() {
 
-    private lateinit var box: LinearLayout
+    private val targetPath = "/admin.html"
+    private val appTitle = "Xiquim Vargas\nTorre de Controle"
+    private val appSubtitle = "Painel executivo, catálogo, auditoria, estoque inteligente e governança com IA."
+
     private var currentWebView: WebView? = null
     private var fileUploadCallback: ValueCallback<Array<Uri>>? = null
     private val FILE_CHOOSER_REQ = 1001
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
-    override fun onCreate(b: Bundle?) {
-        super.onCreate(b)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
         Api.init(this)
-        
+
+        registerNetworkMonitor()
+
         val url = Api.getBaseUrl()
         if (isValidUrl(url)) {
             launchWebView(url)
@@ -37,46 +43,94 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun isOnline(): Boolean {
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return true
+        val net = cm.activeNetwork ?: return false
+        val cap = cm.getNetworkCapabilities(net) ?: return false
+        return cap.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+
+    private fun registerNetworkMonitor() {
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return
+        val builder = NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        networkCallback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                runOnUiThread {
+                    currentWebView?.settings?.cacheMode = WebSettings.LOAD_DEFAULT
+                    currentWebView?.evaluateJavascript(
+                        "window.dispatchEvent(new Event('online')); if(typeof Realtime!=='undefined') Realtime.connectStream();",
+                        null
+                    )
+                }
+            }
+
+            override fun onLost(network: Network) {
+                runOnUiThread {
+                    currentWebView?.settings?.cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
+                    currentWebView?.evaluateJavascript("window.dispatchEvent(new Event('offline'));", null)
+                }
+            }
+        }
+        try {
+            cm.registerNetworkCallback(builder.build(), networkCallback!!)
+        } catch (_: Exception) {}
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        networkCallback?.let {
+            val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            try { cm?.unregisterNetworkCallback(it) } catch (_: Exception) {}
+        }
+    }
+
     private fun isValidUrl(value: String): Boolean {
         if (value.isBlank()) return false
         val clean = value.trim().trimEnd('/')
-        if (clean.startsWith("https://")) return true
-        if (clean.startsWith("http://10.0.2.2") || 
-            clean.startsWith("http://localhost") || 
-            clean.startsWith("http://127.0.0.1") ||
-            clean.startsWith("http://192.168.") ||
-            clean.startsWith("http://10.") ||
-            clean.startsWith("http://172.")) return true
-        return false
+        return clean.startsWith("https://") ||
+                clean.startsWith("http://10.0.2.2") ||
+                clean.startsWith("http://localhost") ||
+                clean.startsWith("http://127.0.0.1") ||
+                clean.startsWith("http://192.168.") ||
+                clean.startsWith("http://10.") ||
+                clean.startsWith("http://172.")
     }
 
     private fun configScreen() {
         currentWebView = null
-        box = LinearLayout(this).apply {
+        val box = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(40, 60, 40, 40)
             setBackgroundColor(Color.rgb(7, 12, 24))
             layoutParams = ViewGroup.LayoutParams(-1, -1)
         }
-        
+
         val scroll = ScrollView(this).apply { addView(box) }
         setContentView(scroll)
 
-        val title = TextView(this).apply { 
-            text = "Xiquim Vargas\nTorre de Controle"
+        val title = TextView(this).apply {
+            text = appTitle
             textSize = 26f
             setTextColor(Color.WHITE)
-            setPadding(0, 0, 0, 20) 
+            setPadding(0, 0, 0, 16)
         }
         box.addView(title)
-        
-        val subtitle = TextView(this).apply { 
-            text = "Informe a URL do seu ERP para acessar o Painel de Gestão e Governança."
+
+        val subtitle = TextView(this).apply {
+            text = appSubtitle
             textSize = 15f
             setTextColor(Color.LTGRAY)
-            setPadding(0, 0, 0, 40) 
+            setPadding(0, 0, 0, 36)
         }
         box.addView(subtitle)
+
+        val label = TextView(this).apply {
+            text = "URL DO SERVIDOR ERP:"
+            textSize = 12f
+            setTextColor(Color.rgb(253, 94, 2))
+            setPadding(0, 0, 0, 8)
+        }
+        box.addView(label)
 
         val input = EditText(this).apply {
             hint = "https://seu-erp.onrender.com"
@@ -90,11 +144,11 @@ class MainActivity : Activity() {
         box.addView(input)
 
         val save = Button(this).apply {
-            text = "Acessar Torre de Controle"
-            setBackgroundColor(Color.rgb(244, 90, 8)) // Brand orange
+            text = "Conectar e Acessar"
+            setBackgroundColor(Color.rgb(253, 94, 2))
             setTextColor(Color.WHITE)
             val lp = LinearLayout.LayoutParams(-1, -2)
-            lp.topMargin = 40
+            lp.topMargin = 36
             layoutParams = lp
         }
         box.addView(save)
@@ -105,27 +159,106 @@ class MainActivity : Activity() {
                 Toast.makeText(this, "Informe uma URL válida do ERP (HTTPS ou rede local).", Toast.LENGTH_LONG).show()
                 return@setOnClickListener
             }
-            
             Api.setBaseUrl(this, value)
-            Toast.makeText(this, "URL salva com sucesso.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Configuração salva.", Toast.LENGTH_SHORT).show()
             launchWebView(value)
         }
     }
 
+    private fun showOfflineScreen(targetUrl: String) {
+        val box = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(40, 60, 40, 40)
+            setBackgroundColor(Color.rgb(7, 12, 24))
+            layoutParams = ViewGroup.LayoutParams(-1, -1)
+        }
+        val scroll = ScrollView(this).apply { addView(box) }
+        setContentView(scroll)
+
+        val title = TextView(this).apply {
+            text = appTitle
+            textSize = 24f
+            setTextColor(Color.WHITE)
+            setPadding(0, 0, 0, 16)
+        }
+        box.addView(title)
+
+        val status = TextView(this).apply {
+            text = "Aguardando conexão com o servidor\n\nConecte-se à internet para sincronizar e navegar na Torre de Controle."
+            textSize = 15f
+            setTextColor(Color.LTGRAY)
+            setPadding(0, 0, 0, 36)
+        }
+        box.addView(status)
+
+        val retryBtn = Button(this).apply {
+            text = "🔄 Tentar Reconectar"
+            setBackgroundColor(Color.rgb(253, 94, 2))
+            setTextColor(Color.WHITE)
+            val lp = LinearLayout.LayoutParams(-1, -2)
+            lp.bottomMargin = 20
+            layoutParams = lp
+        }
+        box.addView(retryBtn)
+        retryBtn.setOnClickListener {
+            launchWebView(Api.getBaseUrl())
+        }
+
+        val configBtn = Button(this).apply {
+            text = "⚙ Configurar URL do Servidor"
+            setBackgroundColor(Color.rgb(30, 41, 59))
+            setTextColor(Color.WHITE)
+            layoutParams = LinearLayout.LayoutParams(-1, -2)
+        }
+        box.addView(configBtn)
+        configBtn.setOnClickListener {
+            configScreen()
+        }
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
     private fun launchWebView(baseUrl: String) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            try {
+                ServiceWorkerController.getInstance().setServiceWorkerClient(object : ServiceWorkerClient() {
+                    override fun shouldInterceptRequest(request: WebResourceRequest): WebResourceResponse? = null
+                })
+            } catch (_: Exception) {}
+        }
+
         val webView = WebView(this).apply {
             layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-            settings.javaScriptEnabled = true
-            settings.domStorageEnabled = true
-            settings.allowFileAccess = true
-            
+            settings.apply {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                databaseEnabled = true
+                allowFileAccess = true
+                allowContentAccess = true
+                mediaPlaybackRequiresUserGesture = false
+                cacheMode = if (isOnline()) WebSettings.LOAD_DEFAULT else WebSettings.LOAD_CACHE_ELSE_NETWORK
+            }
+
             webViewClient = object : WebViewClient() {
-                override fun onReceivedError(view: WebView?, errorCode: Int, description: String?, failingUrl: String?) {
-                    super.onReceivedError(view, errorCode, description, failingUrl)
-                    Toast.makeText(this@MainActivity, "Erro de conexão: $description", Toast.LENGTH_LONG).show()
+                override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                    val uri = request?.url ?: return false
+                    val scheme = uri.scheme ?: ""
+                    if (scheme == "tel" || scheme == "mailto") {
+                        try {
+                            startActivity(Intent(Intent.ACTION_VIEW, uri))
+                            return true
+                        } catch (_: Exception) {}
+                    }
+                    return false
+                }
+
+                override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
+                    super.onReceivedError(view, request, error)
+                    if (request?.isForMainFrame == true && !isOnline()) {
+                        showOfflineScreen(view?.url ?: (baseUrl + targetPath))
+                    }
                 }
             }
-            
+
             webChromeClient = object : WebChromeClient() {
                 override fun onShowFileChooser(
                     wv: WebView?,
@@ -134,7 +267,7 @@ class MainActivity : Activity() {
                 ): Boolean {
                     fileUploadCallback?.onReceiveValue(null)
                     fileUploadCallback = filePathCallback
-                    
+
                     val intent = fileChooserParams?.createIntent() ?: Intent(Intent.ACTION_GET_CONTENT).apply {
                         type = "*/*"
                         addCategory(Intent.CATEGORY_OPENABLE)
@@ -149,8 +282,8 @@ class MainActivity : Activity() {
                     return true
                 }
             }
-            
-            loadUrl("$baseUrl/admin.html")
+
+            loadUrl(baseUrl + targetPath)
         }
         currentWebView = webView
         setContentView(webView)

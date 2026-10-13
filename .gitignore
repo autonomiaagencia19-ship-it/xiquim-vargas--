@@ -24,4 +24,6 @@ storage/proofs/
 /.android-sdk/
 /node_modules/
 *.zip
+*.apk
+mobile/apks/
 
