@@ -80,10 +80,23 @@ async function roleRealtimeRefresh(type,payload){
     const role=document.body.dataset.role;
     try{
       if(role==='Frente de Loja / PDV'){
-        if(type==='stock_changed'||type==='products_changed'||type==='prices_changed'||type==='tab_focused'){
-          const [p,s]=await Promise.all([api('/api/products'),api('/api/stock')]);
+        if(type==='clients_changed'||type==='tab_focused'){
+          try{
+            const c=await api('/api/clients');
+            window.pdvClients=c.items||[];
+            await offlinePut('kv','pdvClients',window.pdvClients);
+          }catch(e){}
+        }
+        if(type==='stock_changed'||type==='products_changed'||type==='prices_changed'||type==='orders_changed'||type==='tab_focused'){
+          const clientId=$('#pdvClient')?.value||'CLIENTE-BALCAO';
+          const [p,s]=await Promise.all([
+            api('/api/products'+(clientId?'?cliente_id='+encodeURIComponent(clientId):'')),
+            api('/api/stock')
+          ]);
           const sm=new Map(s.items.map(x=>[x.id,x]));
           window.pdvProducts=p.items.map(x=>({...x,...(sm.get(x.id)||{})}));
+          await offlinePut('kv','pdvProducts',p.items);
+          await offlinePut('kv','pdvStock',s.items);
           const searchInput=$('#pdvSearch');
           if(searchInput&&searchInput.value.trim()){
             pdvFilter(searchInput);
@@ -93,35 +106,95 @@ async function roleRealtimeRefresh(type,payload){
           }
         }
       }else if(role==='Vendedor Externo'){
-        if(type==='clients_changed'||type==='orders_changed'||type==='tab_focused'){
-          if(typeof sellerRefreshCrm==='function')sellerRefreshCrm();
-        }else if(type==='stock_changed'||type==='products_changed'||type==='prices_changed'){
-          if(window.sellerCatalogMode){
-            const [p,s]=await Promise.all([api('/api/products'+(window.sellerCurrentClientId?'?cliente_id='+encodeURIComponent(window.sellerCurrentClientId):'')),api('/api/seller/stock')]);
+        const host=document.querySelector('.mobile-content');
+        if(host&&host.innerHTML.includes('Meus pedidos')){
+          if(type==='orders_changed'||type==='returns_changed'||type==='tab_focused'){
+            sellerOrders();
+          }
+        }else if(host&&host.innerHTML.includes('Painel do mês')){
+          if(type==='orders_changed'||type==='returns_changed'||type==='tab_focused'){
+            sellerDashboard();
+          }
+        }else if(host&&host.innerHTML.includes('Estoque disponível')){
+          if(type==='stock_changed'||type==='products_changed'||type==='orders_changed'||type==='tab_focused'){
+            const x=await api('/api/seller/stock');
+            const listEl=$('#sellerStockList');
+            if(listEl){
+              listEl.innerHTML=x.items.map(sellerStockRow).join('');
+              const search=$('#sellerStockSearch');
+              if(search&&search.value.trim())sellerStockFilter(search);
+            }else{
+              sellerStock();
+            }
+          }
+        }else if(window.sellerCatalogMode){
+          if(type==='stock_changed'||type==='products_changed'||type==='prices_changed'||type==='orders_changed'||type==='tab_focused'){
+            const [p,s]=await Promise.all([
+              api('/api/products'+(window.sellerCurrentClientId?'?cliente_id='+encodeURIComponent(window.sellerCurrentClientId):'')),
+              api('/api/seller/stock')
+            ]);
             const sm=new Map(s.items.map(x=>[x.id,x]));
             const items=p.items.map(x=>({...x,...(sm.get(x.id)||{})}));
             if(window.sellerCatalogMode==='DEMO'){
               window.sellerCatalogItems=items;
-              sellerCatalogRender(items);
+              if(typeof sellerCatalogRender==='function')sellerCatalogRender(items);
             }else{
               window.sellerProducts=items;
-              sellerRender(items);
+              if(typeof sellerRender==='function')sellerRender(items);
+              if(typeof renderSellerNewOrderCart==='function')renderSellerNewOrderCart();
             }
+          }
+        }else if(host&&host.innerHTML.includes('Minhas Rotas')){
+          if(type==='routes_changed'||type==='tab_focused'){
+            sellerMyRoutes();
+          }
+        }else{
+          if(type==='clients_changed'||type==='orders_changed'||type==='returns_changed'||type==='tab_focused'){
+            if(typeof sellerRefreshCrm==='function')sellerRefreshCrm();
           }
         }
       }else if(role==='Loja Online'){
-        if(type==='products_changed'||type==='stock_changed'||type==='prices_changed'){
-          const p=await api('/api/products'+(window.lojaClientId?'?cliente_id='+encodeURIComponent(window.lojaClientId):''));
-          window.lojaProducts=p.items;
-          if($('#storeProducts')){
-            lojaFilter();
+        if(type==='orders_changed'||type==='tab_focused'){
+          const navActive=document.querySelector('.store-nav.active');
+          if(navActive&&navActive.textContent.toLowerCase().includes('ped')){
+            lojaPedidos();
           }
         }
+        if(type==='products_changed'||type==='stock_changed'||type==='prices_changed'||type==='tab_focused'){
+          const p=await api('/api/products'+(window.lojaClientId?'?cliente_id='+encodeURIComponent(window.lojaClientId):''));
+          window.lojaProducts=p.items;
+          if($('#storeSubSearch')){
+            lojaFilterSub();
+          }else if($('#storeProducts')){
+            lojaFilter();
+          }
+          if(typeof renderCart==='function'&&$('#cartItems')){
+            renderCart();
+          }
+        }
+        if(type==='settings_changed'){
+          try{
+            const sc=await api('/api/store-config');
+            window.storeCfg=sc.config||{};
+            const navActive=document.querySelector('.store-nav.active');
+            if(navActive&&navActive.textContent.toLowerCase().includes('cat')){
+              const hero=$('.store-hero');
+              if(hero)hero.outerHTML=storeHeroHtml();
+            }
+          }catch(e){}
+        }
       }else if(role==='Motorista'){
-        if(type==='routes_changed'||type==='tab_focused'){
-          const host=document.querySelector('.mobile-content');
-          if(host&&host.innerHTML.includes('Fila do dia')){
-            driver();
+        if(type==='routes_changed'||type==='orders_changed'||type==='returns_changed'||type==='tab_focused'){
+          const hasModal=!!document.querySelector('#modal');
+          if(!hasModal){
+            const host=document.querySelector('.mobile-content');
+            if(host){
+              if(host.innerHTML.includes('Fila do dia')){
+                driver();
+              }else if(host.innerHTML.includes('Rotas concluídas')){
+                driverCompletedRoutes();
+              }
+            }
           }
         }
       }
@@ -802,11 +875,11 @@ async function driver(){
    r={items:cr,offline:true};
    o={items:co,offline:true};
  }
- const byId=new Map(o.items.map(x=>[x.id,x]));const activeRoutes=r.items.filter(route=>route.status!=='CONCLUIDA');const stops=activeRoutes.flatMap(route=>{let ids=[];try{ids=JSON.parse(route.sequencia_json||'[]')}catch{};return ids.map((id,i)=>({id,order:byId.get(id),route,i}))}).filter(x=>x.order&&x.order.status!=='CONCLUIDO');const routeNames=new Map(activeRoutes.map(x=>[x.id,x]));document.body.innerHTML=`<div class="mobile-shell mobile-dark"><div class="mobile-content">${mobileHeader('Fila do dia',`${esc(me.nome)} · Logística interna`,'/assets/brand/logo-admin.jpg',true)}<div class="mobile-nav" style="margin-top:15px"><button class="btn primary" onclick="driver()">↻ Atualizar fila</button><button class="btn" onclick="driverCompletedRoutes()">✓ Rotas concluídas</button><button class="btn" onclick="logout()">Sair</button></div><div class="mobile-card" style="margin-bottom:12px"><div class="route-status">Operação de entrega</div><h2 style="margin:5px 0">${stops.length} parada(s) na fila</h2><div class="muted">A sequência foi definida pela Torre de Controle. Abra o mapa, entregue e conclua.</div></div>${stops.length?stops.map((s,idx)=>{const address=s.order.endereco||s.order.cliente_endereco||'Endereço não informado';const route=routeNames.get(s.route.id);return `<article class="route-card"><div class="route-row"><div class="route-number">${idx+1}</div><div style="flex:1"><div class="route-status">${esc(route?.nome||'Rota')} · Parada ${idx+1}</div><h3 style="margin:4px 0;color:#14203a">${esc(s.order.cliente_nome)}</h3><div class="muted">${esc(address)}</div><div class="muted" style="margin-top:5px">Pedido ${esc(s.order.numero)} · ${money(s.order.total)}</div></div></div><div class="route-actions"><a class="btn" target="_blank" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}">⌖ Abrir Maps</a><label class="btn">📷 Canhoto<input type="file" accept="image/png,image/jpeg" capture="environment" hidden onchange="uploadProof('${s.id}',this)"></label><button class="btn good" onclick="completeDriver('${s.id}')">✓ Concluído</button></div></article>`}).join(''):'<div class="mobile-card empty-state">Nenhuma parada pendente. As rotas concluídas ficam disponíveis em <strong>Rotas concluídas</strong>.</div>'}</div></div>`}
+ const byId=new Map(o.items.map(x=>[x.id,x]));const activeRoutes=r.items.filter(route=>route.status!=='CONCLUIDA');const stops=activeRoutes.flatMap(route=>{let ids=[];try{ids=JSON.parse(route.sequencia_json||'[]')}catch{};return ids.map((id,i)=>({id,order:byId.get(id),route,i}))}).filter(x=>x.order&&x.order.status!=='CONCLUIDO');const routeNames=new Map(activeRoutes.map(x=>[x.id,x]));document.body.innerHTML=`<div class="mobile-shell mobile-dark"><div class="mobile-content">${mobileHeader('Fila do dia',`${esc(me.nome)} · Logística interna`,'/assets/brand/logo-admin.jpg',true)}<div class="mobile-nav" style="margin-top:15px"><button class="btn primary" onclick="driver()">↻ Atualizar fila</button><button class="btn" onclick="driverCompletedRoutes()">✓ Rotas concluídas</button><button class="btn" onclick="logout()">Sair</button></div><div class="mobile-card" style="margin-bottom:12px"><div class="route-status">Operação de entrega</div><h2 style="margin:5px 0">${stops.length} parada(s) na fila</h2><div class="muted">A sequência foi definida pela Torre de Controle. Abra o mapa, entregue e conclua.</div></div>${stops.length?stops.map((s,idx)=>{const address=s.order.endereco||s.order.cliente_endereco||'Endereço não informado';const route=routeNames.get(s.route.id);const phone=s.order.cliente_telefone||s.order.telefone||'';const cleanPhone=String(phone).replace(/\D/g,'');const waUrl=cleanPhone.length>=10?`https://wa.me/55${cleanPhone}?text=${encodeURIComponent('Olá '+s.order.cliente_nome+', sou o motorista responsável pela entrega do seu pedido '+s.order.numero+'.')}`:'';return `<article class="route-card"><div class="route-row"><div class="route-number">${idx+1}</div><div style="flex:1"><div class="route-status">${esc(route?.nome||'Rota')} · Parada ${idx+1}</div><h3 style="margin:4px 0;color:#14203a">${esc(s.order.cliente_nome)}</h3><div class="muted">${esc(address)}</div><div class="muted" style="margin-top:5px">Pedido ${esc(s.order.numero)} · ${money(s.order.total)}</div></div></div><div class="route-contact" style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">${cleanPhone?`<a class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366;font-size:12px;padding:6px 10px;text-align:center;display:inline-flex;align-items:center;justify-content:center;gap:5px;font-weight:700" target="_blank" href="${waUrl}">💬 WhatsApp</a><a class="btn" style="flex:1;background:#0284c7;color:#fff;border-color:#0284c7;font-size:12px;padding:6px 10px;text-align:center;display:inline-flex;align-items:center;justify-content:center;gap:5px;font-weight:700" href="tel:${cleanPhone}">📞 Ligar (${esc(phone)})</a>`:`<span class="badge" style="font-size:11px;background:rgba(255,255,255,0.08);color:#94a3b8;padding:4px 8px">Sem telefone cadastrado</span>`}</div><div class="route-actions" style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap"><a class="btn" style="flex:1;min-width:85px;text-align:center" target="_blank" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}">⌖ Maps</a><label class="btn" style="flex:1;min-width:85px;text-align:center">📷 Canhoto<input type="file" accept="image/png,image/jpeg" capture="environment" hidden onchange="uploadProof('${s.id}',this)"></label><button class="btn danger" style="flex:1;min-width:115px;background:#ef4444;color:#fff;border-color:#ef4444;text-align:center" onclick="openFailStopModal('${s.id}','${esc(s.order.numero)}','${esc(s.order.cliente_nome)}')">✕ Não concluída</button><button class="btn good" style="flex:1;min-width:95px;text-align:center" onclick="completeDriver('${s.id}')">✓ Concluído</button></div></article>`}).join(''):'<div class="mobile-card empty-state">Nenhuma parada pendente. As rotas concluídas ficam disponíveis em <strong>Rotas concluídas</strong>.</div>'}</div></div>`}
 async function driverCompletedRoutes(){try{const x=await api('/api/logistics/completed-routes');const groups=x.groups||[];document.body.innerHTML=`<div class="mobile-shell mobile-dark"><div class="mobile-content">${mobileHeader('Rotas concluídas',`${esc(me.nome)} · Histórico de entregas`,'/assets/brand/logo-admin.jpg',true)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="driver()">← Fila do dia</button><button class="btn primary" onclick="driverCompletedRoutes()">↻ Atualizar</button><button class="btn" onclick="logout()">Sair</button></div>${groups.length?groups.map(g=>`<section class="driver-history-day"><div class="section-title"><h2>${formatDriverDate(g.data)}</h2><span class="badge">${g.rotas.length} ${g.rotas.length===1?'rota':'rotas'}</span></div>${g.rotas.map(route=>`<article class="mobile-card completed-route-card"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start"><div><div class="route-status">Rota concluída</div><h3 style="margin:4px 0">${esc(route.nome||'Rota')}</h3><div class="muted">Realizada em ${formatDriverDateTime(route.concluida_em||route.updated_at)}</div></div><strong>${route.stops.length} ${route.stops.length===1?'parada':'paradas'}</strong></div><div class="completed-stop-list">${route.stops.map(stop=>`<div class="completed-stop"><span class="route-number">${stop.ordem}</span><div style="flex:1"><strong>${esc(stop.cliente_nome)}</strong><div class="muted">Pedido ${esc(stop.pedido_numero)} · ${money(stop.total)}</div><div class="muted">${esc(stop.endereco||'Endereço não informado')}${stop.bairro?` · ${esc(stop.bairro)}`:''}</div></div><span class="badge status-concluido">Concluída</span></div>`).join('')}</div></article>`).join('')}</section>`).join(''):'<div class="mobile-card empty-state">Nenhuma rota concluída registrada.</div>'}</div></div>`}catch(e){alert(e.message)}}
 function formatDriverDate(date){if(!date)return 'Data não informada';const d=new Date(String(date).length===10?date+'T12:00:00':date);return Number.isNaN(d.getTime())?esc(date):d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})}
 function formatDriverDateTime(date){if(!date)return 'Horário não informado';const d=new Date(date);return Number.isNaN(d.getTime())?esc(date):d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}
-async function uploadProof(id,input){const file=input.files?.[0];if(!file)return;if(file.size>8*1024*1024){alert('A foto precisa ter no m�ximo 8 MB.');input.value='';return}const reader=new FileReader();reader.onload=async()=>{try{await api('/api/logistics/orders/'+id+'/proof',{method:'POST',body:JSON.stringify({data_url:reader.result})});alert('Comprovante anexado.');driver()}catch(e){alert(e.message)}};reader.readAsDataURL(file)}
+async function uploadProof(id,input){const file=input.files?.[0];if(!file)return;if(file.size>8*1024*1024){alert('A foto precisa ter no mximo 8 MB.');input.value='';return}const reader=new FileReader();reader.onload=async()=>{try{await api('/api/logistics/orders/'+id+'/proof',{method:'POST',body:JSON.stringify({data_url:reader.result})});alert('Comprovante anexado.');driver()}catch(e){alert(e.message)}};reader.readAsDataURL(file)}
 async function completeDriver(id){
   const btn=document.querySelector(`button[onclick*="completeDriver('${id}')"]`);
   const card=btn?.closest('.route-card');
@@ -834,5 +907,76 @@ async function completeDriver(id){
     await api('/api/logistics/orders/'+id+'/complete',{method:'POST',body:'{}'});
   }catch(e){toastRole(e.message,true);roleRealtimeRefresh('routes_changed')}
 }
+function openFailStopModal(id, numero, clienteNome){
+  modal('✕ Marcar Parada como Não Concluída', `
+    <div style="display:flex;flex-direction:column;gap:14px;color:#1e293b">
+      <div>
+        <strong style="font-size:15px;color:var(--xv-brand-navy,#061a4f)">Pedido ${esc(numero)}</strong>
+        <div class="muted" style="font-size:13px;margin-top:2px">${esc(clienteNome)}</div>
+      </div>
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px;font-size:12px;color:#991b1b">
+        ⚠️ <strong>Atenção:</strong> Ao marcar esta parada como não concluída, ela será desvinculada da rota atual e o pedido voltará para o status <strong>Em Separação</strong> na Torre de Controle, ficando disponível para novas listas de carregamento e nova rota.
+      </div>
+      <div>
+        <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Selecione o motivo da ocorrência: *</label>
+        <select id="failReasonSelect" class="search" style="width:100%;padding:10px;border-radius:8px;border:1px solid #cbd5e1;font-size:14px;background:#fff;color:#0f172a">
+          <option value="Cliente não se encontra no local">Cliente não se encontra no local</option>
+          <option value="Cliente se recusou a receber o pedido">Cliente se recusou a receber o pedido</option>
+          <option value="Pedido incorreto / Divergência de itens">Pedido incorreto / Divergência de itens</option>
+          <option value="Problemas mecânicos com o veículo">Problemas mecânicos com o veículo</option>
+          <option value="Imprevisto com a equipe de entrega">Imprevisto com a equipe de entrega</option>
+          <option value="Outros motivos">Outros motivos</option>
+        </select>
+      </div>
+      <div>
+        <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Observações complementares (opcional):</label>
+        <textarea id="failReasonDesc" rows="3" placeholder="Detalhes adicionais sobre o imprevisto ocorrido na entrega..." style="width:100%;padding:10px;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;box-sizing:border-box;resize:vertical;font-family:inherit"></textarea>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px">
+        <button class="btn" type="button" onclick="closeModal()">Cancelar</button>
+        <button class="btn danger" type="button" id="btnConfirmFailStop" onclick="submitFailStop('${id}')" style="background:#dc2626;color:#fff;border-color:#dc2626;font-weight:700">Confirmar Não Concluído</button>
+      </div>
+    </div>
+  `, '520px');
+}
+async function submitFailStop(id){
+  const sel=document.getElementById('failReasonSelect');
+  const descEl=document.getElementById('failReasonDesc');
+  const motivo=sel?.value || 'Outros motivos';
+  const descricao=descEl?.value?.trim() || '';
+  const btn=document.getElementById('btnConfirmFailStop');
+  if(btn){btn.disabled=true;btn.textContent='Registrando...';}
+  try{
+    await api('/api/logistics/orders/'+id+'/fail',{method:'POST',body:JSON.stringify({motivo,descricao})});
+    closeModal();
+    const targetCard=document.querySelector(`button[onclick*="openFailStopModal('${id}'"]`)?.closest('.route-card');
+    if(targetCard){
+      targetCard.style.transition='all 0.3s ease';
+      targetCard.style.opacity='0';
+      targetCard.style.transform='scale(0.95)';
+      setTimeout(()=>{
+        targetCard.remove();
+        const remaining=document.querySelectorAll('.route-card').length;
+        const countHeader=document.querySelector('.mobile-card h2');
+        if(countHeader)countHeader.textContent=`${remaining} parada(s) na fila`;
+        if(!remaining){
+          const content=document.querySelector('.mobile-content');
+          if(content&&!content.querySelector('.empty-state')){
+            content.insertAdjacentHTML('beforeend','<div class="mobile-card empty-state">Nenhuma parada pendente. As rotas concluídas ficam disponíveis em <strong>Rotas concluídas</strong>.</div>');
+          }
+        }
+      },280);
+    }
+    toastRole('✕ Ocorrência registrada! Pedido retornou para a separação.');
+    Realtime.emit('orders_changed',{id,status:'SEPARACAO',action:'DELIVERY_FAILED'});
+    Realtime.emit('routes_changed');
+    Realtime.emit('returns_changed');
+  }catch(e){
+    if(btn){btn.disabled=false;btn.textContent='Confirmar Não Concluído';}
+    toastRole(e.message,true);
+  }
+}
+window.openFailStopModal=openFailStopModal;
+window.submitFailStop=submitFailStop;
 async function roleHome(){const r=document.body.dataset.role;if(r==='Vendedor Externo')return seller();if(r==='Frente de Loja / PDV')return pdv();if(r==='Loja Online')return loja();return driver()}
 initRole();

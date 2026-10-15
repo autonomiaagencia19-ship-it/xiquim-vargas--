@@ -7,16 +7,132 @@ function wrap(s,n=94){const words=String(s??'').split(/\s+/);const out=[];let li
 function buildPdf(pages,file){const objs=[];const add=x=>{objs.push(x);return objs.length};const font=add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');const pageRefs=[],contentRefs=[];for(const pg of pages){const content=['BT','/F1 10 Tf','50 800 Td'];pg.forEach((l,i)=>{if(i)content.push('0 -18 Td');content.push(`(${esc(l)}) Tj`)});content.push('ET');const stream=content.join('\n');contentRefs.push(add(`<< /Length ${Buffer.byteLength(stream,'latin1')} >>\nstream\n${stream}\nendstream`));pageRefs.push(add('PLACEHOLDER'))}const pagesObj=objs.length+1,catalogObj=pagesObj+1;for(let i=0;i<pageRefs.length;i++)objs[pageRefs[i]-1]=`<< /Type /Page /Parent ${pagesObj} 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ${font} 0 R >> >> /Contents ${contentRefs[i]} 0 R >>`;objs.push(`<< /Type /Pages /Kids [${pageRefs.map(x=>x+' 0 R').join(' ')}] /Count ${pageRefs.length} >>`);objs.push(`<< /Type /Catalog /Pages ${pagesObj} 0 R >>`);let out='%PDF-1.4\n',offs=[0];for(let i=0;i<objs.length;i++){offs.push(Buffer.byteLength(out,'latin1'));out+=`${i+1} 0 obj\n${objs[i]}\nendobj\n`}const xref=Buffer.byteLength(out,'latin1');out+=`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`;for(let i=1;i<=objs.length;i++)out+=String(offs[i]).padStart(10,'0')+' 00000 n \n';out+=`trailer\n<< /Size ${objs.length+1} /Root ${catalogObj} 0 R >>\nstartxref\n${xref}\n%%EOF`;fs.writeFileSync(file,Buffer.from(out,'latin1'))}
 function paginate(lines){const pages=[];let page=[];for(const l of lines.flatMap(x=>wrap(x))){if(page.length>=39){pages.push(page);page=[]}page.push(l)}if(page.length)pages.push(page);return pages}
 function buildThermalPdf(lines,file){const objs=[];const add=x=>{objs.push(x);return objs.length};const font=add('<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>');const lineHeight=13;const pageHeight=Math.max(260,(lines.length*lineHeight)+50);const pageWidth=226;const content=['BT','/F1 8.5 Tf',`10 ${pageHeight-20} Td`];lines.forEach((l,i)=>{if(i)content.push(`0 -${lineHeight} Td`);content.push(`(${esc(l)}) Tj`)});content.push('ET');const stream=content.join('\n');const contentRef=add(`<< /Length ${Buffer.byteLength(stream,'latin1')} >>\nstream\n${stream}\nendstream`);const pageRef=add('PLACEHOLDER');const pagesObj=objs.length+1,catalogObj=pagesObj+1;objs[pageRef-1]=`<< /Type /Page /Parent ${pagesObj} 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 ${font} 0 R >> >> /Contents ${contentRef} 0 R >>`;objs.push(`<< /Type /Pages /Kids [${pageRef} 0 R] /Count 1 >>`);objs.push(`<< /Type /Catalog /Pages ${pagesObj} 0 R >>`);let out='%PDF-1.4\n',offs=[0];for(let i=0;i<objs.length;i++){offs.push(Buffer.byteLength(out,'latin1'));out+=`${i+1} 0 obj\n${objs[i]}\nendobj\n`}const xref=Buffer.byteLength(out,'latin1');out+=`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`;for(let i=1;i<=objs.length;i++)out+=String(offs[i]).padStart(10,'0')+' 00000 n \n';out+=`trailer\n<< /Size ${objs.length+1} /Root ${catalogObj} 0 R >>\nstartxref\n${xref}\n%%EOF`;fs.writeFileSync(file,Buffer.from(out,'latin1'))}
-function makeThermalOrderPdf(order,items,file){const lines=['========================================','             XIQUIM VARGAS              ','       DISTRIBUIDORA DE BEBIDAS         ','========================================','            CUPOM DE VENDA              ','----------------------------------------',`PEDIDO: ${order.numero}`,`EMISSAO: ${new Date(order.created_at).toLocaleString('pt-BR')}`,'----------------------------------------',`CLIENTE: ${(order.cliente_nome||'Cliente Balcao').slice(0,31)}`,order.cnpj_cpf?`DOC: ${order.cnpj_cpf.slice(0,35)}`:'','----------------------------------------','ITENS:','QTD  DESCRICAO           UNIT      TOTAL','----------------------------------------'].filter(Boolean);let totalQtd=0;for(const x of items){totalQtd+=Number(x.quantidade||0);const qStr=String(x.quantidade).padStart(3);const desc=String(x.produto_nome||'').slice(0,18).padEnd(18);const unitStr=Number(x.preco_unitario_aplicado).toFixed(2).padStart(7);const subStr=Number(x.subtotal).toFixed(2).padStart(8);lines.push(`${qStr}  ${desc} ${unitStr} ${subStr}`)}const subtotal=Number(order.subtotal_bruto??order.total);const descVal=Number(order.desconto_tipo==='PERCENTUAL'?(subtotal*Number(order.desconto_valor||0)/100):(order.desconto_valor||0));const total=Number(order.total);lines.push('----------------------------------------',`TOTAL DE ITENS: ${String(totalQtd).padStart(23)}`,`SUBTOTAL:       ${('R$ '+subtotal.toFixed(2)).padStart(24)}`,`DESCONTO:       ${('R$ '+descVal.toFixed(2)).padStart(24)}`,`TOTAL A PAGAR:  ${('R$ '+total.toFixed(2)).padStart(24)}`,'----------------------------------------',`FORMA PAGTO:    ${String(order.forma_pagamento||'-').padStart(24)}`,`PAGAMENTO:      ${(order.pagamento_status==='RECEBIDO'?'RECEBIDO':'NAO RECEBIDO').padStart(24)}`);if(order.forma_pagamento==='DINHEIRO'&&order.valor_recebido){lines.push(`VALOR RECEBIDO: ${('R$ '+Number(order.valor_recebido).toFixed(2)).padStart(24)}`);lines.push(`TROCO:          ${('R$ '+Number(order.troco||0).toFixed(2)).padStart(24)}`)}else if(order.forma_pagamento==='CREDITO'){const credInfo=order.cartao_modalidade==='PARCELADO'?`${order.parcelas||2}x`:'A VISTA';lines.push(`MODALIDADE:     ${credInfo.padStart(24)}`)}if(order.observacoes){lines.push('----------------------------------------');lines.push(`OBS: ${order.observacoes.slice(0,35)}`)}lines.push('----------------------------------------','','','________________________________________','         ASSINATURA DO CLIENTE          ',`   ${(order.cliente_nome||'Cliente Balcao').slice(0,34)}   `,'========================================','       Xiquim Vargas ERP - PDV          ','========================================');buildThermalPdf(lines,file)}
-export function makeOrderPdf(order,items,file){if(order.origem==='BALCAO')return makeThermalOrderPdf(order,items,file);const lines=['XIQUIM VARGAS','DISTRIBUIDORA','',`PEDIDO ${order.numero}`,`Emissão: ${new Date(order.created_at).toLocaleString('pt-BR')}`,`Cliente: ${order.cliente_nome}`,`Documento: ${order.cnpj_cpf||'-'}`,'','ITENS','QTD  DESCRIÇÃO                         UNITÁRIO        SUBTOTAL','--------------------------------------------------------------------------------'];for(const x of items){const desc=String(x.produto_nome||'').slice(0,32).padEnd(32,' ');lines.push(`${String(x.quantidade).padStart(3)}  ${desc}${`R$ ${Number(x.preco_unitario_aplicado).toFixed(2)}`.padStart(13)}${`R$ ${Number(x.subtotal).toFixed(2)}`.padStart(14)}`)}lines.push('','--------------------------------------------------------------------------------',`SUBTOTAL: R$ ${Number(order.subtotal_bruto??order.total).toFixed(2)}`,`DESCONTO ${order.desconto_tipo==='PERCENTUAL'?`(${Number(order.desconto_valor||0).toFixed(2)}%)`:'(R$)'}: R$ ${Number(order.desconto_tipo==='PERCENTUAL'?(Number(order.subtotal_bruto||0)*Number(order.desconto_valor||0)/100):(order.desconto_valor||0)).toFixed(2)}`,`TOTAL DO PEDIDO: R$ ${Number(order.total).toFixed(2)}`,'',`Forma de pagamento: ${order.forma_pagamento||'-'}`,`Pagamento: ${order.pagamento_status==='RECEBIDO'?'Recebido':'Não recebido'}`,(order.forma_pagamento==='DINHEIRO'&&order.valor_recebido)?`Valor recebido: R$ ${Number(order.valor_recebido).toFixed(2)}`:'',(order.forma_pagamento==='DINHEIRO'&&order.valor_recebido)?`Troco: R$ ${Number(order.troco||0).toFixed(2)}`:'',order.forma_pagamento==='CREDITO'?`Crédito: ${order.cartao_modalidade==='PARCELADO'?`${order.parcelas||1}x`:'À vista'}`:'',`Observações: ${order.observacoes||'-'}`,'','Documento operacional do Xiquim Vargas ERP.');buildPdf(paginate(lines.filter(l=>l!==null&&l!==undefined)),file)}
+function formatOrderAddress(order){
+  let endereco = order?.endereco;
+  let bairro = order?.bairro;
+  let cidade = order?.cidade;
+  let estado = order?.estado;
+  let cep = order?.cep;
+  if(!endereco && order?.cliente_id){
+    try{
+      const c=one('SELECT endereco, bairro, cidade, estado, cep FROM clientes WHERE id=?',[order.cliente_id]);
+      if(c){
+        endereco=c.endereco;
+        bairro=c.bairro;
+        cidade=c.cidade;
+        estado=c.estado;
+        cep=c.cep;
+      }
+    }catch{}
+  }
+  const parts=[];
+  if(endereco) parts.push(endereco);
+  if(bairro) parts.push(`Bairro: ${bairro}`);
+  if(cidade) parts.push(`${cidade}${estado?`/${estado}`:''}`);
+  if(cep) parts.push(`CEP: ${cep}`);
+  return parts.length ? parts.join(' - ') : 'Endereço não informado';
+}
+
+function makeThermalOrderPdf(order,items,file){
+  const addr = formatOrderAddress(order);
+  const lines=[
+    '========================================',
+    'XIQUIM VARGAS - DISTRIBUIDORA DE BEBIDAS',
+    '========================================',
+    '            CUPOM DE VENDA              ',
+    '----------------------------------------',
+    `EMISSAO: ${new Date(order.created_at).toLocaleString('pt-BR')}`,
+    '----------------------------------------',
+    `CLIENTE: ${(order.cliente_nome||'Cliente Balcao').slice(0,31)}`,
+    `ENDERECO: ${addr.slice(0,30)}`,
+    '----------------------------------------',
+    'ITENS:',
+    'QTD  DESCRICAO           UNIT      TOTAL',
+    '----------------------------------------'
+  ].filter(Boolean);
+  let totalQtd=0;
+  for(const x of items){
+    totalQtd+=Number(x.quantidade||0);
+    const qStr=String(x.quantidade).padStart(3);
+    const desc=String(x.produto_nome||'').slice(0,18).padEnd(18);
+    const unitStr=Number(x.preco_unitario_aplicado).toFixed(2).padStart(7);
+    const subStr=Number(x.subtotal).toFixed(2).padStart(8);
+    lines.push(`${qStr}  ${desc} ${unitStr} ${subStr}`);
+  }
+  const subtotal=Number(order.subtotal_bruto??order.total);
+  const descVal=Number(order.desconto_tipo==='PERCENTUAL'?(subtotal*Number(order.desconto_valor||0)/100):(order.desconto_valor||0));
+  const total=Number(order.total);
+  lines.push('----------------------------------------',`TOTAL DE ITENS: ${String(totalQtd).padStart(23)}`,`SUBTOTAL:       ${('R$ '+subtotal.toFixed(2)).padStart(24)}`,`DESCONTO:       ${('R$ '+descVal.toFixed(2)).padStart(24)}`,`TOTAL A PAGAR:  ${('R$ '+total.toFixed(2)).padStart(24)}`,'----------------------------------------',`FORMA PAGTO:    ${String(order.forma_pagamento||'-').padStart(24)}`,`PAGAMENTO:      ${(order.pagamento_status==='RECEBIDO'?'RECEBIDO':'NAO RECEBIDO').padStart(24)}`);
+  if(order.forma_pagamento==='DINHEIRO'&&order.valor_recebido){
+    lines.push(`VALOR RECEBIDO: ${('R$ '+Number(order.valor_recebido).toFixed(2)).padStart(24)}`);
+    lines.push(`TROCO:          ${('R$ '+Number(order.troco||0).toFixed(2)).padStart(24)}`);
+  }else if(order.forma_pagamento==='CREDITO'){
+    const credInfo=order.cartao_modalidade==='PARCELADO'?`${order.parcelas||2}x`:'A VISTA';
+    lines.push(`MODALIDADE:     ${credInfo.padStart(24)}`);
+  }
+  if(order.observacoes){
+    lines.push('----------------------------------------');
+    lines.push(`OBS: ${order.observacoes.slice(0,35)}`);
+  }
+  lines.push(
+    '----------------------------------------',
+    '',
+    '',
+    '________________________________________',
+    '         ASSINATURA DO CLIENTE          ',
+    `   ${(order.cliente_nome||'Cliente Balcao').slice(0,34)}   `,
+    '========================================',
+    'Esse documento não possui valor fiscal',
+    '       Xiquim Vargas ERP - PDV          ',
+    '========================================'
+  );
+  buildThermalPdf(lines,file);
+}
+
+export function makeOrderPdf(order,items,file){
+  if(order.origem==='BALCAO')return makeThermalOrderPdf(order,items,file);
+  const lines=[
+    'XIQUIM VARGAS - DISTRIBUIDORA DE BEBIDAS',
+    '',
+    `Emissão: ${new Date(order.created_at).toLocaleString('pt-BR')}`,
+    `Cliente: ${order.cliente_nome}`,
+    `Endereço: ${formatOrderAddress(order)}`,
+    '',
+    'ITENS',
+    'QTD  DESCRIÇÃO                         UNITÁRIO        SUBTOTAL',
+    '--------------------------------------------------------------------------------'
+  ];
+  for(const x of items){
+    const desc=String(x.produto_nome||'').slice(0,32).padEnd(32,' ');
+    lines.push(`${String(x.quantidade).padStart(3)}  ${desc}${`R$ ${Number(x.preco_unitario_aplicado).toFixed(2)}`.padStart(13)}${`R$ ${Number(x.subtotal).toFixed(2)}`.padStart(14)}`);
+  }
+  lines.push(
+    '',
+    '--------------------------------------------------------------------------------',
+    `SUBTOTAL: R$ ${Number(order.subtotal_bruto??order.total).toFixed(2)}`,
+    `DESCONTO ${order.desconto_tipo==='PERCENTUAL'?`(${Number(order.desconto_valor||0).toFixed(2)}%)`:'(R$)'}: R$ ${Number(order.desconto_tipo==='PERCENTUAL'?(Number(order.subtotal_bruto||0)*Number(order.desconto_valor||0)/100):(order.desconto_valor||0)).toFixed(2)}`,
+    `TOTAL DO PEDIDO: R$ ${Number(order.total).toFixed(2)}`,
+    '',
+    `Forma de pagamento: ${order.forma_pagamento||'-'}`,
+    `Pagamento: ${order.pagamento_status==='RECEBIDO'?'Recebido':'Não recebido'}`,
+    (order.forma_pagamento==='DINHEIRO'&&order.valor_recebido)?`Valor recebido: R$ ${Number(order.valor_recebido).toFixed(2)}`:'',
+    (order.forma_pagamento==='DINHEIRO'&&order.valor_recebido)?`Troco: R$ ${Number(order.troco||0).toFixed(2)}`:'',
+    order.forma_pagamento==='CREDITO'?`Crédito: ${order.cartao_modalidade==='PARCELADO'?`${order.parcelas||1}x`:'À vista'}`:'',
+    `Observações: ${order.observacoes||'-'}`,
+    '',
+    'Esse documento não possui valor fiscal'
+  );
+  buildPdf(paginate(lines.filter(l=>l!==null&&l!==undefined)),file);
+}
+
 export function makeCatalogPdf(items,file){const lines=['XIQUIM VARGAS','CATÁLOGO DE PRODUTOS',`Gerado em: ${new Date().toLocaleString('pt-BR')}`,`Total de produtos: ${items.length}`,'','PRODUTO | SKU | CATEGORIA | SUBCATEGORIA | PREÇO | PROMOÇÃO','--------------------------------------------------------------------------------'];for(const x of items)lines.push(`${String(x.nome||'').slice(0,26)} | ${String(x.sku||'').slice(0,16)} | ${String(x.categoria_nome||'-').slice(0,18)} | ${String(x.subcategoria_nome||'-').slice(0,18)} | R$ ${Number(x.preco_base||0).toFixed(2)} | ${x.promocao_preco==null?'-':'R$ '+Number(x.promocao_preco).toFixed(2)}`);buildPdf(paginate(lines),file)}
 export function makeStockPdf(items,file){const lines=['XIQUIM VARGAS','RELATÓRIO DE ESTOQUE INTELIGENTE',`Gerado em: ${new Date().toLocaleString('pt-BR')}`,`Total de produtos: ${items.length}`,'','PRODUTO | SKU | DISPONÍVEL | RESERVADO | MÍNIMO | STATUS','--------------------------------------------------------------------------------'];for(const x of items)lines.push(`${String(x.nome||'').slice(0,28)} | ${String(x.sku||'').slice(0,15)} | ${x.quantidade_disponivel} | ${x.quantidade_reservada} | ${x.estoque_minimo} | ${x.status||'-'}`);buildPdf(paginate(lines),file)}
 
 export function makeLoadingListPdf(data, file) {
   const lines=[
-    'XIQUIM VARGAS',
-    'DISTRIBUIDORA DE BEBIDAS',
+    'XIQUIM VARGAS - DISTRIBUIDORA DE BEBIDAS',
     'LISTA DE CARREGAMENTO LOGÍSTICO',
+    ...(data.vendedor ? [`Vendedor: ${data.vendedor}`] : []),
     `Gerado em: ${new Date().toLocaleString('pt-BR')}`,
     `Total de pedidos: ${data.total_pedidos || 0}`,
     `Total de volumes: ${data.total_produtos || 0}`,
@@ -43,15 +159,38 @@ export function makeLoadingListPdf(data, file) {
 export function makeBulkOrderPdf(ordersData, file) {
   const allPages = [];
   for (const {order, items} of ordersData) {
-    const lines=['XIQUIM VARGAS','DISTRIBUIDORA','',`PEDIDO ${order.numero}`,`Emissão: ${new Date(order.created_at).toLocaleString('pt-BR')}`,`Cliente: ${order.cliente_nome}`,`Documento: ${order.cnpj_cpf||'-'}`,'','ITENS','QTD  DESCRIÇÃO                         UNITÁRIO        SUBTOTAL','--------------------------------------------------------------------------------'];
+    const lines=[
+      'XIQUIM VARGAS - DISTRIBUIDORA DE BEBIDAS',
+      '',
+      `Emissão: ${new Date(order.created_at).toLocaleString('pt-BR')}`,
+      `Cliente: ${order.cliente_nome}`,
+      `Endereço: ${formatOrderAddress(order)}`,
+      '',
+      'ITENS',
+      'QTD  DESCRIÇÃO                         UNITÁRIO        SUBTOTAL',
+      '--------------------------------------------------------------------------------'
+    ];
     for(const x of items){
       const desc=String(x.produto_nome||'').slice(0,32).padEnd(32,' ');
       lines.push(`${String(x.quantidade).padStart(3)}  ${desc}${`R$ ${Number(x.preco_unitario_aplicado).toFixed(2)}`.padStart(13)}${`R$ ${Number(x.subtotal).toFixed(2)}`.padStart(14)}`);
     }
-    lines.push('','--------------------------------------------------------------------------------',`SUBTOTAL: R$ ${Number(order.subtotal_bruto??order.total).toFixed(2)}`,`DESCONTO ${order.desconto_tipo==='PERCENTUAL'?`(${Number(order.desconto_valor||0).toFixed(2)}%)`:'(R$)'}: R$ ${Number(order.desconto_tipo==='PERCENTUAL'?(Number(order.subtotal_bruto||0)*Number(order.desconto_valor||0)/100):(order.desconto_valor||0)).toFixed(2)}`,`TOTAL DO PEDIDO: R$ ${Number(order.total).toFixed(2)}`,'',`Forma de pagamento: ${order.forma_pagamento||'-'}`,`Pagamento: ${order.pagamento_status==='RECEBIDO'?'Recebido':'Não recebido'}`,(order.forma_pagamento==='DINHEIRO'&&order.valor_recebido)?`Valor recebido: R$ ${Number(order.valor_recebido).toFixed(2)}`:'',(order.forma_pagamento==='DINHEIRO'&&order.valor_recebido)?`Troco: R$ ${Number(order.troco||0).toFixed(2)}`:'',order.forma_pagamento==='CREDITO'?`Crédito: ${order.cartao_modalidade==='PARCELADO'?`${order.parcelas||1}x`:'À vista'}`:'',`Observações: ${order.observacoes||'-'}`,'','Documento operacional do Xiquim Vargas ERP.');
+    lines.push(
+      '',
+      '--------------------------------------------------------------------------------',
+      `SUBTOTAL: R$ ${Number(order.subtotal_bruto??order.total).toFixed(2)}`,
+      `DESCONTO ${order.desconto_tipo==='PERCENTUAL'?`(${Number(order.desconto_valor||0).toFixed(2)}%)`:'(R$)'}: R$ ${Number(order.desconto_tipo==='PERCENTUAL'?(Number(order.subtotal_bruto||0)*Number(order.desconto_valor||0)/100):(order.desconto_valor||0)).toFixed(2)}`,
+      `TOTAL DO PEDIDO: R$ ${Number(order.total).toFixed(2)}`,
+      '',
+      `Forma de pagamento: ${order.forma_pagamento||'-'}`,
+      `Pagamento: ${order.pagamento_status==='RECEBIDO'?'Recebido':'Não recebido'}`,
+      (order.forma_pagamento==='DINHEIRO'&&order.valor_recebido)?`Valor recebido: R$ ${Number(order.valor_recebido).toFixed(2)}`:'',
+      (order.forma_pagamento==='DINHEIRO'&&order.valor_recebido)?`Troco: R$ ${Number(order.troco||0).toFixed(2)}`:'',
+      order.forma_pagamento==='CREDITO'?`Crédito: ${order.cartao_modalidade==='PARCELADO'?`${order.parcelas||1}x`:'À vista'}`:'',
+      `Observações: ${order.observacoes||'-'}`,
+      '',
+      'Esse documento não possui valor fiscal'
+    );
     
-    // Use the paginate function (defined internally in pdf.js) which we can't call directly if it's not exported,
-    // but wait! The script adds this to the bottom of the file, so paginate IS in scope.
     const pages = paginate(lines.filter(l=>l!==null&&l!==undefined));
     allPages.push(...pages);
   }

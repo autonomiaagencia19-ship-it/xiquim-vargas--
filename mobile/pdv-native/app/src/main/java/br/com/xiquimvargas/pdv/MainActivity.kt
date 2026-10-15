@@ -36,7 +36,7 @@ class MainActivity : Activity() {
         registerNetworkMonitor()
 
         val url = Api.getBaseUrl()
-        if (isValidUrl(url)) {
+        if (Api.isConfigured() && isValidUrl(url)) {
             launchWebView(url)
         } else {
             configScreen()
@@ -136,7 +136,9 @@ class MainActivity : Activity() {
             hint = "https://seu-erp.onrender.com"
             setHintTextColor(Color.DKGRAY)
             setTextColor(Color.WHITE)
-            setText(Api.getBaseUrl())
+            if (Api.isConfigured()) {
+                setText(Api.getBaseUrl())
+            }
             isSingleLine = true
             setPadding(30, 30, 30, 30)
             setBackgroundColor(Color.rgb(20, 29, 44))

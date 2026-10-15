@@ -62,8 +62,29 @@ async function refreshCurrentViewSilently(eventType,payload){
           const v=$('#view');
           if(v&&!hasOpenModal)home(v);
         }
+        const kanCols=document.querySelectorAll('.panel .kanban .kanban-col');
+        const kanVals=[d.pendentes, d.separacao, d.rota, d.concluidos];
+        if(kanCols.length>=4){
+          kanCols.forEach((col,idx)=>{
+            if(idx<4){
+              const badge=col.querySelector('.kanban-head .badge');
+              const strong=col.querySelector('.kanban-card strong');
+              const nextVal=kanVals[idx];
+              if(badge&&badge.textContent!==String(nextVal)){
+                badge.textContent=String(nextVal);
+                badge.classList.add('xv-flash-updated');
+                setTimeout(()=>badge.classList.remove('xv-flash-updated'),1000);
+              }
+              if(strong&&!strong.textContent.startsWith(String(nextVal))){
+                strong.textContent=`${nextVal} pedido(s)`;
+                strong.classList.add('xv-flash-updated');
+                setTimeout(()=>strong.classList.remove('xv-flash-updated'),1000);
+              }
+            }
+          });
+        }
       }else if(currentView==='orders'){
-        if(!eventType||eventType==='orders_changed'||eventType==='tab_focused'){
+        if(!eventType||eventType==='orders_changed'||eventType==='routes_changed'||eventType==='returns_changed'||eventType==='tab_focused'){
           const [res,usersRes]=await Promise.all([api('/api/orders'),api('/api/users').catch(()=>({items:[]}))]);
           window._ordersItems=Array.isArray(res.items)?res.items:[];
           if(usersRes?.items) window._sellerUsers=usersRes.items.filter(u=>u.role==='seller'&&u.ativo);
@@ -84,13 +105,22 @@ async function refreshCurrentViewSilently(eventType,payload){
           }
         }
       }else if(currentView==='products'){
-        if(!eventType||eventType==='products_changed'||eventType==='stock_changed'||eventType==='tab_focused'){
+        if(!eventType||eventType==='products_changed'||eventType==='stock_changed'||eventType==='prices_changed'||eventType==='tab_focused'){
           const [p,c,promo]=await Promise.all([api('/api/products?limit=100000'),api('/api/categories'),api('/api/promotions')]);
           window.adminProducts=p;window.adminCategories=c;window.catalogCategories=c.categorias;window.catalogSubcategories=c.subcategorias;window.adminPromotions=promo;
           if(!hasOpenModal){
             const pqVal=$('#pq')?.value,catVal=$('#catFilter')?.value,subVal=$('#subFilter')?.value;
             const v=$('#view');
-            if(v)renderAdminCatalog(v);
+            if(v){
+              if(window.adminCurrentSubId){
+                const subObj=c.subcategorias.find(s=>s.id===window.adminCurrentSubId);
+                adminProdutosSub(window.adminCurrentSubId,subObj?.nome||'Subcategoria',window.adminCurrentCatId);
+              }else if(window.adminCurrentCatId){
+                adminSubcategorias(window.adminCurrentCatId);
+              }else{
+                renderAdminCatalog(v);
+              }
+            }
             if(pqVal&&$('#pq'))$('#pq').value=pqVal;
             if(catVal&&$('#catFilter'))$('#catFilter').value=catVal;
             if(subVal&&$('#subFilter'))$('#subFilter').value=subVal;
@@ -98,7 +128,7 @@ async function refreshCurrentViewSilently(eventType,payload){
           }
         }
       }else if(currentView==='stock'){
-        if(!eventType||eventType==='stock_changed'||eventType==='products_changed'||eventType==='tab_focused'){
+        if(!eventType||eventType==='stock_changed'||eventType==='products_changed'||eventType==='orders_changed'||eventType==='purchases_changed'||eventType==='returns_changed'||eventType==='tab_focused'){
           const x=await api('/api/stock?limit=100000');
           if(!hasOpenModal){
             const searchVal=$('#stockSearch')?.value;
@@ -114,19 +144,54 @@ async function refreshCurrentViewSilently(eventType,payload){
           }
         }
       }else if(currentView==='clients'){
-        if(!eventType||eventType==='clients_changed'||eventType==='tab_focused'){
-          const c=await api('/api/clients');
-          window._clientsData=c.items;
-          if(typeof window.renderClientsUI==='function')window.renderClientsUI();
+        if(!eventType||eventType==='clients_changed'||eventType==='orders_changed'||eventType==='tab_focused'){
+          if(typeof window.refreshCrmData==='function'){
+            window.refreshCrmData();
+          }else{
+            const c=await api('/api/clients');
+            window._clientsData=c.items||[];
+            if(typeof window.renderClientsUI==='function')window.renderClientsUI();
+          }
         }
       }else if(currentView==='logistics'){
-        if(!eventType||eventType==='routes_changed'||eventType==='orders_changed'||eventType==='tab_focused'){
+        if(!eventType||eventType==='routes_changed'||eventType==='orders_changed'||eventType==='returns_changed'||eventType==='tab_focused'){
           const v=$('#view');
-          if(v&&!hasOpenModal&&document.getElementById('logisticsMain')?.style.display!=='none')logistics(v);
+          if(v&&!hasOpenModal){
+            if(document.getElementById('returnedOrdersDashboard')?.style.display==='block'){
+              if(typeof window.refreshReturnedOrders==='function')window.refreshReturnedOrders();
+            }else if(document.getElementById('logisticsModalityDashboard')?.style.display==='block'){
+              if(typeof window.renderModalityDashboard==='function'){
+                const groupsReq=await api('/api/logistics/grouped-orders').catch(()=>[]);
+                window._logisticsGroups=groupsReq;
+                window.renderModalityDashboard(window._currentLogisticsGrupoKey||'TODOS', window._currentLogisticsSellerFilter||'');
+              }
+            }else if(document.getElementById('logisticsDashboard')?.style.display==='block'){
+              if(typeof window.refreshLogisticsInRoute==='function') window.refreshLogisticsInRoute();
+            }else if(document.getElementById('logisticsMain')?.style.display!=='none'){
+              const checkedBoxes=document.querySelectorAll('.load-order:checked');
+              if(checkedBoxes.length===0){
+                logistics(v);
+              }else{
+                const retData=await api('/api/logistics/returned-orders').catch(()=>({items:[]}));
+                const retBadge=document.getElementById('returnedOrdersGridBadge');
+                if(retBadge){
+                  retBadge.textContent=retData.items?.length||0;
+                  retBadge.style.background=retData.items?.length?'#ef4444':'#64748b';
+                }
+              }
+            }
+          }
         }
       }else if(currentView==='prices'){
-        if(!eventType||eventType==='prices_changed'||eventType==='tab_focused'){
-          const v=$('#view');if(v&&!hasOpenModal)prices(v);
+        if(!eventType||eventType==='prices_changed'||eventType==='clients_changed'||eventType==='tab_focused'){
+          if(window.ptdCurrentTableId && document.getElementById('ptdBody')){
+            try{
+              const updated=await api('/api/price-tables/'+window.ptdCurrentTableId+'/details');
+              renderPriceTableDashboard(window.ptdCurrentTableId, window.ptdCurrentTableName, updated);
+            }catch(e){}
+          }else if(!hasOpenModal){
+            const v=$('#view');if(v)prices(v);
+          }
         }
       }else if(currentView==='users'){
         if(!eventType||eventType==='users_changed'||eventType==='tab_focused'){
@@ -134,11 +199,80 @@ async function refreshCurrentViewSilently(eventType,payload){
         }
       }else if(currentView==='suppliers'){
         if(!eventType||eventType==='suppliers_changed'||eventType==='tab_focused'){
-          const v=$('#view');if(v&&!hasOpenModal)suppliers(v);
+          const v=$('#view');
+          if(v&&!hasOpenModal){
+            const sVal=$('#supplierSearch')?.value;
+            const s=await api('/api/suppliers');
+            window._suppliersData=s.items||[];
+            const wrap=$('#supplierTableWrap');
+            if(wrap){
+              wrap.innerHTML=renderSuppliersTable(window._suppliersData);
+              if(sVal&&$('#supplierSearch')){$('#supplierSearch').value=sVal;filterSuppliers(sVal)}
+              const kpis=document.querySelectorAll('#view .card.kpi .v');
+              if(kpis.length>=3){
+                kpis[0].textContent=window._suppliersData.length;
+                kpis[1].textContent=window._suppliersData.reduce((a,x)=>a+Number(x.total_produtos||0),0);
+                kpis[2].textContent=window._suppliersData.reduce((a,x)=>a+Number(x.compras_abertas||0),0);
+              }
+            }else{
+              suppliers(v);
+            }
+          }
         }
       }else if(currentView==='inbound'){
         if(!eventType||eventType==='purchases_changed'||eventType==='stock_changed'||eventType==='tab_focused'){
-          const v=$('#view');if(v&&!hasOpenModal)inbound(v);
+          const v=$('#view');
+          if(v&&!hasOpenModal){
+            const sVal=$('#inboundSearch')?.value;
+            const stVal=$('#inboundStatusFilter')?.value;
+            const [summary, res]=await Promise.all([
+              api('/api/inbound/summary'),
+              api('/api/purchases')
+            ]);
+            window._inboundSummary=summary;
+            window._purchasesData=res.items||[];
+            const wrap=$('#inboundTableWrap');
+            if(wrap){
+              wrap.innerHTML=renderInboundTable(window._purchasesData);
+              if(sVal&&$('#inboundSearch'))$('#inboundSearch').value=sVal;
+              if(stVal&&$('#inboundStatusFilter'))$('#inboundStatusFilter').value=stVal;
+              filterInbound();
+              const kpis=document.querySelectorAll('#view .card.kpi .v');
+              if(kpis.length>=5){
+                kpis[0].textContent=summary.aguardando;
+                kpis[1].textContent=summary.hoje;
+                kpis[2].textContent=summary.atrasados;
+                kpis[3].textContent=summary.recebidosMes;
+                kpis[4].textContent=brl(summary.valorMes);
+              }
+            }else{
+              inbound(v);
+            }
+          }
+        }
+      }else if(currentView==='sellers'){
+        if(!eventType||eventType==='orders_changed'||eventType==='users_changed'||eventType==='tab_focused'){
+          if(!hasOpenModal){
+            if(window._currentSellerDashboardId && window._currentSellerDashboardNome){
+              renderSellerDashboard(window._currentSellerDashboardId, window._currentSellerDashboardNome);
+            }else{
+              const v=$('#view');if(v)sellers(v);
+            }
+          }
+        }
+      }else if(currentView==='reports'){
+        if(!eventType||eventType==='orders_changed'||eventType==='dashboard_changed'||eventType==='tab_focused'){
+          const v=$('#view');if(v&&!hasOpenModal)reports(v,window._currentReportsPeriodo||'geral');
+        }
+      }else if(currentView==='audit'){
+        if(!eventType||eventType==='audit_changed'||eventType==='tab_focused'){
+          const v=$('#view');if(v&&!hasOpenModal)auditView(v);
+        }
+      }else if(currentView==='store'){
+        if(!eventType||eventType==='settings_changed'||eventType==='tab_focused'){
+          if(!hasOpenModal&&!document.querySelector('#storeConfigForm:focus-within')){
+            const v=$('#view');if(v)storeSettings(v);
+          }
         }
       }
     }catch(err){console.warn('Silent refresh error:',err)}
@@ -225,7 +359,7 @@ async function stock(v){const x=await api('/api/stock?limit=100000');v.innerHTML
 function stockRow(x){return `<tr data-stock-text="${esc((x.nome+' '+x.sku+' '+(x.descricao||'')).toLowerCase())}"><td><div class="catalog-product-cell">${x.foto_url?`<img class="catalog-mini-photo" src="${esc(x.foto_url)}" alt="" onerror="this.onerror=null;this.replaceWith(Object.assign(document.createElement('div'),{className:'catalog-mini-photo placeholder',textContent:'XV'}))">`:'<div class="catalog-mini-photo placeholder">XV</div>'}<div><strong>${esc(x.nome)}</strong><br><small>${esc([x.marca,x.sabor,x.tamanho].filter(Boolean).join(' · '))}</small></div></div></td><td>${esc(x.sku)}</td><td>${esc(x.descricao||'-')}</td><td><strong>${x.quantidade_disponivel}</strong></td><td>${x.quantidade_reservada}</td><td>${x.estoque_minimo}</td><td><span class="badge status-${String(x.status).toLowerCase()}">${esc(x.status)}</span></td><td><button class="btn" onclick="adjustStock('${x.id}')">Movimentar</button> <button class="btn" onclick="stockHistory('${x.id}')">Histórico</button></td></tr>`}
 function stockFilter(i){const q=i.value.toLowerCase();document.querySelectorAll('#stockTable tbody tr').forEach(r=>r.style.display=r.dataset.stockText.includes(q)?'':'none')}
 function exportStockPdf(){downloadAuthFile('/api/admin/export/stock.pdf','xiquim-vargas-estoque.pdf')}
-async function stockHistory(id){try{const x=await api('/api/stock/'+id+'/movements');modal('Histórico de estoque',`<div class="tablewrap"><table class="table"><thead><tr><th>Data</th><th>Tipo</th><th>Delta</th><th>Saldo</th><th>Operador</th><th>Observação</th></tr></thead><tbody>${x.items.map(m=>`<tr><td>${new Date(m.created_at).toLocaleString('pt-BR')}</td><td>${esc(m.tipo)}</td><td>${m.quantidade>0?'+':''}${m.quantidade}</td><td>${m.quantidade_posterior}</td><td>${esc(m.operador_nome||'-')}</td><td>${esc(m.observacao||'-')}</td></tr>`).join('')||'<tr><td colspan="6">Sem movimentações.</td></tr>'}</tbody></table></div><div style="margin-top:14px; display:flex; justify-content:flex-end;"><button class="btn" onclick="downloadAuthPost('/api/logistics/loading-list/orders-pdf',{pedido_ids:parseJsonArg('${jsonArg(ids)}')},'Pedidos_Carregamento.pdf')">🖨️ Imprimir todos os pedidos em PDF</button></div>`)}catch(e){toast(e.message)}}
+async function stockHistory(id){try{const x=await api('/api/stock/'+id+'/movements');modal('Histórico de estoque',`<div class="tablewrap"><table class="table"><thead><tr><th>Data</th><th>Tipo</th><th>Delta</th><th>Saldo</th><th>Operador</th><th>Observação</th></tr></thead><tbody>${x.items.map(m=>`<tr><td>${new Date(m.created_at).toLocaleString('pt-BR')}</td><td>${esc(m.tipo)}</td><td>${m.quantidade>0?'+':''}${m.quantidade}</td><td>${m.quantidade_posterior}</td><td>${esc(m.operador_nome||'-')}</td><td>${esc(m.observacao||'-')}</td></tr>`).join('')||'<tr><td colspan="6">Sem movimentações.</td></tr>'}</tbody></table></div>`)}catch(e){toast(e.message)}}
 function adjustStock(id){modal('Movimentar estoque',`<form id="stockForm"><div class="field"><label>Delta (+ entrada / - saída)</label><input name="delta" type="number" required></div><div class="field"><label>Tipo</label><select name="tipo"><option>ENTRADA</option><option>SAIDA</option><option>AJUSTE</option><option>INVENTARIO</option></select></div><div class="field"><label>Estoque mínimo</label><input name="estoque_minimo" type="number" min="0"></div><div class="field"><label>Observação</label><input name="observacao"></div><br><button class="btn primary">Aplicar movimentação</button></form>`);$('#stockForm').onsubmit=async e=>{e.preventDefault();try{const b=Object.fromEntries(new FormData(e.currentTarget));const delta=Number(b.delta);b.delta=delta;if(b.estoque_minimo!=='')b.estoque_minimo=Number(b.estoque_minimo);else delete b.estoque_minimo;closeModal();const row=document.querySelector(`button[onclick*="adjustStock('${id}')"]`)?.closest('tr');if(row){const availCell=row.querySelector('td:nth-child(4) strong');if(availCell){availCell.textContent=Number(availCell.textContent||0)+delta}row.classList.add('xv-flash-updated');setTimeout(()=>row.classList.remove('xv-flash-updated'),900)}toast('Estoque movimentado com sucesso!');Realtime.emit('stock_changed',{id,delta});await api('/api/stock/'+id,{method:'POST',body:JSON.stringify(b)});refreshCurrentViewSilently('stock_changed')}catch(x){toast(x.message,true);refreshCurrentViewSilently('stock_changed')}}}
 window.openCrmWhatsApp = function(phone, clientName, days, topProductsJson) {
   const cleanPhone = String(phone||'').replace(/\D/g, '');
@@ -1528,9 +1662,13 @@ async function sellers(v) {
   const x=await api('/api/users');
   const vendedores=x.items.filter(u=>u.role==='seller'&&u.ativo);
   window.renderSellersDashboard=function(){
+    window._currentSellerDashboardId=null;
+    window._currentSellerDashboardNome=null;
     v.innerHTML=`<div class="panel"><div class="panel-title"><div><h3>Vendedores</h3><p class="muted">Desempenho e painel do mês de cada vendedor.</p></div><button class="btn primary" onclick="show('sellers')">↻ Atualizar</button></div></div><div class="grid" style="margin-top:14px">${vendedores.map(u=>`<div class="card" style="cursor:pointer" onclick="renderSellerDashboard('${u.id}','${esc(u.nome)}')"><h3 style="margin-top:0;display:flex;align-items:center;gap:8px"><span class="client-icon" style="width:30px;height:30px;font-size:14px">👤</span>${esc(u.nome)}</h3><p class="muted" style="margin:0">${esc(u.email)}</p></div>`).join('')||'<div class="empty-state">Nenhum vendedor ativo encontrado.</div>'}</div>`;
   };
   window.renderSellerDashboard=async function(id,nome){
+    window._currentSellerDashboardId=id;
+    window._currentSellerDashboardNome=nome;
     v.innerHTML='<div class="panel">Carregando painel do mês...</div>';
     try{
       const d=await api('/api/seller/dashboard/monthly?vendedor_id='+encodeURIComponent(id));
@@ -1547,115 +1685,567 @@ function newUser(){modal('Novo usuário',`<form id="userForm" class="form"><div 
 function editUser(u){modal('Editar usuário',`<form id="userEditForm" class="form"><div class="field"><label>Nome</label><input name="nome" required value="${esc(u.nome)}"></div><div class="field"><label>Email</label><input name="email" type="email" required value="${esc(u.email)}"></div><div class="field"><label>Nova senha (opcional)</label><div style="display:flex;gap:6px"><input name="password" type="password" placeholder="Deixe vazio para manter" style="flex:1"><button type="button" class="btn" tabindex="-1" onclick="const x=this.previousElementSibling; x.type=x.type==='password'?'text':'password'">👁</button></div></div><div class="field"><label>Função / Perfil</label><select name="role">${[['seller','Vendedor'],['cashier','Caixa'],['driver','Motorista'],['web_client','Loja Online'],['admin','Administrador']].map(([v,l])=>`<option value="${v}" ${u.role===v?'selected':''}>${l}</option>`).join('')}</select></div><div class="field"><label>Ativo</label><select name="ativo"><option value="1" ${u.ativo?'selected':''}>Sim</option><option value="0" ${!u.ativo?'selected':''}>Não</option></select></div><div class="actions"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar</button></div></form>`);$('#userEditForm').onsubmit=async e=>{e.preventDefault();const b=Object.fromEntries(new FormData(e.currentTarget));b.ativo=b.ativo==='1';if(!b.password)delete b.password;try{await api('/api/users/'+u.id,{method:'PUT',body:JSON.stringify(b)});closeModal();toast('Usuário atualizado');show('users')}catch(x){toast(x.message)}}}
 async function deleteUser(id,nome){if(id===me?.id)return toast('Não é possível excluir o próprio usuário.');if(!confirm(`Excluir o usuário "${nome}"?\\n\\nO acesso será removido. Histórico operacional será preservado sem o vínculo com este usuário.`))return;try{await api('/api/users/'+id,{method:'DELETE'});toast('Usuário excluído');show('users')}catch(e){toast(e.message)}}
 async function logistics(v){
- const [r,o,drivers,u,sett]=await Promise.all([api('/api/logistics/routes'),api('/api/logistics/grouped-orders'),api('/api/users'),api('/api/logistics/route-config'),api('/api/settings')]);
- const sMap=Object.fromEntries((sett.items||[]).map(x=>[x.chave,x.valor]));
- const depotLat=sMap['deposito_latitude']||sMap['depot.latitude']||'';
- const depotLng=sMap['deposito_longitude']||sMap['depot.longitude']||'';
- const ds=drivers.items.filter(x=>x.role==='driver'),sellers=drivers.items.filter(x=>x.role==='seller');
- const groups=o.grupos||[];
- window._logisticsGroups=groups;
- window._logisticsSellers=sellers;
+  const [r,o,drivers,u,sett,ret]=await Promise.all([
+    api('/api/logistics/routes'),
+    api('/api/logistics/grouped-orders'),
+    api('/api/users'),
+    api('/api/logistics/route-config'),
+    api('/api/settings'),
+    api('/api/logistics/returned-orders').catch(()=>({items:[]}))
+  ]);
+  const sMap=Object.fromEntries((sett.items||[]).map(x=>[x.chave,x.valor]));
+  const depotLat=sMap['deposito_latitude']||sMap['depot.latitude']||'';
+  const depotLng=sMap['deposito_longitude']||sMap['depot.longitude']||'';
+  const ds=drivers.items.filter(x=>x.role==='driver'),sellers=drivers.items.filter(x=>x.role==='seller');
+  const groups=o.grupos||[];
+  window._logisticsGroups=groups;
+  window._logisticsSellers=sellers;
+  const returnedOrders = ret?.items || [];
+  window._returnedOrders = returnedOrders;
 
- window.renderLogisticsModality=function(grupoKey, vendedorFiltro=''){
-   let g;
-   if(grupoKey === 'TODOS') {
-     const subgruposMap = new Map();
-     for(const grp of window._logisticsGroups) {
-       for(const sg of grp.subgrupos) {
-         if(!subgruposMap.has(sg.bairro)) subgruposMap.set(sg.bairro, {bairro: sg.bairro, pedidos: []});
-         subgruposMap.get(sg.bairro).pedidos.push(...sg.pedidos);
-       }
-     }
-     g = {
-       grupo: 'TODOS',
-       titulo: 'Todos os pedidos',
-       subgrupos: Array.from(subgruposMap.values()).sort((a,b)=>a.bairro.localeCompare(b.bairro))
-     };
-   } else {
-     g=window._logisticsGroups.find(x=>x.grupo===grupoKey);
-   }
-   if(!g) return '<div class="empty-state">Nenhum pedido elegível neste grupo.</div>';
-   let html=`<div class="panel-title"><div style="display:flex;align-items:center;gap:12px"><button class="btn" onclick="document.getElementById('logisticsModalityDashboard').style.display='none';document.getElementById('logisticsMain').style.display='block'">← Voltar</button><div><h3 style="margin:0">${esc(g.titulo)}</h3><p class="muted" style="margin-top:4px">${g.grupo==='BALCAO'?'Somente pedidos do balcão marcados para entrega.':'Pedidos subdivididos por bairro.'}</p></div></div></div>`;
-   
-   if(grupoKey==='VENDEDOR' || grupoKey==='BALCAO'){
-     const ops = new Set();
-     for(const sg of g.subgrupos){
-       for(const p of sg.pedidos) if(p.operador_nome) ops.add(p.operador_nome);
-     }
-     const opsArr = Array.from(ops).sort();
-     html+=`<div class="orders-filters" style="margin-top:14px;margin-bottom:14px"><select id="logisticsSellerFilter" class="field-input search" style="width:auto" onchange="renderModalityDashboard('${grupoKey}', this.value)"><option value="">Todos os usuários</option>${opsArr.map(nome=>`<option value="${esc(nome)}" ${vendedorFiltro===nome?'selected':''}>${esc(nome)}</option>`).join('')}</select></div>`;
-   }
-   
-   let hasSubgrupos=false;
-   let sgHtml=g.subgrupos.map(sg=>{
-     let filteredPedidos=sg.pedidos;
-     if((grupoKey==='VENDEDOR' || grupoKey==='BALCAO') && vendedorFiltro){
-       filteredPedidos=sg.pedidos.filter(p=>p.operador_nome===vendedorFiltro);
-     }
-     if(!filteredPedidos.length)return '';
-     hasSubgrupos=true;
-     const totalP=filteredPedidos.length;
-     const totalV=filteredPedidos.reduce((acc, p)=>acc+Number(p.total||0),0);
-     return `<div class="card logistics-neighborhood"><div class="panel-title"><strong>${esc(sg.bairro)}</strong><span class="badge" style="margin-right:auto; margin-left:10px">${totalP} pedidos · ${brl(totalV)}</span><label style="cursor:pointer;font-size:12px;display:flex;align-items:center;gap:5px"><input type="checkbox" onchange="const cb=this.closest('.logistics-neighborhood').querySelectorAll('.routeOrder'); cb.forEach(c => c.checked = this.checked)"> Selecionar todos</label></div><div class="actions">${filteredPedidos.map(p=>`<label class="card logistics-order"><input type="checkbox" class="load-order routeOrder" value="${p.id}"> <span><strong>${esc(p.numero)}</strong> · ${esc(p.nome_fantasia||p.razao_social)} <span class="badge" style="font-size:10px;padding:2px 4px;margin-left:5px">${p.status}</span><br><small class="muted">Operador: ${esc(p.operador_nome||'N/A')}${grupoKey==='TODOS'?` · Origem: ${esc(p.origem)}`:''}</small></span></label>`).join('')}</div></div>`;
-   }).join('');
-   
-   if(!hasSubgrupos) sgHtml='<div class="empty-state">Nenhum pedido para este filtro.</div>';
-   html+=sgHtml;
-   return html;
- };
+  window.renderLogisticsModality=function(grupoKey, vendedorFiltro=''){
+    let g;
+    if(grupoKey === 'TODOS') {
+      const subgruposMap = new Map();
+      for(const grp of window._logisticsGroups) {
+        for(const sg of grp.subgrupos) {
+          if(!subgruposMap.has(sg.bairro)) subgruposMap.set(sg.bairro, {bairro: sg.bairro, pedidos: []});
+          subgruposMap.get(sg.bairro).pedidos.push(...sg.pedidos);
+        }
+      }
+      g = {
+        grupo: 'TODOS',
+        titulo: 'Todos os pedidos',
+        subgrupos: Array.from(subgruposMap.values()).sort((a,b)=>a.bairro.localeCompare(b.bairro))
+      };
+    } else {
+      g=window._logisticsGroups.find(x=>x.grupo===grupoKey);
+    }
+    if(!g) return '<div class="empty-state">Nenhum pedido elegível neste grupo.</div>';
+    let html=`<div class="panel-title"><div style="display:flex;align-items:center;gap:12px"><button class="btn" onclick="document.getElementById('logisticsModalityDashboard').style.display='none';document.getElementById('logisticsMain').style.display='block'">← Voltar</button><div><h3 style="margin:0">${esc(g.titulo)}</h3><p class="muted" style="margin-top:4px">${g.grupo==='BALCAO'?'Somente pedidos do balcão marcados para entrega.':'Pedidos subdivididos por bairro.'}</p></div></div></div>`;
+    
+    if(grupoKey==='VENDEDOR' || grupoKey==='BALCAO'){
+      const ops = new Set();
+      for(const sg of g.subgrupos){
+        for(const p of sg.pedidos) if(p.operador_nome) ops.add(p.operador_nome);
+      }
+      const opsArr = Array.from(ops).sort();
+      html+=`<div class="orders-filters" style="margin-top:14px;margin-bottom:14px"><select id="logisticsSellerFilter" class="field-input search" style="width:auto" onchange="renderModalityDashboard('${grupoKey}', this.value)"><option value="">Todos os usuários</option>${opsArr.map(nome=>`<option value="${esc(nome)}" ${vendedorFiltro===nome?'selected':''}>${esc(nome)}</option>`).join('')}</select></div>`;
+    }
+    
+    let hasSubgrupos=false;
+    let sgHtml=g.subgrupos.map(sg=>{
+      let filteredPedidos=sg.pedidos;
+      if((grupoKey==='VENDEDOR' || grupoKey==='BALCAO') && vendedorFiltro){
+        filteredPedidos=sg.pedidos.filter(p=>p.operador_nome===vendedorFiltro);
+      }
+      if(!filteredPedidos.length)return '';
+      hasSubgrupos=true;
+      const totalP=filteredPedidos.length;
+      const totalV=filteredPedidos.reduce((acc, p)=>acc+Number(p.total||0),0);
+      return `<div class="card logistics-neighborhood"><div class="panel-title"><strong style="color:#ef4444">${esc(sg.bairro)}</strong><span class="badge" style="margin-right:auto; margin-left:10px">${totalP} pedidos · ${brl(totalV)}</span><label style="cursor:pointer;font-size:12px;display:flex;align-items:center;gap:5px"><input type="checkbox" onchange="const cb=this.closest('.logistics-neighborhood').querySelectorAll('.routeOrder'); cb.forEach(c => c.checked = this.checked)"> Selecionar todos</label></div><div class="actions">${filteredPedidos.map(p=>`<label class="card logistics-order"><input type="checkbox" class="load-order routeOrder" value="${p.id}"> <span><strong>${esc(p.numero)}</strong> · ${esc(p.nome_fantasia||p.razao_social)}<br><strong style="color:#ef4444;font-size:12px">📍 ${esc(p.bairro||sg.bairro)}</strong> · <small class="muted">Operador: ${esc(p.operador_nome||'N/A')}${grupoKey==='TODOS'?` · Origem: ${esc(p.origem)}`:''}</small></span></label>`).join('')}</div></div>`;
+    }).join('');
+    
+    if(!hasSubgrupos) sgHtml='<div class="empty-state">Nenhum pedido para este filtro.</div>';
+    html+=sgHtml;
+    return html;
+  };
 
- window.renderModalityDashboard=function(grupoKey, vendedorFiltro=''){
-   document.getElementById('logisticsMain').style.display='none';
-   const modDb=document.getElementById('logisticsModalityDashboard');
-   modDb.style.display='block';
-   document.getElementById('logisticsModalityContent').innerHTML=renderLogisticsModality(grupoKey, vendedorFiltro);
- };
+  window.renderModalityDashboard=function(grupoKey, vendedorFiltro=''){
+    window._currentLogisticsGrupoKey=grupoKey;
+    window._currentLogisticsSellerFilter=vendedorFiltro;
+    document.getElementById('logisticsMain').style.display='none';
+    if(document.getElementById('returnedOrdersDashboard')) document.getElementById('returnedOrdersDashboard').style.display='none';
+    if(document.getElementById('logisticsDashboard')) document.getElementById('logisticsDashboard').style.display='none';
+    const modDb=document.getElementById('logisticsModalityDashboard');
+    modDb.style.display='block';
+    document.getElementById('logisticsModalityContent').innerHTML=renderLogisticsModality(grupoKey, vendedorFiltro);
+  };
 
- v.innerHTML=`<div class="panel" id="logisticsMain" style="margin-bottom:14px">
-  <div class="panel-title"><div><h3>Separação e Roteirização</h3></div><button class="btn" onclick="show('logistics')">↻ Atualizar</button></div>
-  <div class="grid">
-    <div class="card" style="cursor:pointer;border-top:4px solid #10b981" onclick="renderModalityDashboard('TODOS')"><h3>Todos os pedidos</h3><p class="muted">Todos os pedidos agrupados por bairro.</p></div>
-    <div class="card" style="cursor:pointer;border-top:4px solid #f59e0b" onclick="renderModalityDashboard('VENDEDOR')"><h3>Pedidos de vendedores</h3><p class="muted">Pedidos externos subdivididos por bairro.</p></div>
-    <div class="card" style="cursor:pointer;border-top:4px solid #3b82f6" onclick="renderModalityDashboard('WEB')"><h3>Pedidos web</h3><p class="muted">Pedidos da Loja Online subdivididos por bairro.</p></div>
-    <div class="card" style="cursor:pointer;border-top:4px solid #8b5cf6" onclick="renderModalityDashboard('BALCAO')"><h3>Pedidos balcão — entrega</h3><p class="muted">Pedidos locais para entrega.</p></div>
-  </div>
- </div>
- <div id="logisticsModalityDashboard" class="panel" style="display:none; padding-bottom:80px; position:relative; z-index:40;">
-   <div id="logisticsModalityContent"></div>
-   <div style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--bg); padding:10px; border-radius:30px; box-shadow:0 10px 25px rgba(0,0,0,0.2); z-index:999; display:flex; flex-wrap:wrap; justify-content:center; gap:10px; width:max-content; max-width:90vw; border:1px solid var(--border)">
-    <button class="btn primary" onclick="generateLoadingList()">Gerar lista</button>
-    <button class="btn" onclick="makeRouteModal()">Gerar rota</button>
+  window.openReturnedOrdersDashboard = function(){
+    document.getElementById('logisticsMain').style.display='none';
+    if(document.getElementById('logisticsModalityDashboard')) document.getElementById('logisticsModalityDashboard').style.display='none';
+    if(document.getElementById('logisticsDashboard')) document.getElementById('logisticsDashboard').style.display='none';
+    const retDb = document.getElementById('returnedOrdersDashboard');
+    if(retDb) {
+      retDb.style.display='block';
+      renderReturnedOrdersDashboardContent();
+    }
+  };
+
+  window.closeReturnedOrdersDashboard = function(){
+    const retDb = document.getElementById('returnedOrdersDashboard');
+    if(retDb) retDb.style.display='none';
+    document.getElementById('logisticsMain').style.display='block';
+  };
+
+  window.refreshReturnedOrders = async function(){
+    try{
+      const data = await api('/api/logistics/returned-orders');
+      window._returnedOrders = data.items || [];
+      const badgeCount = document.getElementById('returnedOrdersCountBadge');
+      if(badgeCount) {
+        badgeCount.textContent = window._returnedOrders.length;
+        badgeCount.style.background = window._returnedOrders.length ? '#ef4444' : 'var(--border)';
+      }
+      const gridBadge = document.getElementById('returnedOrdersGridBadge');
+      if(gridBadge) {
+        gridBadge.textContent = window._returnedOrders.length;
+        gridBadge.style.background = window._returnedOrders.length ? '#ef4444' : '#64748b';
+      }
+      if(document.getElementById('returnedOrdersDashboard')?.style.display === 'block'){
+        renderReturnedOrdersDashboardContent();
+      }
+    }catch(e){console.warn('Erro ao atualizar pedidos retornados:', e)}
+  };
+
+  window.renderReturnedOrdersDashboardContent = function(){
+    const list = window._returnedOrders || [];
+    const totalRet = list.length;
+    const valTotal = list.reduce((acc, x) => acc + Number(x.total || x.pedido_total || 0), 0);
+    const prontosNovaRota = list.filter(x => (x.status || x.pedido_status) === 'SEPARACAO').length;
+    const motivoCounts = {};
+    list.forEach(x => {
+      if(x.motivo) motivoCounts[x.motivo] = (motivoCounts[x.motivo] || 0) + 1;
+    });
+    let principalMotivo = '-';
+    let maxCount = 0;
+    for(const [mot, count] of Object.entries(motivoCounts)){
+      if(count > maxCount){
+        maxCount = count;
+        principalMotivo = mot;
+      }
+    }
+
+    const container = document.getElementById('returnedOrdersDashboardContainer');
+    if(!container) return;
+
+    container.innerHTML = `
+      <div class="panel-title" style="margin-bottom:18px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <button class="btn" onclick="closeReturnedOrdersDashboard()">← Voltar para separação</button>
+          <div>
+            <h3 style="margin:0">↩ Painel de Pedidos que Retornaram</h3>
+            <p class="muted" style="margin-top:4px">Ocorrências de entregas não concluídas, motivos de retorno e reincorporação automática à fila de separação.</p>
+          </div>
+        </div>
+        <button class="btn primary" onclick="refreshReturnedOrders()">↻ Atualizar</button>
+      </div>
+
+      <div class="grid" style="margin-bottom:18px">
+        <div class="card kpi" style="border-left:4px solid #ef4444">
+          <small class="muted">Total de Retornos</small>
+          <h2 style="color:#ef4444;margin:6px 0 0">${totalRet}</h2>
+          <small class="muted">${totalRet === 1 ? '1 retorno registrado' : totalRet + ' retornos registrados'}</small>
+        </div>
+        <div class="card kpi" style="border-left:4px solid #f59e0b">
+          <small class="muted">Valor dos Pedidos Retornados</small>
+          <h2 class="orange" style="margin:6px 0 0">${brl(valTotal)}</h2>
+          <small class="muted">Estoque e produtos preservados</small>
+        </div>
+        <div class="card kpi" style="border-left:4px solid #10b981">
+          <small class="muted">Prontos p/ Nova Rota</small>
+          <h2 style="color:#10b981;margin:6px 0 0">${prontosNovaRota}</h2>
+          <small class="muted">Em fila de separação p/ novo carregamento</small>
+        </div>
+        <div class="card kpi" style="border-left:4px solid #6366f1">
+          <small class="muted">Principal Motivo</small>
+          <h3 style="margin:6px 0 0;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(principalMotivo)}">${esc(principalMotivo)}</h3>
+          <small class="muted">${maxCount > 0 ? `${maxCount} ocorrência(s)` : 'Sem ocorrências'}</small>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:14px;padding:14px">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <input id="retFilterSearch" class="field-input search" style="flex:1;min-width:240px;margin:0" placeholder="🔍 Buscar por número, cliente, motorista ou motivo..." oninput="renderReturnedOrdersTable()">
+          <select id="retFilterReason" class="field-input search" style="width:auto;min-width:220px;margin:0" onchange="renderReturnedOrdersTable()">
+            <option value="">Todos os motivos</option>
+            <option value="Cliente não se encontra no local">Cliente não se encontra no local</option>
+            <option value="Cliente se recusou a receber o pedido">Cliente se recusou a receber o pedido</option>
+            <option value="Pedido incorreto / Divergência de itens">Pedido incorreto / Divergência de itens</option>
+            <option value="Problemas mecânicos com o veículo">Problemas mecânicos com o veículo</option>
+            <option value="Imprevisto com a equipe de entrega">Imprevisto com a equipe de entrega</option>
+            <option value="Outros motivos">Outros motivos</option>
+          </select>
+          <select id="retFilterStatus" class="field-input search" style="width:auto;min-width:180px;margin:0" onchange="renderReturnedOrdersTable()">
+            <option value="">Todas as situações</option>
+            <option value="SEPARACAO">Liberado p/ Nova Rota</option>
+            <option value="ROTA">Em Nova Rota</option>
+            <option value="CONCLUIDO">Concluído</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="tablewrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Pedido</th>
+              <th>Data / Horário</th>
+              <th>Cliente</th>
+              <th>Motorista</th>
+              <th>Motivo do Retorno</th>
+              <th>Observação do Motorista</th>
+              <th>Total</th>
+              <th>Situação / Destino</th>
+            </tr>
+          </thead>
+          <tbody id="returnedOrdersTableBody"></tbody>
+        </table>
+      </div>
+    `;
+
+    renderReturnedOrdersTable();
+  };
+
+  window.renderReturnedOrdersTable = function(){
+    const tbody = document.getElementById('returnedOrdersTableBody');
+    if(!tbody) return;
+    const q = (document.getElementById('retFilterSearch')?.value || '').trim().toLowerCase();
+    const reasonFilter = document.getElementById('retFilterReason')?.value || '';
+    const statusFilter = document.getElementById('retFilterStatus')?.value || '';
+
+    const list = (window._returnedOrders || []).filter(item => {
+      const st = item.status || item.pedido_status || '';
+      if(statusFilter && st !== statusFilter) return false;
+      if(reasonFilter && item.motivo !== reasonFilter) return false;
+      if(q){
+        const text = [
+          item.pedido_numero,
+          item.nome_fantasia,
+          item.razao_social,
+          item.cliente_fantasia,
+          item.cliente_nome,
+          item.motorista_nome,
+          item.motivo,
+          item.descricao,
+          item.bairro,
+          item.cliente_bairro
+        ].filter(Boolean).join(' ').toLowerCase();
+        if(!text.includes(q)) return false;
+      }
+      return true;
+    });
+
+    if(!list.length){
+      tbody.innerHTML = `<tr><td colspan="8" class="empty-state" style="padding:32px;text-align:center"><div style="font-size:32px;margin-bottom:8px">🚚✨</div><strong>Nenhum pedido retornado encontrado</strong><p class="muted" style="margin-top:4px;font-size:13px">Nenhuma ocorrência encontrada para os filtros selecionados.</p></td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = list.map(x => {
+      const curStatus = x.status || x.pedido_status;
+      const clientName = x.nome_fantasia || x.razao_social || x.cliente_fantasia || x.cliente_nome || 'Cliente não identificado';
+      const bairro = x.bairro || x.cliente_bairro || '';
+      const phone = x.telefone || x.cliente_telefone || '';
+      const orderTotal = Number(x.total != null ? x.total : x.pedido_total || 0);
+      const isLiberado = curStatus === 'SEPARACAO';
+      const dateStr = x.created_at ? new Date(x.created_at).toLocaleString('pt-BR') : '-';
+
+      return `<tr>
+        <td>
+          <strong>${esc(x.pedido_numero)}</strong>
+          <br>
+          ${isLiberado
+            ? `<span class="badge" style="background:#10b98120;color:#10b981;border:1px solid #10b98150;font-size:10px;padding:2px 5px">✓ Em Separação</span>`
+            : `<span class="badge" style="font-size:10px;padding:2px 5px">${esc(curStatus)}</span>`}
+        </td>
+        <td style="font-size:13px;white-space:nowrap">${dateStr}</td>
+        <td>
+          <strong>${esc(clientName)}</strong>
+          ${bairro ? `<br><strong style="color:#ef4444;font-size:12px">📍 ${esc(bairro)}</strong>` : ''}
+          ${phone ? `<br><small class="muted">📞 ${esc(phone)}</small>` : ''}
+        </td>
+        <td>
+          <span>👤 ${esc(x.motorista_nome || 'Não informado')}</span>
+          ${x.rota_data ? `<br><small class="muted">Rota: ${esc(x.rota_data)}</small>` : ''}
+        </td>
+        <td>
+          <span style="display:inline-block;padding:3px 8px;border-radius:6px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;font-weight:600;font-size:12px">
+            ✕ ${esc(x.motivo || 'Motivo não informado')}
+          </span>
+        </td>
+        <td style="max-width:240px">
+          <div style="font-size:12px;color:var(--text);word-break:break-word">
+            ${x.descricao ? esc(x.descricao) : '<span class="muted">Sem observação adicional</span>'}
+          </div>
+        </td>
+        <td><strong>${brl(orderTotal)}</strong></td>
+        <td>
+          ${isLiberado
+            ? `<span class="badge" style="background:#10b98120;color:#10b981;border:1px solid #10b98150;font-weight:600;font-size:11px">Liberado p/ Nova Rota</span><br><button class="btn" style="font-size:11px;padding:3px 7px;margin-top:4px" onclick="closeReturnedOrdersDashboard();renderModalityDashboard('TODOS')">Ver na Separação →</button>`
+            : `<span class="badge">${esc(curStatus)}</span>`}
+        </td>
+      </tr>`;
+    }).join('');
+  };
+
+  window._ordersInRoute = o.em_rota || [];
+
+  window.openLogisticsInRoute = function(){
+    document.getElementById('logisticsMain').style.display='none';
+    if(document.getElementById('logisticsModalityDashboard')) document.getElementById('logisticsModalityDashboard').style.display='none';
+    if(document.getElementById('returnedOrdersDashboard')) document.getElementById('returnedOrdersDashboard').style.display='none';
+    const db = document.getElementById('logisticsDashboard');
+    if(db) {
+      db.style.display='block';
+      renderLogisticsInRouteContent();
+    }
+  };
+
+  window.closeLogisticsInRoute = function(){
+    const db = document.getElementById('logisticsDashboard');
+    if(db) db.style.display='none';
+    document.getElementById('logisticsMain').style.display='block';
+  };
+
+  window.refreshLogisticsInRoute = async function(){
+    try{
+      const data = await api('/api/logistics/grouped-orders');
+      window._ordersInRoute = data.em_rota || [];
+      const inRouteBadge = document.getElementById('ordersInRouteCountBadge');
+      if(inRouteBadge) {
+        inRouteBadge.textContent = window._ordersInRoute.length;
+        inRouteBadge.style.background = window._ordersInRoute.length ? '#3b82f6' : 'var(--border)';
+      }
+      if(document.getElementById('logisticsDashboard')?.style.display === 'block'){
+        renderLogisticsInRouteContent(true);
+      }
+    }catch(e){
+      console.warn('Erro ao atualizar pedidos em rota:', e);
+    }
+  };
+
+  window.renderLogisticsInRouteContent = function(preserveFilters = false){
+    const list = window._ordersInRoute || [];
+    const totalOrders = list.length;
+    const totalValor = list.reduce((acc, x) => acc + Number(x.total || 0), 0);
+    const bairrosList = [...new Set(list.map(x => x.bairro || 'Sem bairro'))].sort((a,b) => a.localeCompare(b));
+    const sellersList = [...new Set(list.map(x => x.operador_nome).filter(Boolean))].sort((a,b) => a.localeCompare(b));
+    const driversList = [...new Set(list.map(x => x.motorista_nome).filter(Boolean))].sort((a,b) => a.localeCompare(b));
+
+    const prevSearch = preserveFilters ? (document.getElementById('routeFilterSearch')?.value || '') : '';
+    const prevBairro = preserveFilters ? (document.getElementById('routeFilterBairro')?.value || '') : '';
+    const prevSeller = preserveFilters ? (document.getElementById('routeFilterSeller')?.value || '') : '';
+    const prevDriver = preserveFilters ? (document.getElementById('routeFilterDriver')?.value || '') : '';
+    const prevOrigin = preserveFilters ? (document.getElementById('routeFilterOrigin')?.value || '') : '';
+
+    const container = document.getElementById('logisticsDashboardContainer');
+    if(!container) return;
+
+    container.innerHTML = `
+      <div class="panel-title" style="margin-bottom:18px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <button class="btn" onclick="closeLogisticsInRoute()">← Voltar para separação</button>
+          <div>
+            <h3 style="margin:0">🚚 Dashboard: Pedidos em Rota</h3>
+            <p class="muted" style="margin-top:4px">Monitoramento em tempo real e filtros de opções dos pedidos atualmente em entrega.</p>
+          </div>
+        </div>
+        <button class="btn primary" onclick="refreshLogisticsInRoute()">↻ Atualizar</button>
+      </div>
+
+      <div class="grid" style="margin-bottom:18px">
+        <div class="card kpi" style="border-left:4px solid #3b82f6">
+          <small class="muted">Pedidos em Rota</small>
+          <h2 style="color:#3b82f6;margin:6px 0 0">${totalOrders}</h2>
+          <small class="muted">${totalOrders === 1 ? '1 entrega em trânsito' : totalOrders + ' entregas em trânsito'}</small>
+        </div>
+        <div class="card kpi" style="border-left:4px solid #10b981">
+          <small class="muted">Valor em Entrega</small>
+          <h2 class="orange" style="margin:6px 0 0">${brl(totalValor)}</h2>
+          <small class="muted">Mercadoria em rota</small>
+        </div>
+        <div class="card kpi" style="border-left:4px solid #ef4444">
+          <small class="muted">Bairros Atendidos</small>
+          <h2 style="color:#ef4444;margin:6px 0 0">${bairrosList.length}</h2>
+          <small class="muted">Destinos de rota</small>
+        </div>
+        <div class="card kpi" style="border-left:4px solid #8b5cf6">
+          <small class="muted">Motoristas Ativos</small>
+          <h2 style="color:#8b5cf6;margin:6px 0 0">${driversList.length}</h2>
+          <small class="muted">Equipe de entrega</small>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:14px;padding:14px">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <input id="routeFilterSearch" class="field-input search" style="flex:1;min-width:220px;margin:0" placeholder="🔍 Buscar por pedido, cliente, endereço, motorista..." oninput="filterLogisticsInRouteTable()" value="${esc(prevSearch)}">
+          <select id="routeFilterBairro" class="field-input search" style="width:auto;min-width:180px;margin:0" onchange="filterLogisticsInRouteTable()">
+            <option value="">Todos os bairros</option>
+            ${bairrosList.map(b => `<option value="${esc(b)}" ${prevBairro === b ? 'selected' : ''}>${esc(b)}</option>`).join('')}
+          </select>
+          <select id="routeFilterSeller" class="field-input search" style="width:auto;min-width:180px;margin:0" onchange="filterLogisticsInRouteTable()">
+            <option value="">Todos os vendedores</option>
+            ${sellersList.map(s => `<option value="${esc(s)}" ${prevSeller === s ? 'selected' : ''}>${esc(s)}</option>`).join('')}
+          </select>
+          <select id="routeFilterDriver" class="field-input search" style="width:auto;min-width:180px;margin:0" onchange="filterLogisticsInRouteTable()">
+            <option value="">Todos os motoristas</option>
+            ${driversList.map(d => `<option value="${esc(d)}" ${prevDriver === d ? 'selected' : ''}>${esc(d)}</option>`).join('')}
+          </select>
+          <select id="routeFilterOrigin" class="field-input search" style="width:auto;min-width:160px;margin:0" onchange="filterLogisticsInRouteTable()">
+            <option value="">Todas as origens</option>
+            <option value="VENDEDOR" ${prevOrigin === 'VENDEDOR' ? 'selected' : ''}>Vendedor</option>
+            <option value="BALCAO" ${prevOrigin === 'BALCAO' ? 'selected' : ''}>Balcão (Entrega)</option>
+            <option value="WEB" ${prevOrigin === 'WEB' ? 'selected' : ''}>Loja Web</option>
+          </select>
+          <button class="btn" onclick="clearLogisticsInRouteFilters()">Limpar filtros</button>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+          <small class="muted" id="routeFilterCountBadge"></small>
+        </div>
+      </div>
+
+      <div class="tablewrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Pedido</th>
+              <th>Cliente</th>
+              <th>Endereço</th>
+              <th>Bairro</th>
+              <th>Vendedor / Operador</th>
+              <th>Motorista</th>
+              <th>Total</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="logisticsInRouteTableBody"></tbody>
+        </table>
+      </div>
+    `;
+
+    filterLogisticsInRouteTable();
+  };
+
+  window.clearLogisticsInRouteFilters = function(){
+    const s = document.getElementById('routeFilterSearch'); if(s) s.value = '';
+    const b = document.getElementById('routeFilterBairro'); if(b) b.value = '';
+    const sel = document.getElementById('routeFilterSeller'); if(sel) sel.value = '';
+    const d = document.getElementById('routeFilterDriver'); if(d) d.value = '';
+    const o = document.getElementById('routeFilterOrigin'); if(o) o.value = '';
+    filterLogisticsInRouteTable();
+  };
+
+  window.filterLogisticsInRouteTable = function(){
+    const tbody = document.getElementById('logisticsInRouteTableBody');
+    if(!tbody) return;
+    const q = (document.getElementById('routeFilterSearch')?.value || '').trim().toLowerCase();
+    const bairroFilter = document.getElementById('routeFilterBairro')?.value || '';
+    const sellerFilter = document.getElementById('routeFilterSeller')?.value || '';
+    const driverFilter = document.getElementById('routeFilterDriver')?.value || '';
+    const originFilter = document.getElementById('routeFilterOrigin')?.value || '';
+
+    const allOrders = window._ordersInRoute || [];
+    const filtered = allOrders.filter(x => {
+      if(bairroFilter && (x.bairro || 'Sem bairro') !== bairroFilter) return false;
+      if(sellerFilter && (x.operador_nome || '') !== sellerFilter) return false;
+      if(driverFilter && (x.motorista_nome || '') !== driverFilter) return false;
+      if(originFilter && (x.origem || '') !== originFilter) return false;
+      if(q){
+        const text = [
+          x.numero,
+          x.nome_fantasia,
+          x.razao_social,
+          x.endereco,
+          x.bairro,
+          x.operador_nome,
+          x.motorista_nome,
+          x.origem
+        ].filter(Boolean).join(' ').toLowerCase();
+        if(!text.includes(q)) return false;
+      }
+      return true;
+    });
+
+    const badge = document.getElementById('routeFilterCountBadge');
+    if(badge) {
+      badge.textContent = `Exibindo ${filtered.length} de ${allOrders.length} pedido(s) em rota`;
+    }
+
+    if(!filtered.length){
+      tbody.innerHTML = `<tr><td colspan="9" class="empty-state" style="padding:32px;text-align:center"><div style="font-size:32px;margin-bottom:8px">🚚✨</div><strong>Nenhum pedido em rota encontrado</strong><p class="muted" style="margin-top:4px;font-size:13px">Nenhum pedido corresponde aos filtros selecionados.</p></td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(x => `
+      <tr>
+        <td>
+          <strong>${esc(x.numero)}</strong>
+          <br><small class="muted">${esc(x.origem || '')}</small>
+        </td>
+        <td><strong>${esc(x.nome_fantasia || x.razao_social || 'Cliente')}</strong></td>
+        <td>${esc(x.endereco || '-')}</td>
+        <td><strong style="color:#ef4444;font-size:13px">📍 ${esc(x.bairro || 'Sem bairro')}</strong></td>
+        <td>${esc(x.operador_nome || '-')}</td>
+        <td><span>👤 ${esc(x.motorista_nome || 'Não atribuído')}</span></td>
+        <td><strong>${brl(x.total)}</strong></td>
+        <td><span class="badge" style="background:#3b82f620;color:#3b82f6;border:1px solid #3b82f650;font-weight:600">Em Rota</span></td>
+        <td class="actions">
+          <button class="btn" style="padding:4px 8px;font-size:12px" onclick="orderDetail('${x.id}')">Detalhes</button>
+          <button class="btn" style="padding:4px 8px;font-size:12px;margin-left:4px" onclick="downloadAuthFile('/api/orders/${x.id}/pdf','pedido-${x.numero}.pdf')">PDF</button>
+        </td>
+      </tr>
+    `).join('');
+  };
+
+  v.innerHTML=`<div class="panel" id="logisticsMain" style="margin-bottom:14px">
+   <div class="panel-title"><div><h3>Separação e Roteirização</h3></div><button class="btn" onclick="show('logistics')">↻ Atualizar</button></div>
+   <div class="grid">
+     <div class="card" style="cursor:pointer;border-top:4px solid #10b981" onclick="renderModalityDashboard('TODOS')"><h3>Todos os pedidos</h3><p class="muted">Todos os pedidos agrupados por bairro.</p></div>
+     <div class="card" style="cursor:pointer;border-top:4px solid #f59e0b" onclick="renderModalityDashboard('VENDEDOR')"><h3>Pedidos de vendedores</h3><p class="muted">Pedidos externos subdivididos por bairro.</p></div>
+     <div class="card" style="cursor:pointer;border-top:4px solid #3b82f6" onclick="renderModalityDashboard('WEB')"><h3>Pedidos web</h3><p class="muted">Pedidos da Loja Online subdivididos por bairro.</p></div>
+     <div class="card" style="cursor:pointer;border-top:4px solid #8b5cf6" onclick="renderModalityDashboard('BALCAO')"><h3>Pedidos balcão — entrega</h3><p class="muted">Pedidos locais para entrega.</p></div>
+     <div class="card" style="cursor:pointer;border-top:4px solid #ef4444;position:relative" onclick="openReturnedOrdersDashboard()">
+       <div style="display:flex;align-items:center;justify-content:space-between">
+         <h3 style="margin:0">↩ Pedidos que retornaram</h3>
+         <span id="returnedOrdersGridBadge" class="badge" style="background:${returnedOrders.length?'#ef4444':'#64748b'};color:#fff;font-size:12px;padding:3px 8px">${returnedOrders.length}</span>
+       </div>
+       <p class="muted" style="margin-top:6px">Histórico de paradas não concluídas e motivos de retorno.</p>
+     </div>
    </div>
- </div>
- <div style="text-align:center; margin:16px 0 24px;"><button class="btn" onclick="document.getElementById('logisticsDashboard').style.display='block';document.getElementById('logisticsMain').style.display='none';document.getElementById('logisticsModalityDashboard').style.display='none'">Ver pedidos em rota →</button></div>
- <div class="panel" style="margin-bottom:16px">
-  <div class="panel-title">
-    <div>
-      <h3>📍 Ponto de Partida e Roteirização Inteligente (OpenStreetMap)</h3>
-      <p class="muted">A fila de paradas das entregas é calculada automaticamente pela rota mais curta nas ruas reais via <strong>OpenStreetMap (OSRM)</strong>, 100% gratuito e sem necessidade de chave de API.</p>
+  </div>
+  <div id="logisticsModalityDashboard" class="panel" style="display:none; padding-bottom:80px; position:relative; z-index:40;">
+    <div id="logisticsModalityContent"></div>
+    <div style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--bg); padding:10px; border-radius:30px; box-shadow:0 10px 25px rgba(0,0,0,0.2); z-index:999; display:flex; flex-wrap:wrap; justify-content:center; gap:10px; width:max-content; max-width:90vw; border:1px solid var(--border)">
+     <button class="btn primary" onclick="generateLoadingList()">Gerar lista</button>
+     <button class="btn" onclick="makeRouteModal()">Gerar rota</button>
     </div>
   </div>
-  <div class="form">
-    <div class="field">
-      <label>Latitude do Depósito</label>
-      <input id="depotLatInput" placeholder="Ex: -23.550520" value="${esc(depotLat)}">
-    </div>
-    <div class="field">
-      <label>Longitude do Depósito</label>
-      <input id="depotLngInput" placeholder="Ex: -46.633308" value="${esc(depotLng)}">
-    </div>
-    <div class="actions">
-      <button class="btn primary" onclick="saveDepotCoordinates()">Salvar Coordenadas</button>
-    </div>
+  <div style="text-align:center; margin:16px 0 24px; display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
+    <button class="btn" onclick="openLogisticsInRoute()">🚚 Ver pedidos em rota → <span id="ordersInRouteCountBadge" class="badge" style="margin-left:6px;background:${(o.em_rota||[]).length?'#3b82f6':'var(--border)'};color:#fff">${(o.em_rota||[]).length}</span></button>
+    <button class="btn" onclick="openReturnedOrdersDashboard()">↩ Ver pedidos que retornaram → <span id="returnedOrdersCountBadge" class="badge" style="margin-left:6px;background:${returnedOrders.length?'#ef4444':'var(--border)'};color:#fff">${returnedOrders.length}</span></button>
   </div>
- </div>
- <div class="panel"><div class="panel-title"><div><h3>Rotas e bairros</h3><p class="muted">Configure o nome da rota e os bairros. O dia da semana é definido separadamente quando necessário.</p></div><button class="btn primary" onclick="newRouteConfig()">+ Criar rota</button></div><div class="tablewrap"><table class="table"><thead><tr><th>Rota</th><th>Bairros</th><th></th></tr></thead><tbody>${u.routes.map(x=>`<tr><td>${esc(x.nome)}</td><td>${x.bairros.map(b=>esc(b.bairro)).join(' · ')}</td><td><button class="btn" onclick="editRouteConfig(parseJsonArg('${jsonArg(x)}'))">Editar</button></td></tr>`).join('')||'<tr><td colspan="3">Nenhuma rota configurada.</td></tr>'}</tbody></table></div></div>
- <div class="panel"><div class="panel-title"><div><h3>Designação de rota do vendedor</h3></div></div><div class="form"><div class="field"><label>Vendedor</label><select id="assignSeller">${sellers.map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join('')}</select></div><div class="field"><label>Dia</label><select id="assignDay">${['Segunda','Terça','Quarta','Quinta','Sexta','Sábado'].map((x,i)=>`<option value="${i+1}">${x}</option>`).join('')}</select></div><div class="field"><label>Rota</label><select id="assignRoute">${u.routes.map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join('')}</select></div><div class="actions"><button class="btn primary" onclick="assignSellerRoute()">Designar rota</button></div></div><div class="tablewrap" style="margin-top:15px"><table class="table"><thead><tr><th>Vendedor</th><th>Rota</th><th>Dia</th><th>Ações</th></tr></thead><tbody>${(u.assignments||[]).map(a=>`<tr><td>${esc(a.vendedor_nome)}</td><td>${esc(a.rota_nome)}</td><td>${['Segunda','Terça','Quarta','Quinta','Sexta','Sábado'][a.dia_semana-1]}</td><td class="actions"><button class="btn danger" onclick="removeRouteAssignment('${a.vendedor_id}',${a.dia_semana})">Remover</button></td></tr>`).join('')||'<tr><td colspan="4">Nenhuma designação configurada.</td></tr>'}</tbody></table></div></div>
- <div id="logisticsDashboard" style="display:none; padding:20px; background:var(--bg); position:absolute; top:0; left:0; width:100%; min-height:100vh; z-index:50;">
-  <div class="panel-title"><div><h3>Dashboard: Pedidos em Rota</h3><p class="muted">Monitoramento de pedidos atualmente em entrega.</p></div><button class="btn" onclick="document.getElementById('logisticsDashboard').style.display='none';document.getElementById('logisticsMain').style.display='block'">← Voltar para separação</button></div>
-  <div class="tablewrap"><table class="table"><thead><tr><th>Pedido</th><th>Cliente</th><th>Bairro</th><th>Operador/Vendedor</th></tr></thead><tbody>${(o.em_rota||[]).map(x=>`<tr><td>${esc(x.numero)}</td><td>${esc(x.nome_fantasia||x.razao_social)}</td><td>${esc(x.bairro||'')}</td><td>${esc(x.operador_nome||'')}</td></tr>`).join('')||'<tr><td colspan="4">Nenhum pedido em rota.</td></tr>'}</tbody></table></div>
- </div>
- <div class="tablewrap"><table class="table"><thead><tr><th>Data</th><th>Motorista</th><th>Status</th><th>Pedidos</th><th>Distância / Tempo</th></tr></thead><tbody>${r.items.map(x=>{let ids=[];try{ids=JSON.parse(x.sequencia_json)}catch{}const meta=x.distance_km!=null?`${x.distance_km} km ${x.estimated_minutes?`· ~${x.estimated_minutes} min`:''}`:'-';return `<tr><td>${x.data}</td><td>${esc(x.motorista_nome||'-')}</td><td>${esc(x.status)}</td><td>${ids.length}</td><td><small class="muted">${meta}</small></td></tr>`}).join('')}</tbody></table></div>`;
+  <div class="panel" style="margin-bottom:16px">
+   <div class="panel-title">
+     <div>
+       <h3>📍 Ponto de Partida e Roteirização Inteligente (OpenStreetMap)</h3>
+       <p class="muted">A fila de paradas das entregas é calculada automaticamente pela rota mais curta nas ruas reais via <strong>OpenStreetMap (OSRM)</strong>, 100% gratuito e sem necessidade de chave de API.</p>
+     </div>
+   </div>
+   <div class="form">
+     <div class="field">
+       <label>Latitude do Depósito</label>
+       <input id="depotLatInput" placeholder="Ex: -23.550520" value="${esc(depotLat)}">
+     </div>
+     <div class="field">
+       <label>Longitude do Depósito</label>
+       <input id="depotLngInput" placeholder="Ex: -46.633308" value="${esc(depotLng)}">
+     </div>
+     <div class="actions">
+       <button class="btn primary" onclick="saveDepotCoordinates()">Salvar Coordenadas</button>
+     </div>
+   </div>
+  </div>
+  <div class="panel"><div class="panel-title"><div><h3>Rotas e bairros</h3><p class="muted">Configure o nome da rota e os bairros. O dia da semana é definido separadamente quando necessário.</p></div><button class="btn primary" onclick="newRouteConfig()">+ Criar rota</button></div><div class="tablewrap"><table class="table"><thead><tr><th>Rota</th><th>Bairros</th><th></th></tr></thead><tbody>${u.routes.map(x=>`<tr><td>${esc(x.nome)}</td><td>${x.bairros.map(b=>esc(b.bairro)).join(' · ')}</td><td><button class="btn" onclick="editRouteConfig(parseJsonArg('${jsonArg(x)}'))">Editar</button></td></tr>`).join('')||'<tr><td colspan="3">Nenhuma rota configurada.</td></tr>'}</tbody></table></div></div>
+  <div class="panel"><div class="panel-title"><div><h3>Designação de rota do vendedor</h3></div></div><div class="form"><div class="field"><label>Vendedor</label><select id="assignSeller">${sellers.map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join('')}</select></div><div class="field"><label>Dia</label><select id="assignDay">${['Segunda','Terça','Quarta','Quinta','Sexta','Sábado'].map((x,i)=>`<option value="${i+1}">${x}</option>`).join('')}</select></div><div class="field"><label>Rota</label><select id="assignRoute">${u.routes.map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join('')}</select></div><div class="actions"><button class="btn primary" onclick="assignSellerRoute()">Designar rota</button></div></div><div class="tablewrap" style="margin-top:15px"><table class="table"><thead><tr><th>Vendedor</th><th>Rota</th><th>Dia</th><th>Ações</th></tr></thead><tbody>${(u.assignments||[]).map(a=>`<tr><td>${esc(a.vendedor_nome)}</td><td>${esc(a.rota_nome)}</td><td>${['Segunda','Terça','Quarta','Quinta','Sexta','Sábado'][a.dia_semana-1]}</td><td class="actions"><button class="btn danger" onclick="removeRouteAssignment('${a.vendedor_id}',${a.dia_semana})">Remover</button></td></tr>`).join('')||'<tr><td colspan="4">Nenhuma designação configurada.</td></tr>'}</tbody></table></div></div>
+  <div id="logisticsDashboard" style="display:none; padding:20px; background:var(--bg); position:absolute; top:0; left:0; width:100%; min-height:100vh; z-index:50;">
+    <div id="logisticsDashboardContainer"></div>
+  </div>
+  <div id="returnedOrdersDashboard" style="display:none; padding:20px; background:var(--bg); position:absolute; top:0; left:0; width:100%; min-height:100vh; z-index:50;">
+    <div id="returnedOrdersDashboardContainer"></div>
+  </div>
+  <div class="tablewrap"><table class="table"><thead><tr><th>Data</th><th>Motorista</th><th>Status</th><th>Pedidos</th><th>Distância / Tempo</th></tr></thead><tbody>${r.items.map(x=>{let ids=[];try{ids=JSON.parse(x.sequencia_json)}catch{}const meta=x.distance_km!=null?`${x.distance_km} km ${x.estimated_minutes?`· ~${x.estimated_minutes} min`:''}`:'-';return `<tr><td>${x.data}</td><td>${esc(x.motorista_nome||'-')}</td><td>${esc(x.status)}</td><td>${ids.length}</td><td><small class="muted">${meta}</small></td></tr>`}).join('')}</tbody></table></div>`;
 }
 function newRouteConfig(){routeConfigModal()}
 
@@ -1681,9 +2271,11 @@ async function removeRouteAssignment(vid, dia){if(!confirm('Remover designação
 async function generateLoadingList(){
  const ids=[...document.querySelectorAll('.load-order:checked')].map(x=>x.value);
  if(!ids.length)return toast('Selecione os pedidos agrupados por bairro.');
+ const seller = window._currentLogisticsSellerFilter || '';
  try{
-  const x=await api('/api/logistics/loading-list',{method:'POST',body:JSON.stringify({pedido_ids:ids})});
-  modal('Lista de carregamento',`<div class="panel" style="display:flex; justify-content:space-between; align-items:center"><strong>Produtos para carregamento</strong><button class="btn primary" onclick="downloadAuthPost('/api/logistics/loading-list/pdf',{pedido_ids:parseJsonArg('${jsonArg(ids)}')},'Lista_Carregamento.pdf')">Gerar PDF</button></div> <div style="margin-top:10px;text-align:right"><button class="btn" onclick="downloadAuthPost('/api/logistics/loading-list/orders-pdf',{pedido_ids:parseJsonArg('${jsonArg(ids)}')},'Pedidos_Carregamento.pdf')">🖨️ Imprimir Pedidos em PDF</button></div><div class="tablewrap"><table class="table"><thead><tr><th style="width:140px">Quantidade</th><th>Descrição do Produto</th></tr></thead><tbody>${x.produtos.map(p=>`<tr><td style="width:140px;font-size:1.15em"><strong style="color:var(--xv-primary,#fd5e02)">${p.quantidade_total} un</strong></td><td style="font-size:1.05em;font-weight:750">${esc(p.produto_nome)}</td></tr>`).join('')}</tbody></table></div>`)
+  const x=await api('/api/logistics/loading-list',{method:'POST',body:JSON.stringify({pedido_ids:ids,vendedor:seller})});
+  const sellerName = seller || x.vendedor || '';
+  modal('Lista de carregamento',`<div class="panel" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px"><div><strong>Produtos para carregamento</strong>${sellerName?`<div style="font-size:13px; color:var(--xv-primary,#fd5e02); margin-top:2px;">👤 <strong>Vendedor:</strong> ${esc(sellerName)}</div>`:''}</div><button class="btn primary" onclick="downloadAuthPost('/api/logistics/loading-list/pdf',{pedido_ids:parseJsonArg('${jsonArg(ids)}'),vendedor:parseJsonArg('${jsonArg(sellerName)}')},'Lista_Carregamento.pdf')">Gerar PDF</button></div> <div style="margin-top:10px;text-align:right"><button class="btn" onclick="downloadAuthPost('/api/logistics/loading-list/orders-pdf',{pedido_ids:parseJsonArg('${jsonArg(ids)}')},'Pedidos_Carregamento.pdf')">🖨️ Imprimir Pedidos em PDF</button></div><div class="tablewrap"><table class="table"><thead><tr><th style="width:140px">Quantidade</th><th>Descrição do Produto</th></tr></thead><tbody>${x.produtos.map(p=>`<tr><td style="width:140px;font-size:1.15em"><strong style="color:var(--xv-primary,#fd5e02)">${p.quantidade_total} un</strong></td><td style="font-size:1.05em;font-weight:750">${esc(p.produto_nome)}</td></tr>`).join('')}</tbody></table></div>`);
  }catch(e){toast(e.message)}
 }
 async function makeRouteModal(){
@@ -1728,7 +2320,7 @@ async function makeRouteModal(){
       } catch(ex){ toast(ex.message,true) }
     };
   }
-async function reports(v,periodo='geral'){v.innerHTML='<div class="panel">Carregando relatórios...</div>';const qStr=periodo!=='geral'?`?periodo=${periodo}`:'';const r=await api('/api/reports'+qStr);const periodLabels={geral:'Histórico Geral',semanal:'Últimos 7 dias',mensal:'Últimos 30 dias'};const originLabels={VENDEDOR:'Vendedor Externo',BALCAO:'Frente de Loja / PDV',WEB:'Loja Online (Web)'};v.innerHTML=`<div class="panel" style="margin-bottom:14px"><div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px"><div><h3 style="margin:0">Relatórios Gerenciais</h3><p class="muted" style="margin:4px 0 0">Torre de Controle · Período: <strong>${periodLabels[periodo]||periodo}</strong></p></div><div class="actions" style="display:flex;gap:6px"><button class="btn ${periodo==='geral'?'primary':''}" style="font-size:12px;padding:6px 12px" onclick="reports(document.getElementById('view'),'geral')">Geral</button><button class="btn ${periodo==='semanal'?'primary':''}" style="font-size:12px;padding:6px 12px" onclick="reports(document.getElementById('view'),'semanal')">Semanal</button><button class="btn ${periodo==='mensal'?'primary':''}" style="font-size:12px;padding:6px 12px" onclick="reports(document.getElementById('view'),'mensal')">Mensal</button></div></div></div><div class="grid"><div class="card" style="border-top:4px solid #2ecc71"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><h3 style="margin:0;display:flex;align-items:center;gap:6px"><span>🛒</span> Vendas da Loja Online</h3><span class="badge" style="background:rgba(46,204,113,0.15);color:#2ecc71;border:1px solid rgba(46,204,113,0.3)">Canal Web</span></div><div style="padding:12px;background:rgba(46,204,113,0.08);border-radius:8px;margin-bottom:12px"><div style="font-size:24px;font-weight:800;color:#2ecc71">${brl(r.lojaOnline?.faturamento||0)}</div><small class="muted">${r.lojaOnline?.pedidos||0} pedido(s) concluído(s)</small></div>${(r.lojaOnline?.clientes||[]).length?`<small class="muted" style="font-weight:700;display:block;margin-bottom:6px">Clientes da Loja Online:</small>${r.lojaOnline.clientes.map(x=>`<p style="margin:4px 0">${esc(x.nome)} — <strong>${x.pedidos} pedidos</strong> — ${brl(x.faturamento)}</p>`).join('')}`:'<p class="muted">Nenhuma venda concluída na loja online no período.</p>'}</div><div class="card"><h3>Por Modalidade (Origem)</h3>${(r.origens||[]).map(x=>`<p><strong>${originLabels[x.origem]||x.origem}:</strong> ${x.pedidos} pedidos — <span class="orange">${brl(x.faturamento)}</span></p>`).join('')||'<p class="muted">Nenhum pedido no período.</p>'}</div><div class="card"><h3>Top produtos</h3>${r.topProdutos.slice(0,10).map(x=>`<p>${esc(x.nome)} — <strong>${x.quantidade} un.</strong> — ${brl(x.faturamento)}</p>`).join('')||'<p class="muted">Sem produtos vendidos no período.</p>'}</div><div class="card"><h3>Vendedores</h3>${r.vendedores.map(x=>`<p>${esc(x.nome)} — <strong>${x.pedidos} pedidos</strong> — ${brl(x.faturamento)}</p>`).join('')||'<p class="muted">Sem vendas de vendedores no período.</p>'}</div><div class="card"><h3>Frente de Loja / PDV</h3>${(r.balcao||[]).map(x=>`<p>${esc(x.nome)} — <strong>${x.pedidos} pedidos</strong> — ${brl(x.faturamento)}</p>`).join('')||'<p class="muted">Sem vendas no balcão no período.</p>'}</div></div>`}
+async function reports(v,periodo='geral'){window._currentReportsPeriodo=periodo;v.innerHTML='<div class="panel">Carregando relatórios...</div>';const qStr=periodo!=='geral'?`?periodo=${periodo}`:'';const r=await api('/api/reports'+qStr);const periodLabels={geral:'Histórico Geral',semanal:'Últimos 7 dias',mensal:'Últimos 30 dias'};const originLabels={VENDEDOR:'Vendedor Externo',BALCAO:'Frente de Loja / PDV',WEB:'Loja Online (Web)'};v.innerHTML=`<div class="panel" style="margin-bottom:14px"><div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px"><div><h3 style="margin:0">Relatórios Gerenciais</h3><p class="muted" style="margin:4px 0 0">Torre de Controle · Período: <strong>${periodLabels[periodo]||periodo}</strong></p></div><div class="actions" style="display:flex;gap:6px"><button class="btn ${periodo==='geral'?'primary':''}" style="font-size:12px;padding:6px 12px" onclick="reports(document.getElementById('view'),'geral')">Geral</button><button class="btn ${periodo==='semanal'?'primary':''}" style="font-size:12px;padding:6px 12px" onclick="reports(document.getElementById('view'),'semanal')">Semanal</button><button class="btn ${periodo==='mensal'?'primary':''}" style="font-size:12px;padding:6px 12px" onclick="reports(document.getElementById('view'),'mensal')">Mensal</button></div></div></div><div class="grid"><div class="card" style="border-top:4px solid #2ecc71"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><h3 style="margin:0;display:flex;align-items:center;gap:6px"><span>🛒</span> Vendas da Loja Online</h3><span class="badge" style="background:rgba(46,204,113,0.15);color:#2ecc71;border:1px solid rgba(46,204,113,0.3)">Canal Web</span></div><div style="padding:12px;background:rgba(46,204,113,0.08);border-radius:8px;margin-bottom:12px"><div style="font-size:24px;font-weight:800;color:#2ecc71">${brl(r.lojaOnline?.faturamento||0)}</div><small class="muted">${r.lojaOnline?.pedidos||0} pedido(s) concluído(s)</small></div>${(r.lojaOnline?.clientes||[]).length?`<small class="muted" style="font-weight:700;display:block;margin-bottom:6px">Clientes da Loja Online:</small>${r.lojaOnline.clientes.map(x=>`<p style="margin:4px 0">${esc(x.nome)} — <strong>${x.pedidos} pedidos</strong> — ${brl(x.faturamento)}</p>`).join('')}`:'<p class="muted">Nenhuma venda concluída na loja online no período.</p>'}</div><div class="card"><h3>Por Modalidade (Origem)</h3>${(r.origens||[]).map(x=>`<p><strong>${originLabels[x.origem]||x.origem}:</strong> ${x.pedidos} pedidos — <span class="orange">${brl(x.faturamento)}</span></p>`).join('')||'<p class="muted">Nenhum pedido no período.</p>'}</div><div class="card"><h3>Top produtos</h3>${r.topProdutos.slice(0,10).map(x=>`<p>${esc(x.nome)} — <strong>${x.quantidade} un.</strong> — ${brl(x.faturamento)}</p>`).join('')||'<p class="muted">Sem produtos vendidos no período.</p>'}</div><div class="card"><h3>Vendedores</h3>${r.vendedores.map(x=>`<p>${esc(x.nome)} — <strong>${x.pedidos} pedidos</strong> — ${brl(x.faturamento)}</p>`).join('')||'<p class="muted">Sem vendas de vendedores no período.</p>'}</div><div class="card"><h3>Frente de Loja / PDV</h3>${(r.balcao||[]).map(x=>`<p>${esc(x.nome)} — <strong>${x.pedidos} pedidos</strong> — ${brl(x.faturamento)}</p>`).join('')||'<p class="muted">Sem vendas no balcão no período.</p>'}</div></div>`}
 async function auditView(v){const a=await api('/api/audit');v.innerHTML=`<div class="tablewrap"><table class="table"><thead><tr><th>Quando</th><th>Usuário</th><th>Ação</th><th>Entidade</th><th>ID</th></tr></thead><tbody>${a.items.map(x=>`<tr><td>${new Date(x.created_at).toLocaleString('pt-BR')}</td><td>${esc(x.user_nome||'-')}</td><td>${esc(x.action)}</td><td>${esc(x.entity)}</td><td>${esc(x.entity_id||'-')}</td></tr>`).join('')}</tbody></table></div>`}
 async function ai(v){
   let status = { configured: false, model: 'openai/gpt-oss-120b' };
@@ -1888,7 +2480,7 @@ async function askAI(){
   }
 }
 function filterTable(input,id){const q=input.value.toLowerCase();document.querySelectorAll(`#${id} tbody tr`).forEach(r=>r.style.display=r.innerText.toLowerCase().includes(q)?'':'none')}
-function modal(title,body,width='700px'){const x=document.createElement('div');x.id='modal';x.style='position:fixed;inset:0;background:#000b;display:grid;place-items:center;z-index:100';x.innerHTML=`<div class="panel" style="width:min(${width},94vw);max-height:90vh;overflow:auto"><div class="top"><h2>${title}</h2><button class="btn" onclick="closeModal()">×</button></div>${body}</div>`;document.body.appendChild(x)}function closeModal(){window.inboundBarcodeActive=false;document.querySelector('#modal')?.remove()}
+function modal(title,body,width='700px'){const x=document.createElement('div');x.id='modal';x.style='position:fixed;inset:0;background:#000b;display:grid;place-items:center;z-index:100';x.innerHTML=`<div class="panel" style="width:min(${width},94vw);max-height:90vh;overflow:auto"><div class="top"><h2>${title}</h2><button class="btn" onclick="closeModal()">×</button></div>${body}</div>`;document.body.appendChild(x)}function closeModal(){window.inboundBarcodeActive=false;window.ptdCurrentTableId=null;document.querySelector('#modal')?.remove()}
 function roleLoginPage(role){document.body.innerHTML=`<div class="login"><div class="loginbox"><div class="brand">Xiquim <span>Vargas</span></div><h1>${role}</h1><p style="color:var(--muted)">Entre com suas credenciais.</p><form onsubmit="login(event)"><div class="field"><label>Email</label><input name="email" type="email" required></div><br><div class="field"><label>Senha</label><div style="display:flex;gap:6px"><input name="password" type="password" required style="flex:1"><button type="button" class="btn" tabindex="-1" onclick="const x=this.previousElementSibling; x.type=x.type==='password'?'text':'password'">👁</button></div></div><br><button class="btn primary" style="width:100%">Entrar</button></form><p style="color:var(--muted);font-size:16px">Servidor local: ${location.origin}</p></div></div><div id="toast" class="toast"></div>`}
 boot();
 

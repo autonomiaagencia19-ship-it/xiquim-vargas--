@@ -21,9 +21,15 @@ jobs:
         run: gradle --no-daemon --max-workers=1 -p mobile/seller-native assembleDebug
       - name: Build driver
         run: gradle --no-daemon --max-workers=1 -p mobile/driver-native assembleDebug
+      - name: Build pdv
+        run: gradle --no-daemon --max-workers=1 -p mobile/pdv-native assembleDebug
+      - name: Build tower
+        run: gradle --no-daemon --max-workers=1 -p mobile/tower-native assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: xiquim-vargas-1.8.1-debug-apks
+          name: xiquim-vargas-1.8.2-debug-apks
           path: |
             mobile/seller-native/app/build/outputs/apk/debug/app-debug.apk
             mobile/driver-native/app/build/outputs/apk/debug/app-debug.apk
+            mobile/pdv-native/app/build/outputs/apk/debug/app-debug.apk
+            mobile/tower-native/app/build/outputs/apk/debug/app-debug.apk

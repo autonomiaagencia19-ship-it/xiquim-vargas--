@@ -1,0 +1,78 @@
+================================================================================
+PACOTE DE ENTREGA — AUTONOMIA SYSTEMS ERP (XIQUIM VARGAS)
+Versão: 2.2.1  ·  Data de Homologação: Outubro de 2026
+Classificação: Documento Oficial de Engenharia e Operações
+================================================================================
+
+Este pacote reúne a documentação técnica, operacional, de governança e arquitetural
+do ERP AutonomIA para a operação comercial e logística do Xiquim Vargas.
+
+Todos os documentos foram atualizados em nível executivo e de engenharia detalhada,
+espelhando com exatidão o estado vigente do sistema, incluindo:
+
+• Sincronização em Tempo Real (SSE + BroadcastChannel):
+  Reatividade completa de interfaces sem recarregamento de página em todos os módulos
+  (Torre de Controle, PDV/Caixa, Vendedor Externo, Loja Online e Motorista).
+
+• Operação Logística e App do Motorista:
+  Comunicação direta com clientes de cada parada via WhatsApp pré-formatado e ligação
+  telefônica rápida, protocolo de insucesso de entrega com seleção de motivo padronizado,
+  observação de contingência, reversão automática de pedidos para a fila de separação
+  (desfazendo contadores e liberando itens para novo carregamento) e Painel de Pedidos
+  Retornados na Torre de Controle.
+
+• Gestão Comercial e Tabelas de Preço:
+  Governança de preços diferenciados por canal e tabelas exclusivas por cliente corporativo.
+
+• Gestão de Compras e Inbound:
+  Cadastro e qualificação de fornecedores, ordens de compra e conferência física em doca
+  com entrada automatizada no estoque.
+
+• Inteligência Comercial (CRM RFM):
+  Matriz de segmentação automática de clientes por Recência, Frequência e Valor Monetário.
+
+• Garantia de Qualidade e Homologação:
+  17 suítes completas de testes de integração e 73 testes funcionais com 100% de aprovação.
+
+--------------------------------------------------------------------------------
+ÍNDICE DE DOCUMENTOS DO PACOTE (PASTA xiquimvargasmanuais)
+--------------------------------------------------------------------------------
+
+00_LEIA-ME.txt
+   Índice, sumário executivo do pacote e notas de versão da release 2.2.1.
+
+01_Manual_de_Operacoes_AutonomIA_ERP_2.2.1.docx
+   Guia operacional de uso diário cobrindo Torre de Controle, PDV, Vendedor Móvel,
+   Loja Online, Logística, Contato de Motoristas e Painel de Pedidos Retornados.
+
+02_Runbook_Operacional_AutonomIA_ERP_2.2.1.docx
+   Rotinas de abertura/fechamento de turno, separação, expedição de rotas, protocolo
+   de devoluções físicas, conferência de doca (inbound) e plano de contingência.
+
+03_Engineering_Handoff_AutonomIA_ERP_2.2.1.docx
+   Arquitetura de software, engine de SSE, modelo transacional SQLite WAL, apps Android
+   nativos com outbox offline-first e invariantes de segurança e concorrência.
+
+04_Deploy_Render_Backup_AutonomIA_ERP_2.2.1.docx
+   Blueprint de publicação no Render PaaS, topologia de disco persistente (STORAGE_DIR),
+   variáveis de ambiente, streaming SSE e política de backup com checkpoint de WAL.
+
+05_Catalogo_API_AutonomIA_ERP_2.2.1.docx
+   Referência completa de endpoints REST, contratos de requisição/resposta, eventos SSE,
+   rotas de insucesso logístico (/api/logistics/orders/:oid/fail) e doca de compras.
+
+06_Matriz_Acessos_Responsabilidades_AutonomIA_ERP_2.2.1.docx
+   Perfis de usuário (Admin, Vendedor, Caixa, Motorista, Expedição, Cliente Web),
+   matriz granular de permissões e matriz RACI das operações corporativas.
+
+07_Relatorio_Validacao_Fluxos_AutonomIA_ERP_2.2.1.docx
+   Evidências de qualidade, homologação das 17 suítes de testes de integração (73 testes
+   aprovados), validação E2E dos fluxos omni-channel e certificação da release.
+
+08_Plano_Transicao_e_Aceite_AutonomIA_ERP_2.2.1.docx
+   Roteiro de migração, operação assistida (go-live), governança de suporte pós-entrega,
+   critérios formais de homologação e termo de aceite assinado pelas partes.
+
+--------------------------------------------------------------------------------
+AutonomIA Systems · Sistemas Inteligentes e Arquitetura Empresarial
+================================================================================

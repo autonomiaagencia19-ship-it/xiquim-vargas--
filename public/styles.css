@@ -988,5 +988,16 @@ button:active, .btn:active {
   }
 }
 
+/* ================================================================
+   LOGÍSTICA - DESTAQUE DOS BAIRROS DOS PEDIDOS EM COR VERMELHA
+   ================================================================ */
+.logistics-bairro-red,
+.logistics-neighborhood .panel-title strong,
+.logistics-order strong.bairro-destaque,
+.bairro-destaque {
+  color: #ef4444 !important;
+  font-weight: 700 !important;
+}
+
 
 
