@@ -868,6 +868,14 @@ const server=http.createServer((req,res)=>{const rid=requestId(req);res.setHeade
  const next=()=>{const now=new Date(),at=new Date(now);at.setUTCHours(3,0,0,0);if(at<=now)at.setUTCDate(at.getUTCDate()+1);const timer=setTimeout(()=>{launch();next()},at-now);timer.unref()};next();
 }
 export { server };
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n[AVISO] A porta ${PORT} já está em uso por outro processo.`);
+    console.error(`Finalize o processo anterior antes de iniciar novamente.\n`);
+    process.exit(1);
+  }
+  throw err;
+});
 if(process.env.NODE_ENV !== 'test') {
   server.listen(PORT,()=>{console.log(`Xiquim Vargas ERP em http://localhost:${PORT}`);if(process.env.DISABLE_AUTOMATIC_BACKUP!=='1')scheduleDiskBackup()});
 }

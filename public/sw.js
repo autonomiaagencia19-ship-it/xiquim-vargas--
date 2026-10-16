@@ -1,4 +1,4 @@
-const CACHE = 'xv-shell-v1-8-2-routes-modality';
+const CACHE = 'xv-shell-v1-8-3-logo-hd';
 const SHELL = [
   '/',
   '/admin.html',
@@ -11,6 +11,7 @@ const SHELL = [
   '/styles.css?v=1.8.1',
   '/app.js',
   '/role.js',
+  '/assets/institucional/01_Logo_Xiquim_Vargas_HD.png',
   '/assets/brand/logo-online.jpg',
   '/assets/brand/logo-pdv.jpg',
   '/assets/brand/logo-admin.jpg'
