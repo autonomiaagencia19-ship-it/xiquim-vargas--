@@ -22,7 +22,7 @@ class MainActivity : Activity() {
 
     private val targetPath = "/admin.html"
     private val appTitle = "Xiquim Vargas\nTorre de Controle"
-    private val appSubtitle = "Painel executivo, catálogo, auditoria, estoque inteligente e governança com IA."
+    private val appSubtitle = "Painel executivo, catálogo, estoque inteligente e governança (100% Offline e Online)."
 
     private var currentWebView: WebView? = null
     private var fileUploadCallback: ValueCallback<Array<Uri>>? = null
@@ -58,7 +58,7 @@ class MainActivity : Activity() {
                 runOnUiThread {
                     currentWebView?.settings?.cacheMode = WebSettings.LOAD_DEFAULT
                     currentWebView?.evaluateJavascript(
-                        "window.dispatchEvent(new Event('online')); if(typeof Realtime!=='undefined') Realtime.connectStream();",
+                        "window.dispatchEvent(new Event('online')); if(typeof Realtime!=='undefined') Realtime.connectStream(); if(typeof syncAdminOutbox==='function') syncAdminOutbox();",
                         null
                     )
                 }
@@ -186,7 +186,7 @@ class MainActivity : Activity() {
         box.addView(title)
 
         val status = TextView(this).apply {
-            text = "Aguardando conexão com o servidor\n\nConecte-se à internet para sincronizar e navegar na Torre de Controle."
+            text = "Aguardando conexão com o servidor\n\nConecte-se uma vez para carregar os recursos. Após a sincronização inicial, a Torre opera offline com armazenamento local e outbox automático."
             textSize = 15f
             setTextColor(Color.LTGRAY)
             setPadding(0, 0, 0, 36)

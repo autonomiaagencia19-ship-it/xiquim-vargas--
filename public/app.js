@@ -1,8 +1,140 @@
-function offlineOutboxKey(){return 'xv_outbox_'+(me?.id||'anonymous')}const API='';let token=localStorage.getItem('xv_token');let me=null;const $=s=>document.querySelector(s);function jsonArg(value){const bytes=new TextEncoder().encode(JSON.stringify(value));let binary='';for(const byte of bytes)binary+=String.fromCharCode(byte);return btoa(binary)}
+function adminOfflineDb(){
+  return new Promise((resolve,reject)=>{
+    const r=indexedDB.open('xv-offline-admin-v1',1);
+    r.onupgradeneeded=()=>{
+      const d=r.result;
+      if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv');
+      if(!d.objectStoreNames.contains('outbox'))d.createObjectStore('outbox',{keyPath:'id'});
+    };
+    r.onsuccess=()=>resolve(r.result);
+    r.onerror=()=>reject(r.error);
+  });
+}
+async function adminOfflinePut(store,key,value){
+  try{
+    const d=await adminOfflineDb();
+    return new Promise((res,rej)=>{
+      const t=d.transaction(store,'readwrite');
+      t.objectStore(store).put(value,key);
+      t.oncomplete=res;
+      t.onerror=()=>rej(t.error);
+    });
+  }catch(e){console.warn('adminOfflinePut err',e)}
+}
+async function adminOfflineGet(store,key){
+  try{
+    const d=await adminOfflineDb();
+    return new Promise((res,rej)=>{
+      const t=d.transaction(store);
+      const r=t.objectStore(store).get(key);
+      r.onsuccess=()=>res(r.result);
+      r.onerror=()=>rej(r.error);
+    });
+  }catch(e){return null}
+}
+async function queueAdminOffline(path,opt){
+  const id=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
+  const item={id,path,method:opt.method||'POST',body:opt.body||'{}',headers:opt.headers||{},created_at:new Date().toISOString()};
+  try{
+    const d=await adminOfflineDb();
+    await new Promise((res,rej)=>{
+      const t=d.transaction('outbox','readwrite');
+      t.objectStore('outbox').put(item);
+      t.oncomplete=res;
+      t.onerror=()=>rej(t.error);
+    });
+  }catch(e){}
+  return item;
+}
+async function syncAdminOutbox(){
+  if(!navigator.onLine)return;
+  try{
+    const d=await adminOfflineDb();
+    const rows=await new Promise((res,rej)=>{
+      const t=d.transaction('outbox');
+      const q=t.objectStore('outbox').getAll();
+      q.onsuccess=()=>res(q.result);
+      q.onerror=()=>rej(q.error);
+    });
+    if(!rows||!rows.length)return;
+    let synced=0;
+    for(const item of rows.sort((a,b)=>a.created_at.localeCompare(b.created_at))){
+      try{
+        await api(item.path,{method:item.method,body:item.body,headers:{...(item.headers||{}),'Idempotency-Key':item.headers?.['Idempotency-Key']||('OFF-ADMIN-'+item.id)}});
+        await new Promise((res,rej)=>{
+          const t=d.transaction('outbox','readwrite');
+          t.objectStore('outbox').delete(item.id);
+          t.oncomplete=res;
+          t.onerror=()=>rej(t.error);
+        });
+        synced++;
+      }catch(err){
+        if(!navigator.onLine)break;
+      }
+    }
+    if(synced>0){
+      toast(`✓ ${synced} operação(ões) offline sincronizada(s) na Torre!`);
+      refreshCurrentViewSilently();
+    }
+  }catch(e){}
+}
+window.syncAdminOutbox=syncAdminOutbox;
+
+const API='';let token=localStorage.getItem('xv_token');let me=null;const $=s=>document.querySelector(s);
+function jsonArg(value){const bytes=new TextEncoder().encode(JSON.stringify(value));let binary='';for(const byte of bytes)binary+=String.fromCharCode(byte);return btoa(binary)}
 function parseJsonArg(encoded){return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(encoded),c=>c.charCodeAt(0))))}
-const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));const brl=value=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number.isFinite(Number(value))?Number(value):0);const ROLE_LABELS={admin:'Administrador',seller:'Vendedor',cashier:'Caixa',driver:'Motorista',web_client:'Loja Online'};
-async function api(path,opt={}){const method=opt.method||'GET';const reqId=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);console.log(`[${reqId}] ${method} ${path}`);try{const r=await fetch(API+path,{...opt,headers:{'x-request-id':reqId,'content-type':'application/json',...(opt.headers||{}),...(token?{authorization:'Bearer '+token}:{})}});if(!r.ok){let e;try{e=await r.json()}catch{};if(r.status===401&&token&&!path.includes('/api/auth/login')){localStorage.removeItem('xv_token');token=null;location.href='/admin.html'}throw new Error(e?.error||`HTTP ${r.status}`)}const data=r.headers.get('content-type')?.includes('application/json')?await r.json():await r.blob();if(method==='GET'&&typeof data==='object')localStorage.setItem('xv_cache_'+(me?.id||'anonymous')+'_'+path,JSON.stringify(data));return data}catch(err){if(err.message==='Failed to fetch'||err.message.includes('NetworkError')||err.message.includes('fetch')||!navigator.onLine){if(method==='GET'){const c=localStorage.getItem('xv_cache_'+(me?.id||'anonymous')+'_'+path);if(c){setTimeout(()=>toast("Conexão instável. Exibindo dados locais do aparelho."),500);return JSON.parse(c)}throw new Error('Sem internet e sem dados no cache.')}else{const out=JSON.parse(localStorage.getItem(offlineOutboxKey())||'[]');out.push({path,opt,reqId});localStorage.setItem(offlineOutboxKey(),JSON.stringify(out));setTimeout(()=>toast("Sem sinal! Ação salva e será enviada quando a rede voltar."),500);return{success:true,item:{},offline:true}}}throw err}}
-window.addEventListener('online', async()=>{const out=JSON.parse(localStorage.getItem(offlineOutboxKey())||'[]');if(!out.length)return;localStorage.removeItem(offlineOutboxKey());toast("Internet voltou! Sincronizando operações...");for(const r of out){try{await api(r.path,r.opt)}catch(e){console.error("Sync erro",e)}}toast("Sincronização offline concluída!")});
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const brl=value=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number.isFinite(Number(value))?Number(value):0);
+const ROLE_LABELS={admin:'Administrador',seller:'Vendedor',cashier:'Caixa',driver:'Motorista',web_client:'Loja Online'};
+
+async function api(path,opt={}){
+  const method=opt.method||'GET';
+  const reqId=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
+  try{
+    const r=await fetch(API+path,{...opt,headers:{'x-request-id':reqId,'content-type':'application/json',...(opt.headers||{}),...(token?{authorization:'Bearer '+token}:{})}});
+    if(!r.ok){
+      let e;try{e=await r.json()}catch{};
+      if(r.status===401&&token&&!path.includes('/api/auth/login')){
+        localStorage.removeItem('xv_token');localStorage.removeItem('xv_user');token=null;location.href='/admin.html';
+      }
+      throw new Error(e?.error||`HTTP ${r.status}`);
+    }
+    const data=r.headers.get('content-type')?.includes('application/json')?await r.json():await r.blob();
+    if(method==='GET'&&typeof data==='object'&&!(data instanceof Blob)){
+      adminOfflinePut('kv',path,data);
+      try{localStorage.setItem('xv_cache_'+(me?.id||'admin')+'_'+path,JSON.stringify(data))}catch{}
+    }
+    return data;
+  }catch(err){
+    if(err.message==='Failed to fetch'||err.message?.includes('NetworkError')||err.message?.includes('fetch')||!navigator.onLine){
+      if(method==='GET'){
+        const cached=await adminOfflineGet('kv',path);
+        if(cached){
+          return cached;
+        }
+        const fallback=localStorage.getItem('xv_cache_'+(me?.id||'admin')+'_'+path);
+        if(fallback) return JSON.parse(fallback);
+        throw new Error('Modo offline: estes dados ainda não foram salvos neste aparelho.');
+      }else{
+        await queueAdminOffline(path,opt);
+        toast("Modo offline: alteração gravada localmente. Será enviada ao reconectar.");
+        return {success:true,item:{},offline:true};
+      }
+    }
+    throw err;
+  }
+}
+
+window.addEventListener('online',async()=>{
+  const el=document.getElementById('offlineIndicator');if(el)el.style.display='none';
+  toast("Conexão restabelecida! Atualizando Torre de Controle...");
+  await syncAdminOutbox();
+  refreshCurrentViewSilently();
+});
+window.addEventListener('offline',()=>{
+  const el=document.getElementById('offlineIndicator');if(el)el.style.display='flex';
+  toast("Torre em Modo Offline. Operando com dados salvos no aparelho.");
+});
 let _toastTimer=null;
 function toast(m,isError=false){let t=$('#toast');if(!t){t=document.createElement('div');t.id='toast';t.className='toast';document.body.appendChild(t)}clearTimeout(_toastTimer);t.textContent=m;t.style.display='block';t.style.opacity='1';t.style.backgroundColor=isError?'#991b1b':'var(--xv-primary,#0f172a)';t.style.color='#fff';_toastTimer=setTimeout(()=>{t.style.opacity='0';setTimeout(()=>{t.style.display='none'},300)},2500)}
 
@@ -278,18 +410,43 @@ async function refreshCurrentViewSilently(eventType,payload){
     }catch(err){console.warn('Silent refresh error:',err)}
   },120);
 }
-async function login(e){e.preventDefault();try{const b=Object.fromEntries(new FormData(e.currentTarget));const x=await api('/api/auth/login',{method:'POST',body:JSON.stringify(b)});token=x.token;localStorage.setItem('xv_token',token);location.reload()}catch(err){toast(err.message)}}
+async function login(e){e.preventDefault();try{const b=Object.fromEntries(new FormData(e.currentTarget));const x=await api('/api/auth/login',{method:'POST',body:JSON.stringify(b)});token=x.token;me=x.user;localStorage.setItem('xv_token',token);localStorage.setItem('xv_user',JSON.stringify(x.user||{}));location.reload()}catch(err){toast(err.message)}}
 async function downloadAuthFile(url,filename){try{const reqId=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);console.log(`[${reqId}] GET ${url}`);const r=await fetch(url,{headers:{'x-request-id':reqId,...(token?{authorization:'Bearer '+token}:{})}});if(!r.ok)throw new Error('Não foi possível abrir o documento');const b=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=filename||'documento.pdf';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}catch(e){alert(e.message)}}
 async function downloadAuthPost(url,body,filename){try{const reqId=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);console.log(`[${reqId}] POST ${url}`);const r=await fetch(url,{method:'POST',headers:{'x-request-id':reqId,'content-type':'application/json',...(token?{authorization:'Bearer '+token}:{})},body:JSON.stringify(body)});if(!r.ok)throw new Error('Não foi possível gerar o documento');const b=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=filename||'documento.pdf';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}catch(e){alert(e.message)}}
-function logout(){localStorage.removeItem('xv_token');location.href='/admin.html'}
+function logout(){localStorage.removeItem('xv_token');localStorage.removeItem('xv_user');location.href='/admin.html'}
 async function boot(){
   if(!token){try{const st=await fetch('/api/setup/status',{cache:'no-store'}).then(r=>r.json());if(st.required)return setupPage(st)}catch{}return roleLoginPage('Administrador Geral')}
-  try{const m=await api('/api/me');me=m.user;if(me.role!=='admin'){const map={seller:'/vendedor.html',cashier:'/pdv.html',driver:'/motorista.html',web_client:'/loja.html'};localStorage.removeItem('xv_token');alert('A Torre de Controle é de uso exclusivo para o Administrador Geral. Você será redirecionado para o login.');return location.href='/admin.html'}render()}catch{logout()}
+  const cachedMe=localStorage.getItem('xv_user');
+  if(cachedMe){try{me=JSON.parse(cachedMe)}catch{}}
+  try{
+    const m=await api('/api/me');
+    me=m.user;
+    localStorage.setItem('xv_user',JSON.stringify(me));
+    if(me.role!=='admin'){
+      localStorage.removeItem('xv_token');
+      localStorage.removeItem('xv_user');
+      alert('A Torre de Controle é de uso exclusivo para o Administrador Geral. Você será redirecionado para o login.');
+      return location.href='/admin.html';
+    }
+    render();
+  }catch(err){
+    if(!navigator.onLine&&me?.role==='admin'){
+      console.warn('Operando offline com sessão em cache');
+      return render();
+    }
+    if(err.message?.includes('401')||err.message?.includes('Token')||err.message?.includes('jwt')||err.message?.includes('unauthorized')){
+      return logout();
+    }
+    if(me?.role==='admin'){
+      return render();
+    }
+    logout();
+  }
 }
 function setupPage(status){const q=new URLSearchParams(location.search);const setupToken=q.get('setup')||'';document.body.innerHTML=`<div class="login"><div class="loginbox"><div class="brand">Xiquim <span>Vargas</span></div><h1>Primeiro acesso</h1><p style="color:var(--muted)">Este ERP ainda não foi configurado. Crie agora o administrador principal. Não existe uma senha fixa de fábrica.</p>${setupToken?`<form id="setupForm"><div class="field"><label>Nome do administrador</label><input name="nome" required maxlength="180"></div><br><div class="field"><label>E-mail</label><input name="email" type="email" required autocomplete="email"></div><br><div class="field"><label>Senha</label><div style="display:flex;gap:6px"><input name="password" type="password" minlength="10" required autocomplete="new-password" style="flex:1"><button type="button" class="btn" tabindex="-1" onclick="const x=this.previousElementSibling; x.type=x.type==='password'?'text':'password'">👁</button></div><small style="display:block;margin-top:6px;color:var(--muted)">Use pelo menos 10 caracteres.</small></div><br><button class="btn primary" style="width:100%">Criar administrador e entrar</button></form>`:`<div class="panel" style="margin-top:18px"><strong>Configuração inicial protegida</strong><p style="color:var(--muted)">Abra o link de primeiro acesso exibido nos logs do serviço no Render. Esse link é criado uma única vez e deixa de funcionar depois que o administrador é criado.</p></div>`}<div id="toast" class="toast"></div></div></div>`;if(setupToken){$('#setupForm').onsubmit=async e=>{e.preventDefault();const b=Object.fromEntries(new FormData(e.currentTarget));b.setup_token=setupToken;try{const x=await fetch('/api/setup/initialize',{method:'POST',headers:{'content-type':'application/json','x-setup-token':setupToken},body:JSON.stringify(b)});const out=await x.json();if(!x.ok)throw new Error(out.error||'Não foi possível concluir a configuração');token=out.token;localStorage.setItem('xv_token',token);history.replaceState({},'', '/admin');location.reload()}catch(err){toast(err.message)}}}}
 
 const menu=[['Visão Geral','home'],['Catálogo','products'],['Tabelas de preço','prices'],['Estoque Inteligente','stock'],['Clientes & CRM','clients'],['Pedidos','orders'],['Logística','logistics'],['Fornecedores','suppliers'],['Recebimento','inbound'],['Vendedores','sellers'],['Relatórios','reports'],['Auditoria','audit'],['Usuários','users'],['IA Administrativa','ai']];
-function shell(){const dot='•';const groups=[['Operação',[[dot,'Visão Geral','home'],[dot,'Pedidos','orders'],[dot,'Catálogo','products'],[dot,'Loja Online','store'],[dot,'Estoque Inteligente','stock'],[dot,'Clientes & CRM','clients'],[dot,'Logística','logistics']]],['Suprimentos',[[dot,'Fornecedores','suppliers'],[dot,'Recebimento de Mercadorias','inbound']]],['Gestão',[[dot,'Vendedores','sellers'],[dot,'Usuários','users'],[dot,'Tabelas de preço','prices'],[dot,'Relatórios','reports']]],['Governança',[[dot,'Auditoria','audit'],[dot,'IA Administrativa','ai']]]];return `<div class="app"><aside class="sidebar"><img class="xv-logo" src="/assets/brand/logo-admin.jpg" alt="Xiquim Vargas ERP"><div class="group">Torre de Controle</div>${groups.map(([title,items])=>`<div class="group">${title}</div><div class="nav">${items.map(([i,l,k])=>`<button data-view="${k}"><span style="width:16px;text-align:center;font-size:16px;line-height:1;display:inline-block">${i}</span>${l}</button>`).join('')}</div>`).join('')}<div class="group">Sessão</div><div class="nav"><button onclick="logout()"><span style="width:16px;text-align:center;font-size:16px;line-height:1;display:inline-block">•</span>Sair</button></div></aside><main class="main"><div class="topbar"><div class="brand-dark"><button class="mobile-back-btn btn" onclick="window.showSidebar()">← Voltar</button><div><h1 id="title">Visão Geral</h1></div></div><div class="topbar-actions"><span class="badge">${esc(ROLE_LABELS[me?.role]||me?.role||'Administrador')}</span></div></div><div id="view"></div></main></div><div id="toast" class="toast"></div>`}
+function shell(){const dot='•';const groups=[['Operação',[[dot,'Visão Geral','home'],[dot,'Pedidos','orders'],[dot,'Catálogo','products'],[dot,'Loja Online','store'],[dot,'Estoque Inteligente','stock'],[dot,'Clientes & CRM','clients'],[dot,'Logística','logistics']]],['Suprimentos',[[dot,'Fornecedores','suppliers'],[dot,'Recebimento de Mercadorias','inbound']]],['Gestão',[[dot,'Vendedores','sellers'],[dot,'Usuários','users'],[dot,'Tabelas de preço','prices'],[dot,'Relatórios','reports']]],['Governança',[[dot,'Auditoria','audit'],[dot,'IA Administrativa','ai']]]];return `<div class="app"><aside class="sidebar"><img class="xv-logo" src="/assets/brand/logo-admin.jpg" alt="Xiquim Vargas ERP"><div class="group">Torre de Controle</div>${groups.map(([title,items])=>`<div class="group">${title}</div><div class="nav">${items.map(([i,l,k])=>`<button data-view="${k}"><span style="width:16px;text-align:center;font-size:16px;line-height:1;display:inline-block">${i}</span>${l}</button>`).join('')}</div>`).join('')}<div class="group">Sessão</div><div class="nav"><button onclick="logout()"><span style="width:16px;text-align:center;font-size:16px;line-height:1;display:inline-block">•</span>Sair</button></div></aside><main class="main"><div class="topbar"><div class="brand-dark"><button class="mobile-back-btn btn" onclick="window.showSidebar()">← Voltar</button><div><h1 id="title">Visão Geral</h1></div></div><div class="topbar-actions"><span id="offlineIndicator" style="display:${navigator.onLine?'none':'inline-flex'};background:#e11d48;color:#fff;font-weight:700;font-size:11px;padding:3px 8px;border-radius:12px;margin-right:6px">OFFLINE</span><span class="badge">${esc(ROLE_LABELS[me?.role]||me?.role||'Administrador')}</span></div></div><div id="view"></div></main></div><div id="toast" class="toast"></div>`}
 async function render(){if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});Realtime.init((type,payload)=>refreshCurrentViewSilently(type,payload));document.body.innerHTML=shell();window.showSidebar=()=>document.querySelector('.app').classList.remove('view-open');document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{document.querySelector('.app').classList.add('view-open');show(b.dataset.view)});const h=location.hash.slice(1);if(h&&window.innerWidth<=800)document.querySelector('.app').classList.add('view-open');await show(h||'home')}
 async function show(view){document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));$('#title').textContent=({home:'Visão Geral',products:'Catálogo',stock:'Estoque Inteligente',clients:'Clientes & CRM',orders:'Pedidos',users:'Usuários',sellers:'Vendedores',logistics:'Logística',suppliers:'Fornecedores',inbound:'Recebimento de Mercadorias',reports:'Relatórios',store:'Loja Online',audit:'Auditoria',prices:'Tabelas de preço',ai:'IA Administrativa'})[view]||view;location.hash=view;const v=$('#view');v.innerHTML='<div class="panel">Carregando...</div>';try{if(view==='home')return home(v);if(view==='products')return products(v);if(view==='prices')return prices(v);if(view==='store')return storeSettings(v);if(view==='stock')return stock(v);if(view==='clients')return clients(v);if(view==='orders')return orders(v);if(view==='users')return users(v);if(view==='sellers')return sellers(v);if(view==='logistics')return logistics(v);if(view==='suppliers')return suppliers(v);if(view==='inbound')return inbound(v);if(view==='reports')return reports(v);if(view==='audit')return auditView(v);if(view==='ai')return ai(v)}catch(e){v.innerHTML=`<div class="panel">Erro: ${esc(e.message)}</div>`}}
 async function home(v){const d=await api('/api/dashboard');window._dashboardData=d;const cards=[['🛍','Pedidos hoje',d.pedidosHoje],['●','Pendentes',d.pendentes],['●','Separação',d.separacao],['🚚','Em rota',d.rota],['✓','Concluídos',d.concluidos],['R$','Faturamento',`${brl(d.faturamento)}`],['▪','Produtos',d.produtos],['!','Estoque baixo',d.criticos],['♣','Clientes',d.clientes],['♣','Vendedores',d.vendedores]];const kan=[['PENDENTE',d.pendentes,'status-pendente'],['SEPARACAO',d.separacao,'status-separacao'],['ROTA',d.rota,'status-rota'],['CONCLUIDO',d.concluidos,'status-concluido']];const top=d.topProdutos||[];const chunked=[];for(let i=0;i<top.length;i+=5)chunked.push(top.slice(i,i+5));const topKanbanHtml=chunked.length?`<div class="panel" style="margin-top:16px"><div class="panel-title"><h3>Top 20 Produtos Mais Vendidos</h3></div><div class="kanban">${chunked.map((chunk,idx)=>`<div class="kanban-col"><div class="kanban-head"><span><span class="dot" style="background:var(--xv-orange)"></span>Top ${idx*5+1} ao ${idx*5+chunk.length}</span><span class="badge">${chunk.length}</span></div>${chunk.map((p,i)=>`<div class="kanban-card" style="display:flex;gap:12px;align-items:center"><div class="catalog-product-cell">${p.foto_url?`<img class="catalog-mini-photo" src="${esc(p.foto_url)}" alt="">`:'<div class="catalog-mini-photo placeholder">XV</div>'}</div><div><strong>#${idx*5+i+1} - ${esc(p.nome)}</strong><br><small class="muted">${p.total_vendido} un vendidas</small><br><small class="orange">${brl(p.total_receita)}</small></div></div>`).join('')}</div>`).join('')}</div></div>`:'';window.renderModalidadeRanking=function(periodo='geral'){window._currentModalidadePeriodo=periodo;const db=window._dashboardData||d;const periodosMap=db.vendasPorOrigemPeriodos||{geral:db.vendasPorOrigem||[],semanal:[],mensal:[]};const rawList=periodosMap[periodo]||db.vendasPorOrigem||[];const originLabels={VENDEDOR:'Vendedor Externo',BALCAO:'Frente de Loja / Caixa',WEB:'Loja Online'};const originIcons={VENDEDOR:'👤',BALCAO:'🏪',WEB:'🛒'};const originColors={VENDEDOR:'var(--xv-orange)',BALCAO:'#4a90e2',WEB:'#2ecc71'};const originsData=rawList.reduce((acc,x)=>({...acc,[x.origem]:x}),{});const origensList=['VENDEDOR','BALCAO','WEB'].map(o=>({origem:o,label:originLabels[o],icon:originIcons[o],color:originColors[o],pedidos:Number(originsData[o]?.pedidos||0),faturamento:Number(originsData[o]?.faturamento||0)})).sort((a,b)=>b.faturamento-a.faturamento);const rankBadges=['🥇 1º Lugar','🥈 2º Lugar','🥉 3º Lugar'];const pLabels={geral:'Todo o histórico',semanal:'Últimos 7 dias',mensal:'Últimos 30 dias'};const el=document.getElementById('modalidadeRankingContainer');if(!el)return;el.innerHTML=`<div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px"><div><h3 style="margin:0">Ranking de Vendas por Modalidade</h3><p class="muted" style="margin:4px 0 0;font-size:12px">Período selecionado: <strong>${pLabels[periodo]||periodo}</strong></p></div><div class="actions" style="display:flex;gap:6px"><button class="btn ${periodo==='geral'?'primary':''}" style="font-size:12px;padding:6px 12px" onclick="renderModalidadeRanking('geral')">Geral</button><button class="btn ${periodo==='semanal'?'primary':''}" style="font-size:12px;padding:6px 12px" onclick="renderModalidadeRanking('semanal')">Semanal (7d)</button><button class="btn ${periodo==='mensal'?'primary':''}" style="font-size:12px;padding:6px 12px" onclick="renderModalidadeRanking('mensal')">Mensal (30d)</button></div></div><div class="kanban" style="margin-top:14px">${origensList.map((x,idx)=>`<div class="kanban-col"><div class="kanban-head"><span><span class="dot" style="background:${x.color}"></span>${x.label}</span><span class="badge" style="background:${idx===0?'rgba(253,94,2,0.18)':''};color:${idx===0?'#fd5e02':''}">${rankBadges[idx]}</span></div><div class="kanban-card" style="text-align:center;padding:22px;border:1px solid ${idx===0?'rgba(253,94,2,0.3)':'var(--border)'}"><div style="font-size:30px;margin-bottom:6px">${x.icon}</div><div class="v" style="font-size:22px;color:${x.color};font-weight:800">${brl(x.faturamento)}</div><div style="margin-top:8px"><span class="badge" style="font-size:11px">${x.pedidos} pedido(s)</span></div><small class="muted" style="display:block;margin-top:8px">${x.faturamento>0?`${brl(x.pedidos?x.faturamento/x.pedidos:0)} ticket médio`:'Sem vendas no período'}</small></div></div>`).join('')}</div>`};v.innerHTML=`<div class="grid">${cards.map(x=>`<div class="card kpi"><div style="font-size:16px;color:#8193a9;margin-bottom:7px">${x[0]} &nbsp; ${x[1]}</div><div class="v">${x[2]}</div></div>`).join('')}</div><div class="panel" style="margin-top:16px"><div class="panel-title"><h3>Fluxo operacional</h3><button class="btn" onclick="show('orders')">Ver pedidos</button></div><div class="kanban">${kan.map(k=>`<div class="kanban-col"><div class="kanban-head"><span><span class="dot"></span>${k[0]}</span><span class="badge">${k[1]}</span></div><div class="kanban-card"><strong>${k[1]} pedido(s)</strong><small>Monitorado em tempo real pela Torre de Controle</small></div></div>`).join('')}</div></div><div class="panel" id="modalidadeRankingContainer" style="margin-top:16px"></div>${topKanbanHtml}`;window.renderModalidadeRanking(window._currentModalidadePeriodo||'geral')}
@@ -1722,7 +1879,7 @@ async function logistics(v){
       g=window._logisticsGroups.find(x=>x.grupo===grupoKey);
     }
     if(!g) return '<div class="empty-state">Nenhum pedido elegível neste grupo.</div>';
-    let html=`<div class="panel-title"><div style="display:flex;align-items:center;gap:12px"><button class="btn" onclick="document.getElementById('logisticsModalityDashboard').style.display='none';document.getElementById('logisticsMain').style.display='block'">← Voltar</button><div><h3 style="margin:0">${esc(g.titulo)}</h3><p class="muted" style="margin-top:4px">${g.grupo==='BALCAO'?'Somente pedidos do balcão marcados para entrega.':'Pedidos subdivididos por bairro.'}</p></div></div></div>`;
+    let html=`<div class="panel-title"><div style="display:flex;align-items:center;gap:12px"><button class="btn" onclick="document.getElementById('logisticsModalityDashboard').style.display='none';const mw=document.getElementById('logisticsMainWrapper');if(mw)mw.style.display='block';if(document.getElementById('logisticsMain'))document.getElementById('logisticsMain').style.display='block';const t=document.getElementById('title');if(t)t.textContent='Logística';window.scrollTo({top:0,behavior:'smooth'})">← Voltar para separação</button><div><h3 style="margin:0">${esc(g.titulo)}</h3><p class="muted" style="margin-top:4px">${g.grupo==='BALCAO'?'Somente pedidos do balcão marcados para entrega.':'Pedidos subdivididos por bairro.'}</p></div></div></div>`;
     
     if(grupoKey==='VENDEDOR' || grupoKey==='BALCAO'){
       const ops = new Set();
@@ -1754,29 +1911,46 @@ async function logistics(v){
   window.renderModalityDashboard=function(grupoKey, vendedorFiltro=''){
     window._currentLogisticsGrupoKey=grupoKey;
     window._currentLogisticsSellerFilter=vendedorFiltro;
-    document.getElementById('logisticsMain').style.display='none';
+    const mw = document.getElementById('logisticsMainWrapper');
+    if(mw) mw.style.display = 'none';
+    if(document.getElementById('logisticsMain')) document.getElementById('logisticsMain').style.display='none';
     if(document.getElementById('returnedOrdersDashboard')) document.getElementById('returnedOrdersDashboard').style.display='none';
     if(document.getElementById('logisticsDashboard')) document.getElementById('logisticsDashboard').style.display='none';
     const modDb=document.getElementById('logisticsModalityDashboard');
-    modDb.style.display='block';
-    document.getElementById('logisticsModalityContent').innerHTML=renderLogisticsModality(grupoKey, vendedorFiltro);
+    if(modDb) {
+      modDb.style.display='block';
+      const t = document.getElementById('title');
+      if(t) t.textContent = 'Logística · Separação';
+      document.getElementById('logisticsModalityContent').innerHTML=renderLogisticsModality(grupoKey, vendedorFiltro);
+      window.scrollTo({top:0, behavior:'smooth'});
+    }
   };
 
   window.openReturnedOrdersDashboard = function(){
-    document.getElementById('logisticsMain').style.display='none';
+    const mw = document.getElementById('logisticsMainWrapper');
+    if(mw) mw.style.display = 'none';
+    if(document.getElementById('logisticsMain')) document.getElementById('logisticsMain').style.display='none';
     if(document.getElementById('logisticsModalityDashboard')) document.getElementById('logisticsModalityDashboard').style.display='none';
     if(document.getElementById('logisticsDashboard')) document.getElementById('logisticsDashboard').style.display='none';
     const retDb = document.getElementById('returnedOrdersDashboard');
     if(retDb) {
       retDb.style.display='block';
+      const t = document.getElementById('title');
+      if(t) t.textContent = 'Logística · Pedidos Retornados';
       renderReturnedOrdersDashboardContent();
+      window.scrollTo({top:0, behavior:'smooth'});
     }
   };
 
   window.closeReturnedOrdersDashboard = function(){
     const retDb = document.getElementById('returnedOrdersDashboard');
     if(retDb) retDb.style.display='none';
-    document.getElementById('logisticsMain').style.display='block';
+    const mw = document.getElementById('logisticsMainWrapper');
+    if(mw) mw.style.display = 'block';
+    if(document.getElementById('logisticsMain')) document.getElementById('logisticsMain').style.display='block';
+    const t = document.getElementById('title');
+    if(t) t.textContent = 'Logística';
+    window.scrollTo({top:0, behavior:'smooth'});
   };
 
   window.refreshReturnedOrders = async function(){
@@ -1982,20 +2156,30 @@ async function logistics(v){
   window._ordersInRoute = o.em_rota || [];
 
   window.openLogisticsInRoute = function(){
-    document.getElementById('logisticsMain').style.display='none';
-    if(document.getElementById('logisticsModalityDashboard')) document.getElementById('logisticsModalityDashboard').style.display='none';
-    if(document.getElementById('returnedOrdersDashboard')) document.getElementById('returnedOrdersDashboard').style.display='none';
+    const mw = document.getElementById('logisticsMainWrapper');
+    if(mw) mw.style.display = 'none';
+    if(document.getElementById('logisticsMain')) document.getElementById('logisticsMain').style.display = 'none';
+    if(document.getElementById('logisticsModalityDashboard')) document.getElementById('logisticsModalityDashboard').style.display = 'none';
+    if(document.getElementById('returnedOrdersDashboard')) document.getElementById('returnedOrdersDashboard').style.display = 'none';
     const db = document.getElementById('logisticsDashboard');
     if(db) {
-      db.style.display='block';
+      db.style.display = 'block';
+      const t = document.getElementById('title');
+      if(t) t.textContent = 'Logística · Pedidos em Rota';
       renderLogisticsInRouteContent();
+      window.scrollTo({top:0, behavior:'smooth'});
     }
   };
 
   window.closeLogisticsInRoute = function(){
     const db = document.getElementById('logisticsDashboard');
-    if(db) db.style.display='none';
-    document.getElementById('logisticsMain').style.display='block';
+    if(db) db.style.display = 'none';
+    const mw = document.getElementById('logisticsMainWrapper');
+    if(mw) mw.style.display = 'block';
+    if(document.getElementById('logisticsMain')) document.getElementById('logisticsMain').style.display = 'block';
+    const t = document.getElementById('title');
+    if(t) t.textContent = 'Logística';
+    window.scrollTo({top:0, behavior:'smooth'});
   };
 
   window.refreshLogisticsInRoute = async function(){
@@ -2006,6 +2190,11 @@ async function logistics(v){
       if(inRouteBadge) {
         inRouteBadge.textContent = window._ordersInRoute.length;
         inRouteBadge.style.background = window._ordersInRoute.length ? '#3b82f6' : 'var(--border)';
+      }
+      const inRouteGridBadge = document.getElementById('ordersInRouteGridBadge');
+      if(inRouteGridBadge) {
+        inRouteGridBadge.textContent = window._ordersInRoute.length;
+        inRouteGridBadge.style.background = window._ordersInRoute.length ? '#3b82f6' : '#64748b';
       }
       if(document.getElementById('logisticsDashboard')?.style.display === 'block'){
         renderLogisticsInRouteContent(true);
@@ -2033,15 +2222,31 @@ async function logistics(v){
     if(!container) return;
 
     container.innerHTML = `
-      <div class="panel-title" style="margin-bottom:18px">
-        <div style="display:flex;align-items:center;gap:12px">
-          <button class="btn" onclick="closeLogisticsInRoute()">← Voltar para separação</button>
-          <div>
-            <h3 style="margin:0">🚚 Dashboard: Pedidos em Rota</h3>
-            <p class="muted" style="margin-top:4px">Monitoramento em tempo real e filtros de opções dos pedidos atualmente em entrega.</p>
+      <div class="panel" style="margin-bottom:18px;border-left:4px solid #3b82f6">
+        <div class="panel-title" style="margin-bottom:0;flex-wrap:wrap;gap:14px">
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+            <button class="btn" onclick="closeLogisticsInRoute()" style="display:inline-flex;align-items:center;gap:6px">
+              ← Voltar para Separação
+            </button>
+            <div>
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <h2 style="margin:0;font-size:22px;letter-spacing:-0.5px">🚚 Dashboard: Pedidos em Rota</h2>
+                <span class="badge" style="background:rgba(59,130,246,0.18);color:#3b82f6;border:1px solid rgba(59,130,246,0.4);font-size:12px;display:inline-flex;align-items:center;gap:6px">
+                  <span style="width:7px;height:7px;border-radius:50%;background:#3b82f6;box-shadow:0 0 8px #3b82f6;display:inline-block"></span>
+                  Tempo Real
+                </span>
+              </div>
+              <p class="muted" style="margin-top:4px;font-size:13px">
+                Painel de tela cheia para monitoramento de todas as entregas e pedidos atualmente em trânsito com os motoristas.
+              </p>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn primary" onclick="refreshLogisticsInRoute()" style="display:inline-flex;align-items:center;gap:6px">
+              ↻ Atualizar Pedidos
+            </button>
           </div>
         </div>
-        <button class="btn primary" onclick="refreshLogisticsInRoute()">↻ Atualizar</button>
       </div>
 
       <div class="grid" style="margin-bottom:18px">
@@ -2051,47 +2256,48 @@ async function logistics(v){
           <small class="muted">${totalOrders === 1 ? '1 entrega em trânsito' : totalOrders + ' entregas em trânsito'}</small>
         </div>
         <div class="card kpi" style="border-left:4px solid #10b981">
-          <small class="muted">Valor em Entrega</small>
+          <small class="muted">Valor em Mercadoria</small>
           <h2 class="orange" style="margin:6px 0 0">${brl(totalValor)}</h2>
-          <small class="muted">Mercadoria em rota</small>
+          <small class="muted">Carga total em entrega nas ruas</small>
         </div>
         <div class="card kpi" style="border-left:4px solid #ef4444">
           <small class="muted">Bairros Atendidos</small>
           <h2 style="color:#ef4444;margin:6px 0 0">${bairrosList.length}</h2>
-          <small class="muted">Destinos de rota</small>
+          <small class="muted">Destinos e regiões de rota</small>
         </div>
         <div class="card kpi" style="border-left:4px solid #8b5cf6">
           <small class="muted">Motoristas Ativos</small>
           <h2 style="color:#8b5cf6;margin:6px 0 0">${driversList.length}</h2>
-          <small class="muted">Equipe de entrega</small>
+          <small class="muted">Entregadores em campo</small>
         </div>
       </div>
 
-      <div class="panel" style="margin-bottom:14px;padding:14px">
+      <div class="panel" style="margin-bottom:16px;padding:16px">
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-          <input id="routeFilterSearch" class="field-input search" style="flex:1;min-width:220px;margin:0" placeholder="🔍 Buscar por pedido, cliente, endereço, motorista..." oninput="filterLogisticsInRouteTable()" value="${esc(prevSearch)}">
-          <select id="routeFilterBairro" class="field-input search" style="width:auto;min-width:180px;margin:0" onchange="filterLogisticsInRouteTable()">
+          <input id="routeFilterSearch" class="field-input search" style="flex:2;min-width:240px;margin:0" placeholder="🔍 Buscar por pedido, cliente, endereço, motorista..." oninput="filterLogisticsInRouteTable()" value="${esc(prevSearch)}">
+          <select id="routeFilterBairro" class="field-input search" style="flex:1;min-width:180px;margin:0" onchange="filterLogisticsInRouteTable()">
             <option value="">Todos os bairros</option>
             ${bairrosList.map(b => `<option value="${esc(b)}" ${prevBairro === b ? 'selected' : ''}>${esc(b)}</option>`).join('')}
           </select>
-          <select id="routeFilterSeller" class="field-input search" style="width:auto;min-width:180px;margin:0" onchange="filterLogisticsInRouteTable()">
+          <select id="routeFilterSeller" class="field-input search" style="flex:1;min-width:170px;margin:0" onchange="filterLogisticsInRouteTable()">
             <option value="">Todos os vendedores</option>
             ${sellersList.map(s => `<option value="${esc(s)}" ${prevSeller === s ? 'selected' : ''}>${esc(s)}</option>`).join('')}
           </select>
-          <select id="routeFilterDriver" class="field-input search" style="width:auto;min-width:180px;margin:0" onchange="filterLogisticsInRouteTable()">
+          <select id="routeFilterDriver" class="field-input search" style="flex:1;min-width:170px;margin:0" onchange="filterLogisticsInRouteTable()">
             <option value="">Todos os motoristas</option>
             ${driversList.map(d => `<option value="${esc(d)}" ${prevDriver === d ? 'selected' : ''}>${esc(d)}</option>`).join('')}
           </select>
-          <select id="routeFilterOrigin" class="field-input search" style="width:auto;min-width:160px;margin:0" onchange="filterLogisticsInRouteTable()">
+          <select id="routeFilterOrigin" class="field-input search" style="flex:1;min-width:150px;margin:0" onchange="filterLogisticsInRouteTable()">
             <option value="">Todas as origens</option>
-            <option value="VENDEDOR" ${prevOrigin === 'VENDEDOR' ? 'selected' : ''}>Vendedor</option>
+            <option value="VENDEDOR" ${prevOrigin === 'VENDEDOR' ? 'selected' : ''}>Vendedor Externo</option>
             <option value="BALCAO" ${prevOrigin === 'BALCAO' ? 'selected' : ''}>Balcão (Entrega)</option>
-            <option value="WEB" ${prevOrigin === 'WEB' ? 'selected' : ''}>Loja Web</option>
+            <option value="WEB" ${prevOrigin === 'WEB' ? 'selected' : ''}>Loja Online</option>
           </select>
           <button class="btn" onclick="clearLogisticsInRouteFilters()">Limpar filtros</button>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid #1e2c40">
           <small class="muted" id="routeFilterCountBadge"></small>
+          <small class="muted" id="routeFilterTotalValueBadge"></small>
         </div>
       </div>
 
@@ -2101,9 +2307,9 @@ async function logistics(v){
             <tr>
               <th>Pedido</th>
               <th>Cliente</th>
-              <th>Endereço</th>
+              <th>Endereço de Entrega</th>
               <th>Bairro</th>
-              <th>Vendedor / Operador</th>
+              <th>Vendedor / Emissor</th>
               <th>Motorista</th>
               <th>Total</th>
               <th>Status</th>
@@ -2151,7 +2357,8 @@ async function logistics(v){
           x.bairro,
           x.operador_nome,
           x.motorista_nome,
-          x.origem
+          x.origem,
+          x.telefone
         ].filter(Boolean).join(' ').toLowerCase();
         if(!text.includes(q)) return false;
       }
@@ -2162,90 +2369,130 @@ async function logistics(v){
     if(badge) {
       badge.textContent = `Exibindo ${filtered.length} de ${allOrders.length} pedido(s) em rota`;
     }
+    const valBadge = document.getElementById('routeFilterTotalValueBadge');
+    if(valBadge) {
+      const sum = filtered.reduce((acc, x) => acc + Number(x.total || 0), 0);
+      valBadge.textContent = `Valor filtrado: ${brl(sum)}`;
+    }
 
     if(!filtered.length){
-      tbody.innerHTML = `<tr><td colspan="9" class="empty-state" style="padding:32px;text-align:center"><div style="font-size:32px;margin-bottom:8px">🚚✨</div><strong>Nenhum pedido em rota encontrado</strong><p class="muted" style="margin-top:4px;font-size:13px">Nenhum pedido corresponde aos filtros selecionados.</p></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="9" class="empty-state" style="padding:48px 20px;text-align:center"><div style="font-size:38px;margin-bottom:10px">🚚✨</div><strong style="font-size:16px">${allOrders.length===0 ? 'Nenhum pedido em rota no momento' : 'Nenhum pedido encontrado para os filtros selecionados'}</strong><p class="muted" style="margin-top:6px;font-size:13px">${allOrders.length===0 ? 'Todos os pedidos estão em separação ou já foram entregues.' : 'Tente alterar ou limpar os filtros de busca acima.'}</p>${allOrders.length>0 ? '<button class="btn" style="margin-top:12px" onclick="clearLogisticsInRouteFilters()">Limpar Filtros</button>' : '<button class="btn" style="margin-top:12px" onclick="closeLogisticsInRoute()">Ir para Separação de Pedidos</button>'}</td></tr>`;
       return;
     }
+
+    const originBadges = {
+      VENDEDOR: '<span class="badge" style="background:rgba(253,94,2,0.15);color:#fd5e02;font-size:10px">Vendedor</span>',
+      BALCAO: '<span class="badge" style="background:rgba(59,130,246,0.15);color:#3b82f6;font-size:10px">Balcão</span>',
+      WEB: '<span class="badge" style="background:rgba(34,197,94,0.15);color:#22c55e;font-size:10px">Loja Web</span>'
+    };
 
     tbody.innerHTML = filtered.map(x => `
       <tr>
         <td>
-          <strong>${esc(x.numero)}</strong>
-          <br><small class="muted">${esc(x.origem || '')}</small>
+          <strong style="font-size:14px">${esc(x.numero)}</strong>
+          <br>${originBadges[x.origem] || `<span class="badge" style="font-size:10px">${esc(x.origem || '-')}</span>`}
         </td>
-        <td><strong>${esc(x.nome_fantasia || x.razao_social || 'Cliente')}</strong></td>
-        <td>${esc(x.endereco || '-')}</td>
+        <td>
+          <strong>${esc(x.nome_fantasia || x.razao_social || 'Cliente')}</strong>
+          ${x.telefone ? `<br><small class="muted">📞 ${esc(x.telefone)}</small>` : ''}
+        </td>
+        <td style="max-width:240px;word-break:break-word">${esc(x.endereco || '-')}</td>
         <td><strong style="color:#ef4444;font-size:13px">📍 ${esc(x.bairro || 'Sem bairro')}</strong></td>
         <td>${esc(x.operador_nome || '-')}</td>
-        <td><span>👤 ${esc(x.motorista_nome || 'Não atribuído')}</span></td>
-        <td><strong>${brl(x.total)}</strong></td>
-        <td><span class="badge" style="background:#3b82f620;color:#3b82f6;border:1px solid #3b82f650;font-weight:600">Em Rota</span></td>
+        <td><span style="font-weight:700">👤 ${esc(x.motorista_nome || 'Não atribuído')}</span></td>
+        <td><strong class="orange" style="font-size:14px">${brl(x.total)}</strong></td>
+        <td><span class="badge" style="background:rgba(59,130,246,0.18);color:#3b82f6;border:1px solid rgba(59,130,246,0.4);font-weight:700">🚚 Em Rota</span></td>
         <td class="actions">
-          <button class="btn" style="padding:4px 8px;font-size:12px" onclick="orderDetail('${x.id}')">Detalhes</button>
-          <button class="btn" style="padding:4px 8px;font-size:12px;margin-left:4px" onclick="downloadAuthFile('/api/orders/${x.id}/pdf','pedido-${x.numero}.pdf')">PDF</button>
+          <button class="btn" style="padding:5px 10px;font-size:12px" onclick="orderDetail('${x.id}')">Detalhes</button>
+          <button class="btn" style="padding:5px 10px;font-size:12px" onclick="downloadAuthFile('/api/orders/${x.id}/pdf','pedido-${x.numero}.pdf')">PDF</button>
         </td>
       </tr>
     `).join('');
   };
 
-  v.innerHTML=`<div class="panel" id="logisticsMain" style="margin-bottom:14px">
-   <div class="panel-title"><div><h3>Separação e Roteirização</h3></div><button class="btn" onclick="show('logistics')">↻ Atualizar</button></div>
-   <div class="grid">
-     <div class="card" style="cursor:pointer;border-top:4px solid #10b981" onclick="renderModalityDashboard('TODOS')"><h3>Todos os pedidos</h3><p class="muted">Todos os pedidos agrupados por bairro.</p></div>
-     <div class="card" style="cursor:pointer;border-top:4px solid #f59e0b" onclick="renderModalityDashboard('VENDEDOR')"><h3>Pedidos de vendedores</h3><p class="muted">Pedidos externos subdivididos por bairro.</p></div>
-     <div class="card" style="cursor:pointer;border-top:4px solid #3b82f6" onclick="renderModalityDashboard('WEB')"><h3>Pedidos web</h3><p class="muted">Pedidos da Loja Online subdivididos por bairro.</p></div>
-     <div class="card" style="cursor:pointer;border-top:4px solid #8b5cf6" onclick="renderModalityDashboard('BALCAO')"><h3>Pedidos balcão — entrega</h3><p class="muted">Pedidos locais para entrega.</p></div>
-     <div class="card" style="cursor:pointer;border-top:4px solid #ef4444;position:relative" onclick="openReturnedOrdersDashboard()">
-       <div style="display:flex;align-items:center;justify-content:space-between">
-         <h3 style="margin:0">↩ Pedidos que retornaram</h3>
-         <span id="returnedOrdersGridBadge" class="badge" style="background:${returnedOrders.length?'#ef4444':'#64748b'};color:#fff;font-size:12px;padding:3px 8px">${returnedOrders.length}</span>
+  v.innerHTML=`
+  <div id="logisticsMainWrapper">
+    <div class="panel" id="logisticsMain" style="margin-bottom:14px">
+      <div class="panel-title"><div><h3>Separação e Roteirização</h3></div><button class="btn" onclick="show('logistics')">↻ Atualizar</button></div>
+      <div class="grid">
+        <div class="card" style="cursor:pointer;border-top:4px solid #10b981" onclick="renderModalityDashboard('TODOS')"><h3>Todos os pedidos</h3><p class="muted">Todos os pedidos agrupados por bairro.</p></div>
+        <div class="card" style="cursor:pointer;border-top:4px solid #f59e0b" onclick="renderModalityDashboard('VENDEDOR')"><h3>Pedidos de vendedores</h3><p class="muted">Pedidos externos subdivididos por bairro.</p></div>
+        <div class="card" style="cursor:pointer;border-top:4px solid #3b82f6" onclick="renderModalityDashboard('WEB')"><h3>Pedidos web</h3><p class="muted">Pedidos da Loja Online subdivididos por bairro.</p></div>
+        <div class="card" style="cursor:pointer;border-top:4px solid #8b5cf6" onclick="renderModalityDashboard('BALCAO')"><h3>Pedidos balcão — entrega</h3><p class="muted">Pedidos locais para entrega.</p></div>
+        <div class="card" style="cursor:pointer;border-top:4px solid #3b82f6;position:relative" onclick="openLogisticsInRoute()">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <h3 style="margin:0">🚚 Pedidos em rota</h3>
+            <span id="ordersInRouteGridBadge" class="badge" style="background:${(o.em_rota||[]).length?'#3b82f6':'#64748b'};color:#fff;font-size:12px;padding:3px 8px">${(o.em_rota||[]).length}</span>
+          </div>
+          <p class="muted" style="margin-top:6px">Dashboard de monitoramento em tempo real dos pedidos na rua.</p>
+        </div>
+        <div class="card" style="cursor:pointer;border-top:4px solid #ef4444;position:relative" onclick="openReturnedOrdersDashboard()">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <h3 style="margin:0">↩ Pedidos que retornaram</h3>
+            <span id="returnedOrdersGridBadge" class="badge" style="background:${returnedOrders.length?'#ef4444':'#64748b'};color:#fff;font-size:12px;padding:3px 8px">${returnedOrders.length}</span>
+          </div>
+          <p class="muted" style="margin-top:6px">Histórico de paradas não concluídas e motivos de retorno.</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align:center; margin:16px 0 24px; display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
+      <button class="btn" onclick="openLogisticsInRoute()">🚚 Ver pedidos em rota → <span id="ordersInRouteCountBadge" class="badge" style="margin-left:6px;background:${(o.em_rota||[]).length?'#3b82f6':'var(--border)'};color:#fff">${(o.em_rota||[]).length}</span></button>
+      <button class="btn" onclick="openReturnedOrdersDashboard()">↩ Ver pedidos que retornaram → <span id="returnedOrdersCountBadge" class="badge" style="margin-left:6px;background:${returnedOrders.length?'#ef4444':'var(--border)'};color:#fff">${returnedOrders.length}</span></button>
+    </div>
+
+    <div class="panel" style="margin-bottom:16px">
+     <div class="panel-title">
+       <div>
+         <h3>📍 Ponto de Partida e Roteirização Inteligente (OpenStreetMap)</h3>
+         <p class="muted">A fila de paradas das entregas é calculada automaticamente pela rota mais curta nas ruas reais via <strong>OpenStreetMap (OSRM)</strong>, 100% gratuito e sem necessidade de chave de API.</p>
        </div>
-       <p class="muted" style="margin-top:6px">Histórico de paradas não concluídas e motivos de retorno.</p>
      </div>
-   </div>
+     <div class="form">
+       <div class="field">
+         <label>Latitude do Depósito</label>
+         <input id="depotLatInput" placeholder="Ex: -23.550520" value="${esc(depotLat)}">
+       </div>
+       <div class="field">
+         <label>Longitude do Depósito</label>
+         <input id="depotLngInput" placeholder="Ex: -46.633308" value="${esc(depotLng)}">
+       </div>
+       <div class="actions">
+         <button class="btn primary" onclick="saveDepotCoordinates()">Salvar Coordenadas</button>
+       </div>
+     </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title"><div><h3>Rotas e bairros</h3><p class="muted">Configure o nome da rota e os bairros. O dia da semana é definido separadamente quando necessário.</p></div><button class="btn primary" onclick="newRouteConfig()">+ Criar rota</button></div>
+      <div class="tablewrap"><table class="table"><thead><tr><th>Rota</th><th>Bairros</th><th></th></tr></thead><tbody>${u.routes.map(x=>`<tr><td>${esc(x.nome)}</td><td>${x.bairros.map(b=>esc(b.bairro)).join(' · ')}</td><td><button class="btn" onclick="editRouteConfig(parseJsonArg('${jsonArg(x)}'))">Editar</button></td></tr>`).join('')||'<tr><td colspan="3">Nenhuma rota configurada.</td></tr>'}</tbody></table></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title"><div><h3>Designação de rota do vendedor</h3></div></div>
+      <div class="form"><div class="field"><label>Vendedor</label><select id="assignSeller">${sellers.map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join('')}</select></div><div class="field"><label>Dia</label><select id="assignDay">${['Segunda','Terça','Quarta','Quinta','Sexta','Sábado'].map((x,i)=>`<option value="${i+1}">${x}</option>`).join('')}</select></div><div class="field"><label>Rota</label><select id="assignRoute">${u.routes.map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join('')}</select></div><div class="actions"><button class="btn primary" onclick="assignSellerRoute()">Designar rota</button></div></div>
+      <div class="tablewrap" style="margin-top:15px"><table class="table"><thead><tr><th>Vendedor</th><th>Rota</th><th>Dia</th><th>Ações</th></tr></thead><tbody>${(u.assignments||[]).map(a=>`<tr><td>${esc(a.vendedor_nome)}</td><td>${esc(a.rota_nome)}</td><td>${['Segunda','Terça','Quarta','Quinta','Sexta','Sábado'][a.dia_semana-1]}</td><td class="actions"><button class="btn danger" onclick="removeRouteAssignment('${a.vendedor_id}',${a.dia_semana})">Remover</button></td></tr>`).join('')||'<tr><td colspan="4">Nenhuma designação configurada.</td></tr>'}</tbody></table></div>
+    </div>
+
+    <div class="panel-title" style="margin-top:20px"><div><h3>Histórico de Rotas</h3><p class="muted">Acompanhe as rotas de entrega já criadas e seus status.</p></div></div>
+    <div class="tablewrap"><table class="table"><thead><tr><th>Data</th><th>Motorista</th><th>Status</th><th>Pedidos</th><th>Distância / Tempo</th></tr></thead><tbody>${r.items.map(x=>{let ids=[];try{ids=JSON.parse(x.sequencia_json)}catch{}const meta=x.distance_km!=null?`${x.distance_km} km ${x.estimated_minutes?`· ~${x.estimated_minutes} min`:''}`:'-';return `<tr><td>${x.data}</td><td>${esc(x.motorista_nome||'-')}</td><td>${esc(x.status)}</td><td>${ids.length}</td><td><small class="muted">${meta}</small></td></tr>`}).join('')||'<tr><td colspan="5" class="empty-state">Nenhuma rota gerada ainda.</td></tr>'}</tbody></table></div>
   </div>
+
   <div id="logisticsModalityDashboard" class="panel" style="display:none; padding-bottom:80px; position:relative; z-index:40;">
     <div id="logisticsModalityContent"></div>
-    <div style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--bg); padding:10px; border-radius:30px; box-shadow:0 10px 25px rgba(0,0,0,0.2); z-index:999; display:flex; flex-wrap:wrap; justify-content:center; gap:10px; width:max-content; max-width:90vw; border:1px solid var(--border)">
+    <div style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--xv-panel,#101d2e); padding:10px 20px; border-radius:30px; box-shadow:0 10px 25px rgba(0,0,0,0.35); z-index:999; display:flex; flex-wrap:wrap; justify-content:center; gap:10px; width:max-content; max-width:90vw; border:1px solid var(--border)">
      <button class="btn primary" onclick="generateLoadingList()">Gerar lista</button>
      <button class="btn" onclick="makeRouteModal()">Gerar rota</button>
     </div>
   </div>
-  <div style="text-align:center; margin:16px 0 24px; display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
-    <button class="btn" onclick="openLogisticsInRoute()">🚚 Ver pedidos em rota → <span id="ordersInRouteCountBadge" class="badge" style="margin-left:6px;background:${(o.em_rota||[]).length?'#3b82f6':'var(--border)'};color:#fff">${(o.em_rota||[]).length}</span></button>
-    <button class="btn" onclick="openReturnedOrdersDashboard()">↩ Ver pedidos que retornaram → <span id="returnedOrdersCountBadge" class="badge" style="margin-left:6px;background:${returnedOrders.length?'#ef4444':'var(--border)'};color:#fff">${returnedOrders.length}</span></button>
-  </div>
-  <div class="panel" style="margin-bottom:16px">
-   <div class="panel-title">
-     <div>
-       <h3>📍 Ponto de Partida e Roteirização Inteligente (OpenStreetMap)</h3>
-       <p class="muted">A fila de paradas das entregas é calculada automaticamente pela rota mais curta nas ruas reais via <strong>OpenStreetMap (OSRM)</strong>, 100% gratuito e sem necessidade de chave de API.</p>
-     </div>
-   </div>
-   <div class="form">
-     <div class="field">
-       <label>Latitude do Depósito</label>
-       <input id="depotLatInput" placeholder="Ex: -23.550520" value="${esc(depotLat)}">
-     </div>
-     <div class="field">
-       <label>Longitude do Depósito</label>
-       <input id="depotLngInput" placeholder="Ex: -46.633308" value="${esc(depotLng)}">
-     </div>
-     <div class="actions">
-       <button class="btn primary" onclick="saveDepotCoordinates()">Salvar Coordenadas</button>
-     </div>
-   </div>
-  </div>
-  <div class="panel"><div class="panel-title"><div><h3>Rotas e bairros</h3><p class="muted">Configure o nome da rota e os bairros. O dia da semana é definido separadamente quando necessário.</p></div><button class="btn primary" onclick="newRouteConfig()">+ Criar rota</button></div><div class="tablewrap"><table class="table"><thead><tr><th>Rota</th><th>Bairros</th><th></th></tr></thead><tbody>${u.routes.map(x=>`<tr><td>${esc(x.nome)}</td><td>${x.bairros.map(b=>esc(b.bairro)).join(' · ')}</td><td><button class="btn" onclick="editRouteConfig(parseJsonArg('${jsonArg(x)}'))">Editar</button></td></tr>`).join('')||'<tr><td colspan="3">Nenhuma rota configurada.</td></tr>'}</tbody></table></div></div>
-  <div class="panel"><div class="panel-title"><div><h3>Designação de rota do vendedor</h3></div></div><div class="form"><div class="field"><label>Vendedor</label><select id="assignSeller">${sellers.map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join('')}</select></div><div class="field"><label>Dia</label><select id="assignDay">${['Segunda','Terça','Quarta','Quinta','Sexta','Sábado'].map((x,i)=>`<option value="${i+1}">${x}</option>`).join('')}</select></div><div class="field"><label>Rota</label><select id="assignRoute">${u.routes.map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join('')}</select></div><div class="actions"><button class="btn primary" onclick="assignSellerRoute()">Designar rota</button></div></div><div class="tablewrap" style="margin-top:15px"><table class="table"><thead><tr><th>Vendedor</th><th>Rota</th><th>Dia</th><th>Ações</th></tr></thead><tbody>${(u.assignments||[]).map(a=>`<tr><td>${esc(a.vendedor_nome)}</td><td>${esc(a.rota_nome)}</td><td>${['Segunda','Terça','Quarta','Quinta','Sexta','Sábado'][a.dia_semana-1]}</td><td class="actions"><button class="btn danger" onclick="removeRouteAssignment('${a.vendedor_id}',${a.dia_semana})">Remover</button></td></tr>`).join('')||'<tr><td colspan="4">Nenhuma designação configurada.</td></tr>'}</tbody></table></div></div>
-  <div id="logisticsDashboard" style="display:none; padding:20px; background:var(--bg); position:absolute; top:0; left:0; width:100%; min-height:100vh; z-index:50;">
+
+  <div id="logisticsDashboard" style="display:none; width:100%;">
     <div id="logisticsDashboardContainer"></div>
   </div>
-  <div id="returnedOrdersDashboard" style="display:none; padding:20px; background:var(--bg); position:absolute; top:0; left:0; width:100%; min-height:100vh; z-index:50;">
+
+  <div id="returnedOrdersDashboard" style="display:none; width:100%;">
     <div id="returnedOrdersDashboardContainer"></div>
-  </div>
-  <div class="tablewrap"><table class="table"><thead><tr><th>Data</th><th>Motorista</th><th>Status</th><th>Pedidos</th><th>Distância / Tempo</th></tr></thead><tbody>${r.items.map(x=>{let ids=[];try{ids=JSON.parse(x.sequencia_json)}catch{}const meta=x.distance_km!=null?`${x.distance_km} km ${x.estimated_minutes?`· ~${x.estimated_minutes} min`:''}`:'-';return `<tr><td>${x.data}</td><td>${esc(x.motorista_nome||'-')}</td><td>${esc(x.status)}</td><td>${ids.length}</td><td><small class="muted">${meta}</small></td></tr>`}).join('')}</tbody></table></div>`;
+  </div>`;
 }
 function newRouteConfig(){routeConfigModal()}
 
