@@ -1,18 +1,42 @@
 const API='';
+// Polyfill: crypto.randomUUID só existe em contexto seguro (HTTPS/localhost). Em http://192.168.x.x (rede local) ele não existe.
+(function(){const c=(typeof window!=='undefined'&&window.crypto)?window.crypto:(window.crypto={});if(typeof c.randomUUID!=='function'){c.randomUUID=function(){const b=new Uint8Array(16);if(typeof c.getRandomValues==='function'){c.getRandomValues(b)}else{for(let i=0;i<16;i++)b[i]=Math.floor(Math.random()*256)}b[6]=(b[6]&0x0f)|0x40;b[8]=(b[8]&0x3f)|0x80;const h=[...b].map(x=>x.toString(16).padStart(2,'0')).join('');return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`}}})();
 if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{})}
 let token=localStorage.getItem('xv_token'),me=null;
 function priceForLine(product,quantity=1){const minimum=Number(product?.quantidade_minima||1);if(product?.preco_tabela!=null&&Number(quantity)>=minimum)return Number(product.preco_tabela);if(product?.promocao_preco!=null)return Number(product.promocao_preco);return Number(product?.preco_aplicado??product?.preco_base??0)}
 const $=s=>document.querySelector(s);function jsonArg(value){const bytes=new TextEncoder().encode(JSON.stringify(value));let binary='';for(const byte of bytes)binary+=String.fromCharCode(byte);return btoa(binary)}
 function parseJsonArg(encoded){return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(encoded),c=>c.charCodeAt(0))))}
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-async function api(path,opt={}){const reqId=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);try{const r=await fetch(API+path,{...opt,headers:{'x-request-id':reqId,'content-type':'application/json',...(opt.headers||{}),...(token?{authorization:'Bearer '+token}:{})}});if(!r.ok){let e;try{e=await r.json()}catch{};throw new Error(e?.error||`HTTP ${r.status}`)}return r.headers.get('content-type')?.includes('application/json')?r.json():r.blob()}catch(e){if((!navigator.onLine||e instanceof TypeError||e?.name==='TypeError'||e.message?.includes('fetch')||e.message?.includes('NetworkError')||e.message?.includes('Failed to fetch'))&&opt.method&&opt.method!=='GET'){const q=await queueOffline(path,opt);return {offline:true,queued_id:q.id}}throw e}}
+async function api(path,opt={}){const reqId=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);try{const r=await fetch(API+path,{...opt,headers:{'x-request-id':reqId,'content-type':'application/json',...(opt.headers||{}),...(token?{authorization:'Bearer '+token}:{})}});if(!r.ok){if(r.status===401&&token&&!path.includes('/api/auth/login')){localStorage.removeItem('xv_token');localStorage.removeItem('xv_user');token=null;me=null;alert('Sua sessão expirou. Faça login novamente.');return loginPage()}let e;try{e=await r.json()}catch{};throw new Error(e?.error||`HTTP ${r.status}`)}return r.headers.get('content-type')?.includes('application/json')?r.json():r.blob()}catch(e){if((!navigator.onLine||e instanceof TypeError||e?.name==='TypeError'||e.message?.includes('fetch')||e.message?.includes('NetworkError')||e.message?.includes('Failed to fetch'))&&opt.method&&opt.method!=='GET'){const q=await queueOffline(path,opt);return {offline:true,queued_id:q.id}}throw e}}
 function money(v){const n=Number(v);return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number.isFinite(n)?n:0)}
 function offlineDb(){return new Promise((resolve,reject)=>{const r=indexedDB.open('xv-offline-v1-'+encodeURIComponent(me?.id||'anonymous'),1);r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv');if(!d.objectStoreNames.contains('queue'))d.createObjectStore('queue',{keyPath:'id'})};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
 async function offlinePut(store,key,value){const d=await offlineDb();return new Promise((res,rej)=>{const t=d.transaction(store,'readwrite');t.objectStore(store).put(value,key);t.oncomplete=res;t.onerror=()=>rej(t.error)})}
 async function offlineGet(store,key){const d=await offlineDb();return new Promise((res,rej)=>{const t=d.transaction(store);const r=t.objectStore(store).get(key);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
 async function queueOffline(path,opt){const id=crypto.randomUUID();const item={id,path,method:opt.method||'POST',body:opt.body||'{}',headers:opt.headers||{},created_at:new Date().toISOString()};const d=await offlineDb();await new Promise((res,rej)=>{const t=d.transaction('queue','readwrite');t.objectStore('queue').put(item);t.oncomplete=res;t.onerror=()=>rej(t.error)});return item}
 async function syncOfflineQueue(){if(!navigator.onLine)return;const d=await offlineDb();const rows=await new Promise((res,rej)=>{const t=d.transaction('queue');const q=t.objectStore('queue').getAll();q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)});let synced=0;for(const item of (rows||[]).sort((a,b)=>a.created_at.localeCompare(b.created_at))){try{await api(item.path,{method:item.method,body:item.body,headers:{...(item.headers||{}),'Idempotency-Key':item.headers?.['Idempotency-Key']||('OFF-'+item.id)}});await new Promise((res,rej)=>{const t=d.transaction('queue','readwrite');t.objectStore('queue').delete(item.id);t.oncomplete=res;t.onerror=()=>rej(t.error)});synced++}catch(e){if(!navigator.onLine)break;console.warn('sync-pending',e.message)}}if(synced>0){toastRole(`✓ ${synced} operação(ões) offline sincronizada(s) com sucesso!`);if(typeof roleRealtimeRefresh==='function'){roleRealtimeRefresh('orders_changed');roleRealtimeRefresh('stock_changed')}}}
-window.addEventListener('online',syncOfflineQueue);setTimeout(syncOfflineQueue,1200);
+let _roleNetTimer=null;
+function handleRoleNetworkChange(isOnline){
+  clearTimeout(_roleNetTimer);
+  _roleNetTimer=setTimeout(async()=>{
+    const reallyOnline = typeof navigator.onLine==='boolean' ? navigator.onLine : isOnline;
+    const el=document.getElementById('offlineIndicator')||document.getElementById('roleOfflineIndicator');
+    if(reallyOnline){
+      if(el)el.style.display='none';
+      toastRole("Conexão restabelecida! Sincronizando...");
+      await syncOfflineQueue();
+      if(typeof roleRealtimeRefresh==='function'){
+        roleRealtimeRefresh('orders_changed');
+        roleRealtimeRefresh('stock_changed');
+      }
+    }else{
+      if(el)el.style.display='inline-flex';
+      toastRole("Dispositivo em Modo Offline. Operando localmente.", true);
+    }
+  }, 300);
+}
+window.addEventListener('online',()=>handleRoleNetworkChange(true));
+window.addEventListener('offline',()=>handleRoleNetworkChange(false));
+setTimeout(syncOfflineQueue,1200);
 
 let _roleToastTimer=null;
 function toastRole(m,isError=false){
@@ -207,8 +231,8 @@ function loginPage(){const isStore=document.body.dataset.role==='Loja Online';do
 function storeAuthMode(mode){const box=$('#storeAuthBox');if(mode==='login'){box.innerHTML=`<form id="roleLoginForm" class="form" style="margin-top:18px"><div class="field"><label>Email</label><input name="email" type="email" autocomplete="username" required></div><div class="field"><label>Senha</label><div style="display:flex;gap:6px"><input name="password" type="password" autocomplete="current-password" required style="flex:1"><button type="button" class="btn" tabindex="-1" onclick="const x=this.previousElementSibling; x.type=x.type==='password'?'text':'password'">👁</button></div></div><button class="btn primary" style="width:100%">Fazer Login</button></form>`;$('#roleLoginForm').addEventListener('submit',doLogin);return}storeRegister()}
 function storeRegister(){const box=$('#storeAuthBox')||$('#registerBox');if(!box)return;box.innerHTML=`<form id="storeRegisterForm" class="form" style="margin-top:18px"><div class="field"><label>Nome</label><input name="nome" required></div><div class="field"><label>E-mail</label><input name="email" type="email" autocomplete="email" required></div><div class="field"><label>Telefone</label><input name="telefone" type="tel" autocomplete="tel" maxlength="40" required></div><div class="field"><label>Endereço</label><input name="endereco" autocomplete="street-address" maxlength="240" required></div><div class="field"><label>Bairro</label><input name="bairro" maxlength="120" required></div><div class="field"><label>Criar senha</label><div style="display:flex;gap:6px"><input id="regPassword" name="password" type="password" minlength="8" required style="flex:1"><button type="button" class="btn" onclick="const x=$('#regPassword');x.type=x.type==='password'?'text':'password'">👁</button></div></div><button class="btn primary" style="width:100%">Criar cadastro</button></form>`;$('#storeRegisterForm').onsubmit=async e=>{e.preventDefault();try{const x=await api('/api/store/register',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});token=x.token;localStorage.setItem('xv_token',token);location.reload()}catch(err){alert(err.message)}}}
 async function doLogin(e){e.preventDefault();const form=e.currentTarget;if(!(form instanceof HTMLFormElement))return alert('Não foi possível identificar o formulário de login. Atualize a página e tente novamente.');const submit=form.querySelector('button[type=submit]');if(submit){submit.disabled=true;submit.textContent='Entrando…'}try{const data=Object.fromEntries(new FormData(form));const x=await api('/api/auth/login',{method:'POST',body:JSON.stringify(data)});token=x.token;me=x.user;localStorage.setItem('xv_token',token);localStorage.setItem('xv_user',JSON.stringify(x.user||{}));location.reload()}catch(err){alert(err.message);if(submit){submit.disabled=false;submit.textContent='Entrar na operação'}}}
-async function initRole(){if(!token)return loginPage();const cachedMe=localStorage.getItem('xv_user');if(cachedMe){try{me=JSON.parse(cachedMe)}catch{}}try{const m=await api('/api/me');me=m.user;localStorage.setItem('xv_user',JSON.stringify(me));Realtime.init((type,payload)=>roleRealtimeRefresh(type,payload));await renderRole()}catch(err){if(!navigator.onLine&&me){console.warn('Operando offline com sessão em cache');await renderRole();return}if(err.message?.includes('401')||err.message?.includes('Token')){localStorage.removeItem('xv_token');localStorage.removeItem('xv_user');return loginPage()}if(me){await renderRole()}else{loginPage()}}}
-function mobileHeader(title,subtitle,logo='/assets/brand/logo-online.jpg',dark=false){return `<header class="mobile-header"><div class="mobile-header-row"><img class="xv-logo" src="${logo}" alt="Xiquim Vargas"><div style="margin-left:auto;display:flex;gap:8px"><button class="btn" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:#fff" onclick="logout()">⇥</button></div></div><div style="margin-top:8px"><strong style="font-size:21px">${title}</strong><div class="mobile-user">${subtitle}</div></div></header>`}
+async function initRole(){if(!token)return loginPage();const cachedMe=localStorage.getItem('xv_user');if(cachedMe){try{me=JSON.parse(cachedMe)}catch{}}try{const m=await api('/api/me');me=m.user;localStorage.setItem('xv_user',JSON.stringify(me));Realtime.init((type,payload)=>roleRealtimeRefresh(type,payload));await renderRole()}catch(err){if((!navigator.onLine||err.name==='TypeError'||err.message?.includes('fetch')||err.message?.includes('NetworkError')||err.message?.includes('Failed to fetch'))&&me){console.warn('Operando offline com sessão em cache');await renderRole();return}if(err.message?.includes('401')||err.message?.includes('Token')||err.message?.includes('jwt')){localStorage.removeItem('xv_token');localStorage.removeItem('xv_user');return loginPage()}if(me){await renderRole()}else{loginPage()}}}
+function mobileHeader(title,subtitle,logo='/assets/brand/logo-online.jpg',dark=false){const isOff=typeof navigator.onLine==='boolean'&&!navigator.onLine;return `<header class="mobile-header"><div class="mobile-header-row"><img class="xv-logo" src="${logo}" alt="Xiquim Vargas"><div style="margin-left:auto;display:flex;align-items:center;gap:8px"><span id="roleOfflineIndicator" style="display:${isOff?'inline-flex':'none'};background:#e11d48;color:#fff;font-weight:700;font-size:11px;padding:3px 8px;border-radius:12px">OFFLINE</span><button class="btn" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:#fff" onclick="logout()">⇥</button></div></div><div style="margin-top:8px"><strong style="font-size:21px">${title}</strong><div class="mobile-user">${subtitle}</div></div></header>`}
 function bottom(active){return `<nav class="bottom-nav"><button class="${active==='home'?'active':''}" onclick="roleHome()"><span class="ico">⌂</span>Início</button><button class="${active==='clients'?'active':''}" onclick="seller()"><span class="ico">♙</span>Clientes</button><button class="${active==='orders'?'active':''}" onclick="sellerOrders()"><span class="ico">▣</span>Pedidos</button><button><span class="ico">☰</span>Mais</button></nav>`}
 async function renderRole(){const role=document.body.dataset.role;const expected={'Vendedor Externo':'seller','Frente de Loja / PDV':'cashier','Loja Online':'web_client','Motorista':'driver'}[role];if(expected&&me.role!==expected){localStorage.removeItem('xv_token');alert('Esta interface não corresponde ao seu perfil de acesso.');return loginPage()}
 if(role==='Vendedor Externo')return seller();if(role==='Frente de Loja / PDV')return pdv();if(role==='Loja Online')return loja();return driver()}
@@ -677,10 +701,10 @@ function sellerStockRow(x){return `<article class="mobile-card seller-stock-row"
 function sellerStockFilter(i){const q=i.value.toLowerCase();document.querySelectorAll('.seller-stock-row').forEach(x=>x.style.display=x.dataset.search.includes(q)?'':'none')}
 async function sellerOrders(){let x;try{x=await api('/api/orders');await offlinePut('kv','sellerOrders',x)}catch(e){x=await offlineGet('kv','sellerOrders')||{items:[]}}document.body.innerHTML=`<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Meus pedidos',`${esc(me.nome)} · Apenas pedidos do vendedor`)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="seller()">♙ Clientes</button><button class="btn" onclick="sellerDashboard()">▦ Painel do mês</button></div><div class="section-title"><h2>Histórico</h2><span class="muted">${x.items.length} pedidos</span></div>${x.items.map(o=>`<article class="mobile-card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:10px"><strong>${esc(o.numero)}</strong><span class="badge status-${String(o.status).toLowerCase()}">${esc(({PENDENTE:'Pendente',SEPARACAO:'Em separação',ROTA:'Em rota',CONCLUIDO:'Concluído'})[o.status]||o.status)}</span></div><h3 style="margin-top:8px">${esc(o.cliente_nome)}</h3><div class="muted">${new Date(o.created_at).toLocaleString('pt-BR')} · ${esc(o.origem)}</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px"><strong class="orange" style="font-size:20px">${money(o.total)}</strong>${o.status==='PENDENTE'?`<button class="btn primary" onclick="sellerEditOrder('${o.id}')">Editar pedido</button>`:''}<button class="btn" onclick="downloadAuthFile('/api/orders/${o.id}/pdf','pedido-${o.numero}.pdf')">Ver PDF</button></div></article>`).join('')}</div>${bottom('orders')}</div>`}
 function pdvGetDefaultClient(){return (window.pdvClients||[]).find(x=>x.id==='CLIENTE-BALCAO'||x.razao_social==='Cliente Balcão')||{id:'CLIENTE-BALCAO',razao_social:'Cliente Balcão'}}
-function pdvResetClient(){const def=pdvGetDefaultClient();const hidden=$('#pdvClient'),search=$('#pdvClientSearch'),badge=$('#pdvClientBadge'),drop=$('#pdvClientDropdown');if(hidden)hidden.value=def.id;if(search)search.value=def.razao_social||'Cliente Balcão';if(badge)badge.textContent='Cliente Balcão (Padrão)';if(drop)drop.style.display='none';toastRole('Cliente redefinido para Cliente Balcão')}
+function pdvResetClient(){const def=pdvGetDefaultClient();const hidden=$('#pdvClient'),search=$('#pdvClientSearch'),badge=$('#pdvClientBadge'),drop=$('#pdvClientDropdown');if(hidden)hidden.value=def.id;if(search){search.value='';search.focus()}if(badge)badge.textContent='Cliente Balcão (Padrão)';if(drop)drop.style.display='none';if(search)pdvClientInput(search)}
 async function pdvSelectClient(id){const c=(window.pdvClients||[]).find(x=>x.id===id);if(!c)return;const hidden=$('#pdvClient'),search=$('#pdvClientSearch'),badge=$('#pdvClientBadge'),drop=$('#pdvClientDropdown');if(hidden)hidden.value=c.id;const name=c.razao_social||c.nome_fantasia||'Cliente';if(search)search.value=name;const isDefault=c.id==='CLIENTE-BALCAO'||name==='Cliente Balcão';if(badge)badge.textContent=isDefault?'Cliente Balcão (Padrão)':name;if(drop)drop.style.display='none';if(id!=='CLIENTE-BALCAO'){try{const result=await api('/api/products?cliente_id='+encodeURIComponent(id));const byId=new Map(result.items.map(product=>[product.id,product]));window.pdvProducts=window.pdvProducts.map(product=>({...product,...(byId.get(product.id)||{})}));pdvRender([]);pdvCartRender()}catch(error){toastRole('Nao foi possivel atualizar os precos deste cliente. O servidor recalculara ao finalizar.',true)}}}
-function pdvClientFocus(){const search=$('#pdvClientSearch');if(search)pdvClientInput(search)}
-function pdvClientInput(input){const q=String(input?.value||'').trim().toLowerCase();const drop=$('#pdvClientDropdown');if(!drop)return;if(!q){pdvResetClient();drop.style.display='none';return}const items=(window.pdvClients||[]).filter(c=>(c.razao_social||'').toLowerCase().includes(q)||(c.nome_fantasia||'').toLowerCase().includes(q)||(c.cnpj_cpf||'').toLowerCase().includes(q)||(c.telefone||'').toLowerCase().includes(q)||(c.bairro||'').toLowerCase().includes(q));if(!items.length){drop.innerHTML='<div style="padding:12px;color:#718198;text-align:center">Nenhum cliente encontrado</div>';drop.style.display='block';return}drop.innerHTML=items.slice(0,15).map(c=>`<div class="pdv-client-option" onclick="pdvSelectClient('${c.id}')"><strong>${esc(c.razao_social||c.nome_fantasia)}</strong><small>${esc(c.cnpj_cpf||'Sem documento')}${c.telefone?' · '+esc(c.telefone):''}${c.bairro?' · '+esc(c.bairro):''}</small></div>`).join('');drop.style.display='block'}
+function pdvClientFocus(){const search=$('#pdvClientSearch');if(!search)return;if(search.value==='Cliente Balcão')search.select();pdvClientInput(search)}
+function pdvClientInput(input){const q=String(input?.value||'').trim().toLowerCase();const drop=$('#pdvClientDropdown');const hidden=$('#pdvClient');const badge=$('#pdvClientBadge');if(!drop)return;if(!q){const def=pdvGetDefaultClient();if(hidden)hidden.value=def.id;if(badge)badge.textContent='Cliente Balcão (Padrão)';const items=(window.pdvClients||[]);if(items.length){drop.innerHTML=items.slice(0,15).map(c=>`<div class="pdv-client-option" onclick="pdvSelectClient('${c.id}')"><strong>${esc(c.razao_social||c.nome_fantasia)}</strong><small>${esc(c.cnpj_cpf||'Sem documento')}${c.telefone?' · '+esc(c.telefone):''}${c.bairro?' · '+esc(c.bairro):''}</small></div>`).join('');drop.style.display='block'}else{drop.style.display='none'}return}if(badge&&badge.textContent!=='Buscando cliente...')badge.textContent='Buscando...';const items=(window.pdvClients||[]).filter(c=>(c.razao_social||'').toLowerCase().includes(q)||(c.nome_fantasia||'').toLowerCase().includes(q)||(c.cnpj_cpf||'').toLowerCase().includes(q)||(c.telefone||'').toLowerCase().includes(q)||(c.bairro||'').toLowerCase().includes(q));if(!items.length){drop.innerHTML='<div style="padding:12px;color:#718198;text-align:center">Nenhum cliente encontrado</div>';drop.style.display='block';return}drop.innerHTML=items.slice(0,15).map(c=>`<div class="pdv-client-option" onclick="pdvSelectClient('${c.id}')"><strong>${esc(c.razao_social||c.nome_fantasia)}</strong><small>${esc(c.cnpj_cpf||'Sem documento')}${c.telefone?' · '+esc(c.telefone):''}${c.bairro?' · '+esc(c.bairro):''}</small></div>`).join('');drop.style.display='block'}
 function pdvClientFilter(input){return pdvClientInput(input)}
 function pdvClientKeydown(event){if(event.key==='Escape'){const drop=$('#pdvClientDropdown');if(drop)drop.style.display='none'}}
 function pdvRemoveItem(id){delete window.pdvCart[id];pdvCartRender()}
@@ -724,7 +748,15 @@ function pdvQty(id,delta){const p=window.pdvProducts.find(x=>x.id===id);window.p
 async function submitPDV(){
   const itens=Object.entries(window.pdvCart).filter(([,q])=>q>0).map(([produto_id,quantidade])=>({produto_id,quantidade}));
   if(!itens.length)return toastRole('O pedido está vazio.',true);
-  const clientId=$('#pdvClient')?.value||'CLIENTE-BALCAO';
+  const clientSearch=String($('#pdvClientSearch')?.value||'').trim();
+  let clientId=$('#pdvClient')?.value||'CLIENTE-BALCAO';
+  if(!clientSearch){
+    const def=pdvGetDefaultClient();
+    clientId=def.id;
+  }else if(clientSearch&&clientId==='CLIENTE-BALCAO'){
+    const match=(window.pdvClients||[]).find(c=>(c.razao_social||'').toLowerCase()===clientSearch.toLowerCase()||(c.nome_fantasia||'').toLowerCase()===clientSearch.toLowerCase());
+    if(match)clientId=match.id;
+  }
   if($('#pdvFulfillment').value==='ENTREGA'){
     const client=window.pdvClients.find(x=>x.id===clientId);
     if(!String(client?.endereco||'').trim())return toastRole('Este cliente não possui endereço cadastrado.',true);
@@ -795,19 +827,229 @@ async function submitPDV(){
   }catch(e){toastRole(e.message,true)}
 }
 
-async function loja(){const [c,p,sc,cats]=await Promise.all([api('/api/clients'),api('/api/products'),api('/api/store-config'),api('/api/categories')]);const cfg=sc.config||{};window.lojaProducts=p.items;window.lojaCategories=cats.categorias;window.lojaSubcategories=cats.subcategorias;window.lojaCart=window.lojaCart||{};const activeIds=new Set(window.lojaProducts.map(x=>x.id));const removed=Object.keys(window.lojaCart).filter(id=>!activeIds.has(id));for(const id of removed)delete window.lojaCart[id];if(removed.length)setTimeout(()=>alert(`${removed.length} produto(s) indisponível(is) foram removidos automaticamente do carrinho.`),0);window.lojaClientId=c.items[0]?.id||'';if(window.lojaClientId){try{const priced=await api('/api/products?cliente_id='+encodeURIComponent(window.lojaClientId));window.lojaProducts=priced.items}catch(error){console.warn('Falha ao atualizar precos da loja',error)}}document.body.innerHTML=`<div><header class="store-header"><img class="xv-logo" src="/assets/brand/logo-online.jpg" alt="Xiquim Vargas"><nav class="store-links"><button class="store-nav active" onclick="lojaCatalogo()">Catálogo</button><button class="store-nav" onclick="lojaPedidos()">Pedidos</button><button class="store-nav" onclick="lojaPerfil()">Perfil</button></nav><div class="store-actions"><span>♙ ${esc(me.nome)}</span><button class="btn cart-button" onclick="openCart()">🛒 <b id="cartCount">0</b></button><button class="btn" onclick="logout()">⇥</button></div></header><main id="storeMain"></main><footer class="store-footer"><strong>Xiquim Vargas</strong><div style="margin-top:7px">${esc(cfg['store.footer']||'Pedido, catálogo e operação integrados.')}</div></footer><div id="cartDrawer"></div></div>`;window.storeCfg=cfg;lojaCatalogo()}
+async function loja(){const [c,p,sc,cats]=await Promise.all([api('/api/clients'),api('/api/products'),api('/api/store-config'),api('/api/categories')]);const cfg=sc.config||{};window.lojaProducts=p.items;window.lojaCategories=cats.categorias;window.lojaSubcategories=cats.subcategorias;window.lojaCart=window.lojaCart||{};const activeIds=new Set(window.lojaProducts.map(x=>x.id));const removed=Object.keys(window.lojaCart).filter(id=>!activeIds.has(id));for(const id of removed)delete window.lojaCart[id];if(removed.length)setTimeout(()=>alert(`${removed.length} produto(s) indisponível(is) foram removidos automaticamente do carrinho.`),0);window.lojaClientId=c.items[0]?.id||'';if(window.lojaClientId){try{const priced=await api('/api/products?cliente_id='+encodeURIComponent(window.lojaClientId));window.lojaProducts=priced.items}catch(error){console.warn('Falha ao atualizar precos da loja',error)}}document.body.innerHTML=`<div><header class="store-header"><img class="xv-logo" src="/assets/brand/logo-online.jpg" alt="Xiquim Vargas"><nav class="store-links"><button class="store-nav active" onclick="lojaCatalogo()">Catálogo</button><button class="store-nav" onclick="lojaPedidos()">Pedidos</button><button class="store-nav" onclick="lojaPerfil()">Perfil</button><button class="store-nav" onclick="lojaSobreNos()">Sobre Nós</button></nav><div class="store-actions"><span>♙ ${esc(me.nome)}</span><button class="btn cart-button" onclick="openCart()">🛒 <b id="cartCount">0</b></button><button class="btn" onclick="logout()">⇥</button></div></header><main id="storeMain"></main><footer class="store-footer"><strong>Xiquim Vargas</strong><div style="margin-top:7px">${esc(cfg['store.footer']||'Pedido, catálogo e operação integrados.')}</div></footer><div id="cartDrawer"></div></div>`;window.storeCfg=cfg;lojaCatalogo()}
 
 function lojaNav(active){document.querySelectorAll('.store-nav').forEach(b=>b.classList.toggle('active',b.textContent.toLowerCase().startsWith(active)))}
 function lojaDashboard(){return lojaCatalogo()}
-function storeHeroHtml(){const cfg=window.storeCfg||{};const cover=cfg['store.cover'];return `<section class="store-cover-hero"${cover?` style="background-image:url('${esc(cover)}')"`:''}><div class="store-cover-content"><h1>${esc(cfg['store.title']||'Catálogo Xiquim Vargas')}</h1><h2>${esc(cfg['store.subtitle']||'')}</h2><p>${esc(cfg['store.hero']||'')}</p></div></section>`}
+function storeHeroHtml(){
+  const cfg=window.storeCfg||{};
+  const cover=cfg['store.cover'];
+  const minVal=Number(cfg['store.min_order_value']||0);
+  const minNotice=minVal>0?`
+    <div class="min-order-banner">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:24px">🛒</span>
+        <div>
+          <strong style="color:var(--xv-brand-orange,#f45a08);font-size:15px">Aviso de Pedido Mínimo:</strong>
+          <span style="font-size:14px;margin-left:4px">A compra mínima na Loja Online é de <strong>${money(minVal)}</strong>.</span>
+        </div>
+      </div>
+      <span class="badge" style="background:rgba(244,90,8,0.15);color:var(--xv-brand-orange,#f45a08);border:1px solid rgba(244,90,8,0.3);font-weight:700">Mínimo: ${money(minVal)}</span>
+    </div>
+  `:'';
+  return `<section class="store-cover-hero"${cover?` style="background-image:url('${esc(cover)}')"`:''}><div class="store-cover-content"><h1>${esc(cfg['store.title']||'Catálogo Xiquim Vargas')}</h1><h2>${esc(cfg['store.subtitle']||'')}</h2><p>${esc(cfg['store.hero']||'')}</p></div></section>${minNotice}`;
+}
+
+const defaultAboutCards = [
+  {
+    id: 'horarios',
+    badge: 'Atendimento',
+    title: 'Horários de Atendimento',
+    description: 'Confira nossos horários de funcionamento presencial e entregas: Segunda à Sexta das 07:30 às 17:30 e Sábado das 07:30 às 12:30.',
+    image: '/assets/institucional/02_Horarios_de_Atendimento_HD.png',
+    link: '',
+    link_text: ''
+  },
+  {
+    id: 'localizacao',
+    badge: 'Endereço',
+    title: 'Nossa Localização',
+    description: 'Venha nos visitar! Rua José Luiz Nogueira, 645 - Centro, Governador Valadares/MG (Próximo ao Mercado Municipal).',
+    image: '/assets/institucional/03_Nossa_Localizacao_Fachada_HD.png',
+    link: 'https://maps.google.com/?q=Rua+Jose+Luiz+Nogueira+645+Centro+Governador+Valadares+MG',
+    link_text: '📍 Abrir no Google Maps'
+  },
+  {
+    id: 'rotas',
+    badge: 'Logística & Entregas',
+    title: 'Rotas de Entrega & Dias da Região',
+    description: 'Entregas diárias no centro e cronograma semanal organizado por bairros em toda a região com agilidade e compromisso.',
+    image: '/assets/institucional/04_Rotas_de_Entrega_Dias_HD.png',
+    link: '',
+    link_text: ''
+  }
+];
+
+const defaultDeliveryRoutesSchedule = [
+  { dia: 'TODOS_OS_DIAS', dia_nome: 'Todos os Dias', bairros: ['Centro'] },
+  { dia: 'SEGUNDA', dia_nome: 'Segunda-feira', bairros: ['Vila Isa', 'São Geraldo', 'Vila Mariana', 'Asteca', 'Residencial Rio Doce', 'Guaçuí'] },
+  { dia: 'TERCA', dia_nome: 'Terça-feira', bairros: ['Altinópolis', 'Santo Antônio', 'Mãe de Deus', 'São Pedro', 'SIR', 'Floresta', 'Universitário'] },
+  { dia: 'QUARTA', dia_nome: 'Quarta-feira', bairros: ['Trevo', 'Santa Paula', 'São Paulo', 'Santa Terezinha', 'Penha', 'Vitória', 'Novo Horizonte', 'Canaã', 'JK', 'JK 1', 'JK 2', 'JK 3', 'Jardim Alice'] },
+  { dia: 'QUINTA', dia_nome: 'Quinta-feira', bairros: ['Santa Rita', 'Vila Rica', 'Pérola', 'Fraternidade', 'São Cristóvão', 'Nossa Senhora de Fátima', 'Sagrada Família', 'Parque Olímpico', 'Castanheira', 'Bela Vista', 'Kennedy', 'Nova Vila Bretas', 'Vila Império'] },
+  { dia: 'SEXTA', dia_nome: 'Sexta-feira', bairros: ['Palmeiras', 'Vila Ozanan', 'Planalto', 'Turmalina', 'Morada do Vale'] },
+  { dia: 'SABADO', dia_nome: 'Sábado', bairros: ['Carapina', 'Santa Helena', 'Nossa Senhora das Graças', 'Grã-Duquesa', 'Esperança', 'Morro do Carapina'] }
+];
+
+function normalizeBairroStr(s){
+  return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+}
+
+function getDeliveryForecastForBairro(bairro, scheduleArr){
+  const clean = normalizeBairroStr(bairro);
+  if(!clean) return { dia: 'A Combinar', detalhe: 'Entrega padrão em até 1 a 2 dias úteis', isTodos: false };
+  const list = (Array.isArray(scheduleArr) && scheduleArr.length) ? scheduleArr : defaultDeliveryRoutesSchedule;
+  for(const item of list){
+    const match = (item.bairros||[]).some(b=>{
+      const cb = normalizeBairroStr(b);
+      return cb && (cb === clean || clean.includes(cb) || cb.includes(clean));
+    });
+    if(match){
+      if(item.dia === 'TODOS_OS_DIAS' || (item.dia_nome||'').toLowerCase().includes('todos')) {
+        return { dia: 'Todos os Dias', detalhe: 'Entregas diárias (Segunda a Sábado)', isTodos: true, motorista: item.motorista_nome||'' };
+      }
+      return { dia: item.dia_nome || item.dia, detalhe: `Próxima entrega programada para ${item.dia_nome || item.dia}`, isTodos: false, motorista: item.motorista_nome||'' };
+    }
+  }
+  return { dia: 'A Combinar', detalhe: 'Entrega padrão em até 1 a 2 dias úteis', isTodos: false };
+}
+
+function showMinOrderToast(minOrderVal){
+  document.querySelector('#minOrderToastCard')?.remove();
+  const c = document.createElement('div');
+  c.id = 'minOrderToastCard';
+  c.className = 'min-order-card-toast';
+  const valFmt = money(minOrderVal);
+  c.innerHTML = `
+    <div class="icon">⚠️</div>
+    <div class="text">
+      <strong>Pedido Mínimo Obrigatório</strong><br>
+      A compra mínima é de ${valFmt}. Por favor adicione mais itens ao seu carrinho.
+    </div>
+  `;
+  document.body.appendChild(c);
+  setTimeout(()=>{
+    c.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+    c.style.opacity = '0';
+    c.style.transform = 'translate(-50%, 20px)';
+    setTimeout(()=>c.remove(), 420);
+  }, 4500);
+}
+
+function getStoreAboutCards(){
+  const cfg = window.storeCfg || {};
+  if(cfg['store.about_cards']){
+    try{
+      const parsed = JSON.parse(cfg['store.about_cards']);
+      if(Array.isArray(parsed) && parsed.length) return parsed;
+    }catch(e){}
+  }
+  return defaultAboutCards;
+}
+
+window.openLightboxImage = function(src, title){
+  document.querySelector('#lightboxModal')?.remove();
+  const d = document.createElement('div');
+  d.id = 'lightboxModal';
+  d.className = 'lightbox-modal';
+  d.onclick = (e)=>{ if(e.target === d || e.target.classList.contains('lightbox-close')) d.remove(); };
+  d.innerHTML = `
+    <button class="lightbox-close" title="Fechar">✕</button>
+    <img src="${esc(src)}" alt="${esc(title||'Imagem')}">
+  `;
+  document.body.appendChild(d);
+};
+
+async function lojaSobreNos(){
+  lojaNav('sob');
+  const cards = getStoreAboutCards();
+  $('#storeMain').innerHTML = `
+    <div class="about-hero">
+      <h1>🏢 Sobre a Distribuidora Xiquim Vargas</h1>
+      <p>Tradição, agilidade e compromisso no fornecimento de bebidas, doces e alimentos para o comércio e varejo de Governador Valadares e região.</p>
+    </div>
+    <section class="store-main" style="padding-top:0">
+      <div class="about-grid">
+        ${cards.map(c => `
+          <article class="about-card">
+            ${c.image ? `
+              <div class="about-card-img-wrap" onclick="openLightboxImage('${esc(c.image)}', '${esc(c.title)}')">
+                <img src="${esc(c.image)}" alt="${esc(c.title)}">
+              </div>
+            ` : ''}
+            <div class="about-card-body">
+              ${c.badge ? `<span class="about-card-badge">${esc(c.badge)}</span>` : ''}
+              <h3 class="about-card-title">${esc(c.title)}</h3>
+              <p class="about-card-desc">${esc(c.description || '')}</p>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                ${c.image ? `<button type="button" class="btn" style="padding:8px 12px;font-size:12px" onclick="openLightboxImage('${esc(c.image)}', '${esc(c.title)}')">🔍 Ampliar foto</button>` : ''}
+                ${c.link ? `<a href="${esc(c.link)}" target="_blank" rel="noopener noreferrer" class="about-card-btn">${esc(c.link_text || 'Acessar Link')} ↗</a>` : ''}
+              </div>
+            </div>
+          </article>
+        `).join('')}
+      </div>
+    </section>
+  `;
+}
 async function lojaCatalogo(){lojaNav('cat');const cats=window.lojaCategories||[];const catCards=cats.length?`<div class="grid" style="margin-top:14px;margin-bottom:24px;">${cats.map(c=>`<div class="mobile-card" style="cursor:pointer" onclick="lojaSubcategorias('${c.id}')"><h3>${esc(c.nome)}</h3><p class="muted">${esc(c.descricao||'')}</p></div>`).join('')}</div>`:'';$('#storeMain').innerHTML=`${storeHeroHtml()}<section class="store-main">${catCards}<div class="section-title"><h2>Catálogo de Produtos</h2></div><div class="form" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;"><input id="storeSearch" class="search" style="grid-column:1/-1" placeholder="Pesquisar produto por nome, marca ou SKU..." oninput="lojaFilter()"><div class="field"><label>Menor preço (R$)</label><input type="number" step="0.01" min="0" id="storeMin" class="search" placeholder="0,00" onkeydown="if(event.key==='Enter')lojaFilter()"></div><div class="field"><label>Maior preço (R$)</label><input type="number" step="0.01" min="0" id="storeMax" class="search" placeholder="Sem limite" onkeydown="if(event.key==='Enter')lojaFilter()"></div><div style="grid-column:1/-1;display:flex;gap:8px;margin-top:4px;"><button type="button" class="btn primary" style="flex:1" onclick="lojaFilter()">🔍 Filtrar por preço</button><button type="button" class="btn" onclick="lojaClearFilters()">Limpar filtros</button></div></div><div id="storeProducts" class="product-grid" style="margin-top:14px"></div></section>`;lojaFilter()}
 function lojaClearFilters(){const s=$('#storeSearch');if(s)s.value='';const mn=$('#storeMin');if(mn)mn.value='';const mx=$('#storeMax');if(mx)mx.value='';lojaFilter()}
 function lojaSubcategorias(catId){const cat=window.lojaCategories.find(c=>c.id===catId);const subs=(window.lojaSubcategories||[]).filter(s=>s.categoria_id===catId);window.lojaCurrentCatId=catId;const catItems=(window.lojaProducts||[]).filter(p=>p.categoria_id===catId);$('#storeMain').innerHTML=`${storeHeroHtml()}<section class="store-main"><div class="mobile-nav" style="margin-bottom:14px"><button class="btn" onclick="lojaCatalogo()">← Todas as Categorias</button></div><div class="section-title"><h2>${esc(cat?.nome||'Categoria')}</h2><span class="badge">${catItems.length} produtos</span></div><div class="grid" style="margin-top:14px;margin-bottom:20px;"><div class="mobile-card" style="cursor:pointer;border-left:4px solid #f97316" onclick="lojaProdutosSub('','Todos os Produtos (${catItems.length})','${catId}')"><h3>Todos os Produtos</h3><p class="muted">Ver toda a linha de ${esc(cat?.nome||'')}</p></div>${subs.length?subs.map(s=>{const cnt=(window.lojaProducts||[]).filter(p=>p.subcategoria_id===s.id).length;return `<div class="mobile-card" style="cursor:pointer" onclick="lojaProdutosSub('${s.id}','${esc(s.nome).replace(/'/g,"\\'").replace(/"/g,"&quot;")}','${catId}')"><h3>${esc(s.nome)}</h3><p class="muted">${cnt} produtos</p></div>`}).join(''):'<p class="muted">Nenhuma subcategoria encontrada.</p>'}</div><div class="section-title"><h2>Produtos em ${esc(cat?.nome||'')}</h2></div><div id="storeProducts" class="product-grid" style="margin-top:14px"></div></section>`;lojaRender(catItems)}
 function lojaProdutosSub(subId,subName,catId){window.lojaCurrentSubId=subId;window.lojaCurrentCatId=catId;$('#storeMain').innerHTML=`${storeHeroHtml()}<section class="store-main"><div class="mobile-nav" style="margin-bottom:14px;display:flex;gap:8px"><button class="btn" onclick="lojaSubcategorias('${catId||''}')">← Subcategorias</button><button class="btn" onclick="lojaCatalogo()">🏠 Categorias</button></div><div class="section-title"><h2>${esc(subName)}</h2></div><div class="form" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;"><input id="storeSubSearch" class="search" style="grid-column:1/-1" placeholder="Pesquisar produto por nome, marca ou SKU..." oninput="lojaFilterSub()"><div class="field"><label>Menor preço (R$)</label><input type="number" step="0.01" min="0" id="storeSubMin" class="search" placeholder="0,00" oninput="lojaFilterSub()"></div><div class="field"><label>Maior preço (R$)</label><input type="number" step="0.01" min="0" id="storeSubMax" class="search" placeholder="Sem limite" oninput="lojaFilterSub()"></div><div style="grid-column:1/-1;display:flex;gap:8px;margin-top:4px;"><button type="button" class="btn primary" style="flex:1" onclick="lojaFilterSub()">🔍 Filtrar por preço</button><button type="button" class="btn" onclick="lojaClearSubFilters()">Limpar filtros</button></div></div><div id="storeProducts" class="product-grid" style="margin-top:14px"></div></section>`;lojaFilterSub()}
 function lojaFilterSub(){const q=($('#storeSubSearch')?.value||'').trim().toLowerCase();const minRaw=$('#storeSubMin')?.value;const maxRaw=$('#storeSubMax')?.value;const min=minRaw!==''&&minRaw!=null?Number(minRaw):0;const max=maxRaw!==''&&maxRaw!=null?Number(maxRaw):Infinity;const subId=window.lojaCurrentSubId;const catId=window.lojaCurrentCatId;const filtered=(window.lojaProducts||[]).filter(x=>{if(catId&&x.categoria_id!==catId)return false;if(subId&&x.subcategoria_id!==subId)return false;const price=Number(x.promocao_preco!=null?x.promocao_preco:(x.preco_aplicado??x.preco_base));if(price<min||price>max)return false;if(q&&!(x.nome+' '+(x.sku||'')+' '+(x.marca||'')+' '+(x.codigo_barras||'')).toLowerCase().includes(q))return false;return true;});lojaRender(filtered)}
 function lojaClearSubFilters(){const s=$('#storeSubSearch');if(s)s.value='';const mn=$('#storeSubMin');if(mn)mn.value='';const mx=$('#storeMax');if(mx)mx.value='';lojaFilterSub()}
-async function lojaPedidos(){lojaNav('ped');const x=await api('/api/orders');$('#storeMain').innerHTML=`<section class="store-main"><div class="section-title"><h2>Pedidos</h2><span class="muted">Histórico da sua conta</span></div>${x.items.map(o=>`<article class="mobile-card" style="margin-bottom:10px"><strong>${esc(o.numero)}</strong><span class="badge">${esc(o.status)}</span><p>${new Date(o.created_at).toLocaleString('pt-BR')} · ${money(o.total)}</p><div class="actions"><button class="btn" onclick="storeViewOrder('${o.id}')">Ver pedido</button><button class="btn" onclick="downloadAuthFile('/api/orders/${o.id}/pdf','pedido-${o.numero}.pdf')">PDF</button><button class="btn primary" onclick="storeRepeatOrder('${o.id}')">↻ Repetir pedido</button></div></article>`).join('')||'<div class="empty-state">Nenhum pedido.</div>'}</section>`}
-async function storeViewOrder(id){try{const x=await api('/api/orders/'+id+'/detail');const o=x.order;storeOrderModal('Pedido '+esc(o.numero),`<div class="panel"><strong>${esc(o.cliente_nome||'')}</strong><p class="muted">${new Date(o.created_at).toLocaleString('pt-BR')} · ${esc(o.modalidade_entrega==='ENTREGA'?'Entrega':'Retirada')}</p></div><div class="tablewrap"><table class="table"><thead><tr><th>Produto</th><th>Quantidade</th><th>Preço</th><th>Total</th></tr></thead><tbody>${x.items.map(i=>`<tr><td>${esc(i.produto_nome)}</td><td>${i.quantidade}</td><td>${money(i.preco_unitario_aplicado)}</td><td>${money(i.subtotal)}</td></tr>`).join('')}</tbody></table></div><div class="actions" style="margin-top:12px"><button class="btn" onclick="document.querySelector('#storeOrderModal')?.remove()">Fechar</button><button class="btn primary" onclick="storeRepeatOrder('${id}');document.querySelector('#storeOrderModal')?.remove()">↻ Repetir pedido</button></div>`)}catch(e){toastStore(e.message)}}
+async function lojaPedidos(){
+  lojaNav('ped');
+  const [x, schedRes] = await Promise.all([
+    api('/api/orders'),
+    api('/api/logistics/delivery-routes-config').catch(()=>({items:[]}))
+  ]);
+  const schedule = schedRes?.items?.length ? schedRes.items : defaultDeliveryRoutesSchedule;
+
+  $('#storeMain').innerHTML=`<section class="store-main"><div class="section-title"><h2>Pedidos</h2><span class="muted">Histórico da sua conta</span></div>${x.items.map(o=>{
+    let previsaoText = '';
+    if(o.observacoes && o.observacoes.includes('Previsão de entrega:')){
+      const m = o.observacoes.match(/Previsão de entrega:\s*([^(\n\r]+)/i);
+      if(m) previsaoText = m[1].trim();
+    }
+    if(!previsaoText && o.bairro){
+      const prev = getDeliveryForecastForBairro(o.bairro, schedule);
+      previsaoText = prev.dia;
+    }
+    return `<article class="mobile-card" style="margin-bottom:12px;border-left:4px solid var(--xv-brand-orange,#f45a08)">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+        <strong>${esc(o.numero)}</strong>
+        <span class="badge">${esc(o.status)}</span>
+      </div>
+      <p style="margin:6px 0">${new Date(o.created_at).toLocaleString('pt-BR')} · <strong>${money(o.total)}</strong></p>
+      ${previsaoText ? `
+        <div style="margin:8px 0;background:#0f172a;border:1px solid #334155;border-radius:8px;padding:8px 12px;font-size:12px;display:flex;align-items:center;gap:8px">
+          <span style="font-size:16px">🚚📅</span>
+          <div>
+            <strong style="color:#10b981">Previsão de Entrega:</strong>
+            <span style="color:#e2e8f0;margin-left:4px;font-weight:700">${esc(previsaoText)}</span>
+          </div>
+        </div>
+      ` : ''}
+      <div class="actions" style="margin-top:10px">
+        <button class="btn" onclick="storeViewOrder('${o.id}')">Ver pedido</button>
+        <button class="btn" onclick="downloadAuthFile('/api/orders/${o.id}/pdf','pedido-${o.numero}.pdf')">PDF</button>
+        <button class="btn primary" onclick="storeRepeatOrder('${o.id}')">↻ Repetir pedido</button>
+      </div>
+    </article>`;
+  }).join('')||'<div class="empty-state">Nenhum pedido.</div>'}</section>`}
+
+async function storeViewOrder(id){
+  try{
+    const x=await api('/api/orders/'+id+'/detail');
+    const o=x.order;
+    let prevHtml = '';
+    if(o.observacoes && o.observacoes.includes('Previsão de entrega:')){
+      const m = o.observacoes.match(/Previsão de entrega:\s*([^\n\r]+)/i);
+      if(m) prevHtml = `<div style="background:#10b98115;border:1px solid #10b98140;border-radius:8px;padding:10px;margin-top:8px;font-size:13px;color:#10b981"><strong>🚚 Previsão de Entrega:</strong> ${esc(m[1].trim())}</div>`;
+    }
+    storeOrderModal('Pedido '+esc(o.numero),`<div class="panel"><strong>${esc(o.cliente_nome||'')}</strong><p class="muted">${new Date(o.created_at).toLocaleString('pt-BR')} · ${esc(o.modalidade_entrega==='ENTREGA'?'Entrega':'Retirada')}</p>${prevHtml}</div><div class="tablewrap"><table class="table"><thead><tr><th>Produto</th><th>Quantidade</th><th>Preço</th><th>Total</th></tr></thead><tbody>${x.items.map(i=>`<tr><td>${esc(i.produto_nome)}</td><td>${i.quantidade}</td><td>${money(i.preco_unitario_aplicado)}</td><td>${money(i.subtotal)}</td></tr>`).join('')}</tbody></table></div><div class="actions" style="margin-top:12px"><button class="btn" onclick="document.querySelector('#storeOrderModal')?.remove()">Fechar</button><button class="btn primary" onclick="storeRepeatOrder('${id}');document.querySelector('#storeOrderModal')?.remove()">↻ Repetir pedido</button></div>`);
+  }catch(e){toastStore(e.message)}
+}
 
 function storeOrderModal(title,body){const old=$('#storeOrderModal');old?.remove();const d=document.createElement('div');d.id='storeOrderModal';d.className='store-order-modal';d.innerHTML=`<div class="store-order-overlay" onclick="if(event.target===this)document.querySelector('#storeOrderModal')?.remove()"><section class="store-order-dialog"><div class="panel-title"><h2>${title}</h2><button class="btn" onclick="document.querySelector('#storeOrderModal')?.remove()">×</button></div>${body}</section></div>`;document.body.appendChild(d)}
 async function lojaPerfil(){lojaNav('per');try{const x=await api('/api/store/profile');const p=x.item;$('#storeMain').innerHTML=`<section class="store-main"><div class="mobile-card"><h2>Meu perfil</h2><p class="muted">${esc(p.email)}</p><form id="storeProfileForm" class="form" style="margin-top:14px"><div class="field"><label>Nome</label><input value="${esc(p.nome)}" disabled></div><div class="field"><label>Telefone</label><input name="telefone" type="tel" maxlength="40" value="${esc(p.telefone||p.cliente_telefone||'')}" required></div><div class="field" style="grid-column:1/-1"><label>Endereço</label><input name="endereco" autocomplete="street-address" maxlength="240" value="${esc(p.endereco||'')}" required></div><div class="field"><label>Bairro</label><input name="bairro" maxlength="120" value="${esc(p.bairro||'')}" required></div><div class="field"><label>Cidade</label><input value="${esc(p.cidade||'')}" disabled></div><div class="field"><label>Estado</label><input value="${esc(p.estado||'')}" disabled></div><div class="actions" style="grid-column:1/-1"><button class="btn primary">Salvar perfil</button></div></form></div></section>`;$('#storeProfileForm').onsubmit=async e=>{e.preventDefault();const b=Object.fromEntries(new FormData(e.currentTarget));try{const saved=await api('/api/store/profile',{method:'PUT',body:JSON.stringify(b)});me.telefone=saved.item.telefone;toastStore('Perfil atualizado com sucesso.')}catch(err){alert(err.message)}}}catch(e){$('#storeMain').innerHTML=`<section class="store-main"><div class="mobile-card"><h2>Meu perfil</h2><p>${esc(e.message)}</p></div></section>`}}
@@ -818,49 +1060,125 @@ function addToCart(id){const p=window.lojaProducts.find(x=>x.id===id);const inpu
 function updateCartCount(){const n=Object.values(window.lojaCart||{}).reduce((a,x)=>a+Number(x),0);const el=$('#cartCount');if(el)el.textContent=n}
 function toastStore(m){let t=$('#storeToast');if(!t){t=document.createElement('div');t.id='storeToast';t.className='toast';document.body.appendChild(t)}t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',1800)}
 function openCart(){const rows=Object.entries(window.lojaCart||{}).filter(([,q])=>q>0).map(([id,q])=>{const p=window.lojaProducts.find(x=>x.id===id);if(!p)return '';const price=priceForLine(p,q);return `<div class="cart-row"><div class="cart-product-info"><strong>${esc(p.nome)}</strong><small>${money(price)} por unidade</small><div class="cart-qty-controls"><button type="button" aria-label="Diminuir quantidade" onclick="changeCartQty('${id}',-1)">−</button><span>${q}</span><button type="button" aria-label="Aumentar quantidade" onclick="changeCartQty('${id}',1)">＋</button></div></div><div class="cart-line-total"><strong>${money(q*price)}</strong><button class="btn cart-remove" onclick="removeFromCart('${id}')">Remover</button></div></div>`}).join('');const total=Object.entries(window.lojaCart||{}).reduce((s,[id,q])=>{const p=window.lojaProducts.find(x=>x.id===id);return s+(p?Number(q)*priceForLine(p,q):0)},0);modalStoreCart(rows,total)}
-function modalStoreCart(rows,total){const d=$('#cartDrawer');d.innerHTML=`<div class="cart-overlay" onclick="if(event.target===this)closeCart()"><aside class="cart-drawer"><div class="panel-title"><h2>Seu carrinho</h2><button type="button" class="btn" aria-label="Fechar carrinho" onclick="closeCart()">×</button></div>${rows||'<div class="empty-state">Seu carrinho está vazio.</div>'}<div class="cart-total"><span>Total</span><strong>${money(total)}</strong></div>${rows?`<div class="field" style="margin-top:12px"><label>Forma de pagamento</label><select id="lojaPayment" onchange="window.lojaPaymentUI&&window.lojaPaymentUI()"><option value="" disabled selected>Selecionar</option><option value="DINHEIRO">Dinheiro</option><option value="DEBITO">Cartão de débito</option><option value="CREDITO">Cartão de crédito</option><option value="PIX">PIX</option></select></div><div id="lojaPaymentCard"></div>`:''}<button class="btn primary" style="width:100%;margin-top:12px" onclick="submitLoja()" ${rows?'':'disabled'}>Finalizar pedido</button></aside></div>`}
+function modalStoreCart(rows,total){
+  const d=$('#cartDrawer');
+  const minVal=Number(window.storeCfg?.['store.min_order_value']||0);
+  const isBelowMin = minVal > 0 && total < minVal;
+  const minWarnHtml = isBelowMin ? `
+    <div style="background:#451a03;border:1px solid #f97316;border-radius:8px;padding:10px 12px;margin-top:10px;font-size:12px;color:#ffedd5;line-height:1.4">
+      ⚠️ <strong>A compra mínima é de ${money(minVal)}.</strong><br>Adicione mais <strong>${money(minVal - total)}</strong> para liberar a finalização.
+    </div>
+  ` : '';
+
+  d.innerHTML=`<div class="cart-overlay" onclick="if(event.target===this)closeCart()"><aside class="cart-drawer"><div class="panel-title"><h2>Seu carrinho</h2><button type="button" class="btn" aria-label="Fechar carrinho" onclick="closeCart()">×</button></div>${rows||'<div class="empty-state">Seu carrinho está vazio.</div>'}<div class="cart-total"><span>Total</span><strong>${money(total)}</strong></div>${minWarnHtml}${rows?`<div class="field" style="margin-top:12px"><label>Forma de pagamento</label><select id="lojaPayment" onchange="window.lojaPaymentUI&&window.lojaPaymentUI()"><option value="" disabled selected>Selecionar</option><option value="DINHEIRO">Dinheiro</option><option value="DEBITO">Cartão de débito</option><option value="CREDITO">Cartão de crédito</option><option value="PIX">PIX</option></select></div><div id="lojaPaymentCard"></div>`:''}<button class="btn primary" style="width:100%;margin-top:12px;${isBelowMin?'opacity:0.8;background:#ea580c;':''}" onclick="submitLoja()" ${rows?'':'disabled'}>Finalizar pedido</button></aside></div>`;
+}
 function closeCart(){$('#cartDrawer').innerHTML=''}
 function changeCartQty(id,delta){const current=Number(window.lojaCart?.[id]||0);if(!current)return;window.lojaCart[id]=Math.max(1,Math.min(99999,current+delta));updateCartCount();openCart()}
 async function storeRepeatOrder(orderId){try{const detail=await api('/api/orders/'+orderId+'/detail');const currentProducts=[];let page=1,total=Infinity;while(currentProducts.length<total){const products=await api('/api/products?cliente_id='+encodeURIComponent(window.lojaClientId)+'&limit=100&page='+page);currentProducts.push(...(products.items||[]));total=Number(products.total||0);if(!products.items?.length)break;page++}const availability=await api('/api/store/availability?ids='+encodeURIComponent(detail.items.map(i=>i.produto_id).join(',')));window.lojaAvailability=new Map((availability.items||[]).map(x=>[x.produto_id,x]));window.lojaProducts=currentProducts;const active=new Map(currentProducts.map(p=>[p.id,p]));const valid=[],missing=[];for(const i of detail.items){const product=active.get(i.produto_id),a=window.lojaAvailability.get(i.produto_id),available=product&&a&&!Number(a.esgotado)?Math.max(0,Number(a.quantidade_disponivel)||0):0;if(!product||available<=0){missing.push(`${i.produto_nome}: indisponível/esgotado`);continue}const q=Math.min(Number(i.quantidade),available);valid.push({...i,quantidade_repetir:q});if(q<Number(i.quantidade))missing.push(`${i.produto_nome}: solicitado ${i.quantidade}, disponível ${q}`)}if(missing.length){if(!valid.length||!confirm(`Alguns itens não estão disponíveis na quantidade original:\n\n${missing.join('\n')}\n\nDeseja repetir apenas os itens disponíveis, respeitando o estoque atual?`))return}if(!valid.length)return alert('Nenhum item deste pedido está disponível no momento.');const merge=Object.values(window.lojaCart||{}).some(q=>Number(q)>0)?confirm('Deseja mesclar os itens deste pedido com o carrinho atual?\n\nOK = mesclar\nCancelar = substituir o carrinho atual'):false;if(!merge)window.lojaCart={};for(const i of valid){const q=Number(i.quantidade_repetir);if(Number.isInteger(q)&&q>0)window.lojaCart[i.produto_id]=Math.min(99999,Number(window.lojaCart[i.produto_id]||0)+q)}updateCartCount();lojaCatalogo();openCart()}catch(e){alert(e.message)}}
 function removeFromCart(id){delete window.lojaCart[id];updateCartCount();openCart()}
 window.lojaPaymentUI=function(){const f=$('#lojaPayment')?.value,c=$('#lojaPaymentCard');if(!c)return;if(f==='CREDITO'){c.innerHTML='<div class="field" style="margin-top:10px"><label>Modalidade Crédito</label><select id="lojaCreditMode" onchange="window.lojaCreditUI&&window.lojaCreditUI()"><option value="A_VISTA">À vista</option><option value="PARCELADO">Parcelado</option></select></div><div id="lojaParcelas"></div>';}else{c.innerHTML='';}};
 window.lojaCreditUI=function(){const x=$('#lojaParcelas');if(!x)return;x.innerHTML=$('#lojaCreditMode').value==='PARCELADO'?'<div class="field" style="margin-top:10px"><label>Parcelas</label><select id="lojaInstallments">'+Array.from({length:11},(_,i)=>`<option value="${i+2}">${i+2}x</option>`).join('')+'</select></div>':'';};
+
 async function submitLoja(){
   const itens=Object.entries(window.lojaCart||{}).filter(([,q])=>q>0).map(([produto_id,quantidade])=>({produto_id,quantidade}));
   if(!itens.length)return toastRole('Seu carrinho está vazio.',true);
-  const forma=$('#lojaPayment')?.value;
-  if(!forma)return toastRole('Selecione uma forma de pagamento.',true);
-  const payload={
-    cliente_id:window.lojaClientId,
-    itens,
-    origem:'WEB',
-    forma_pagamento:forma
-  };
-  if(forma==='CREDITO'){
-    payload.cartao_modalidade=$('#lojaCreditMode')?.value||'A_VISTA';
-    if(payload.cartao_modalidade==='PARCELADO'){
-      payload.parcelas=Number($('#lojaInstallments')?.value||2);
-    }else{
-      payload.parcelas=1;
-    }
+
+  // Calcula total atual do carrinho
+  const total=Object.entries(window.lojaCart||{}).reduce((s,[id,q])=>{
+    const p=window.lojaProducts?.find(x=>x.id===id);
+    return s+(p?Number(q)*priceForLine(p,q):0);
+  },0);
+
+  // Validação estrita do valor mínimo com exibição de card temporário
+  const minVal=Number(window.storeCfg?.['store.min_order_value']||0);
+  if(minVal>0 && total < minVal){
+    showMinOrderToast(minVal);
+    return;
   }
 
-  window.lojaCart={};
-  closeCart();
-  updateCartCount();
-  toastRole('Pedido realizado com sucesso!');
-  Realtime.emit('orders_changed');
-  Realtime.emit('stock_changed');
+  const forma=$('#lojaPayment')?.value;
+  if(!forma)return toastRole('Selecione uma forma de pagamento.',true);
 
+  // Obter perfil do cliente para saber o bairro e dia da rota de entrega
+  let perfilCliente = null;
+  let schedule = defaultDeliveryRoutesSchedule;
   try{
-    const x=await api('/api/orders',{
-      method:'POST',
-      headers:{'Idempotency-Key':`WEB-${Date.now()}-${Math.random().toString(36).slice(2,8)}`},
-      body:JSON.stringify(payload)
-    });
-    toastRole(`✓ Pedido ${x.item.numero} registrado! Visualize em Pedidos.`);
-    roleRealtimeRefresh('orders_changed');
-  }catch(e){toastRole(e.message,true)}
+    const [profRes, schedRes] = await Promise.all([
+      api('/api/store/profile'),
+      api('/api/logistics/delivery-routes-config').catch(()=>({items:[]}))
+    ]);
+    perfilCliente = profRes?.item || null;
+    if(schedRes?.items?.length) schedule = schedRes.items;
+  }catch(e){}
+
+  const bairroCliente = perfilCliente?.bairro || '';
+  const previsao = getDeliveryForecastForBairro(bairroCliente, schedule);
+
+  // Modal informativo de previsão de entrega antes do envio final
+  document.querySelector('#confirmDeliveryForecastModal')?.remove();
+  const dlg = document.createElement('div');
+  dlg.id = 'confirmDeliveryForecastModal';
+  dlg.style = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);display:grid;place-items:center;z-index:10001;padding:14px;';
+  dlg.innerHTML = `
+    <div class="panel" style="max-width:480px;width:100%;border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,0.5);border:1px solid #334155;background:#0f172a;color:#f8fafc">
+      <div style="font-size:36px;margin-bottom:8px;text-align:center">🚚📅</div>
+      <h3 style="margin:0 0 8px;font-size:19px;text-align:center;color:#fff">Previsão de Entrega do Seu Pedido</h3>
+      <div style="background:#1e293b;border-radius:10px;padding:14px;margin:14px 0;border-left:4px solid #f97316">
+        <div style="font-size:13px;color:#94a3b8">Endereço de Entrega:</div>
+        <div style="font-size:14px;font-weight:700;color:#fff;margin-top:2px">${esc(perfilCliente?.endereco||'Endereço cadastrado')}</div>
+        <div style="font-size:13px;color:#f97316;font-weight:700;margin-top:2px">📍 Bairro: ${esc(bairroCliente||'Não especificado')}</div>
+        <hr style="border:none;border-top:1px solid #334155;margin:10px 0">
+        <div style="font-size:13px;color:#94a3b8">Dia Previsto de Entrega:</div>
+        <div style="font-size:18px;font-weight:800;color:#10b981;margin-top:4px">📅 ${esc(previsao.dia)}</div>
+        <div style="font-size:12px;color:#cbd5e1;margin-top:2px">${esc(previsao.detalhe)}</div>
+      </div>
+      <p style="font-size:13px;color:#94a3b8;line-height:1.4;margin-bottom:16px;text-align:center">
+        Com base no cronograma oficial da sua região, seu pedido será entregue no dia indicado acima. Deseja confirmar?
+      </p>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn" type="button" onclick="document.querySelector('#confirmDeliveryForecastModal')?.remove()">Revisar</button>
+        <button class="btn primary" type="button" id="btnFinalConfirmOrder" style="background:#f97316;border-color:#f97316;font-weight:700">Confirmar e Finalizar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(dlg);
+
+  $('#btnFinalConfirmOrder').onclick = async () => {
+    dlg.remove();
+    const observacaoPrevisao = `Previsão de entrega: ${previsao.dia} (${bairroCliente ? 'Bairro: '+bairroCliente : 'Centro/Região'})`;
+    const payload={
+      cliente_id:window.lojaClientId,
+      itens,
+      origem:'WEB',
+      forma_pagamento:forma,
+      observacoes:observacaoPrevisao
+    };
+    if(forma==='CREDITO'){
+      payload.cartao_modalidade=$('#lojaCreditMode')?.value||'A_VISTA';
+      if(payload.cartao_modalidade==='PARCELADO'){
+        payload.parcelas=Number($('#lojaInstallments')?.value||2);
+      }else{
+        payload.parcelas=1;
+      }
+    }
+
+    window.lojaCart={};
+    closeCart();
+    updateCartCount();
+    toastRole('Registrando seu pedido...');
+    Realtime.emit('orders_changed');
+    Realtime.emit('stock_changed');
+
+    try{
+      const x=await api('/api/orders',{
+        method:'POST',
+        headers:{'Idempotency-Key':`WEB-${Date.now()}-${Math.random().toString(36).slice(2,8)}`},
+        body:JSON.stringify(payload)
+      });
+      toastRole(`✓ Pedido ${x.item.numero} registrado com sucesso! Entrega prevista: ${previsao.dia}.`);
+      roleRealtimeRefresh('orders_changed');
+    }catch(e){toastRole(e.message,true)}
+  };
 }
 async function driver(){
  let r,o;

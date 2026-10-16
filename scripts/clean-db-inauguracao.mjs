@@ -73,6 +73,17 @@ try {
   // Limpar usuários de demonstração (manter apenas o administrador central)
   db.exec("DELETE FROM usuarios WHERE email != 'admin@gv.local';");
 
+  // Configurar cronograma padrão oficial de rotas de entrega (Gov. Valadares)
+  const defaultDeliverySchedule = JSON.stringify([
+    { dia: 'segunda', dia_nome: 'Segunda-feira', bairros: ['Vila Isa', 'Vila Mariana', 'São Raimundo', 'Belvedere'], motorista_id: null, motorista_nome: null },
+    { dia: 'terca', dia_nome: 'Terça-feira', bairros: ['Altinópolis', 'Santo Antônio', 'Mãe de Deus', 'São Pedro', 'SIR', 'Floresta'], motorista_id: null, motorista_nome: null },
+    { dia: 'quarta', dia_nome: 'Quarta-feira', bairros: ['Trevo', 'Santa Paula', 'São Paulo', 'Santa Terezinha', 'Penha', 'Vitória', 'Novo Horizonte', 'Canaã', 'JK 1', 'JK 2', 'JK 3', 'Jardim Alice'], motorista_id: null, motorista_nome: null },
+    { dia: 'quinta', dia_nome: 'Quinta-feira', bairros: ['Santa Rita', 'Vila Rica', 'Pérola', 'Fraternidade', 'São Cristóvão', 'Nossa Senhora de Fátima', 'Sagrada Família', 'Parque Olímpico', 'Castanheira', 'Bela Vista', 'Kennedy', 'Nova Vila Bretas', 'Vila Império'], motorista_id: null, motorista_nome: null },
+    { dia: 'sexta', dia_nome: 'Sexta-feira', bairros: ['Palmeiras', 'Vila Ozanan', 'Planalto', 'Turmalina'], motorista_id: null, motorista_nome: null },
+    { dia: 'sabado', dia_nome: 'Sábado', bairros: ['Carapina', 'Santa Helena', 'Nossa Senhora das Graças', 'Grã-Duquesa'], motorista_id: null, motorista_nome: null }
+  ]);
+  db.prepare("INSERT INTO configuracoes(chave, valor) VALUES('delivery.routes_schedule', ?) ON CONFLICT(chave) DO UPDATE SET valor=excluded.valor, updated_at=CURRENT_TIMESTAMP").run(defaultDeliverySchedule);
+
   // Garantir cliente balcão padrão ativo
   db.exec(`
     INSERT INTO clientes(id, razao_social, nome_fantasia, cnpj_cpf, endereco, bairro, cidade, estado, ativo)
@@ -114,15 +125,20 @@ try {
   }
 
   // Registrar auditoria da carga de inauguração
-  db.prepare(`
-    INSERT INTO audit_logs(id, user_id, action, entity, entity_id, after_json)
-    VALUES(?, ?, 'CLEANUP_INAUGURACAO', 'sistema', 'xiquim-vargas-erp', ?)
-  `).run(crypto.randomUUID(), adminId, JSON.stringify({
+  const auditPayload = JSON.stringify({
     acao: 'Banco limpo para inauguração',
     produtos_mantidos: prods.length,
     estoque_por_produto: 10000,
     data: new Date().toISOString()
-  }));
+  });
+  const prevHash = db.prepare('SELECT integrity_hash FROM audit_logs ORDER BY created_at DESC, rowid DESC LIMIT 1').get()?.integrity_hash || '';
+  const hashPayload = `${prevHash}|${adminId || ''}|CLEANUP_INAUGURACAO|sistema|xiquim-vargas-erp||${auditPayload}`;
+  const auditIntegrityHash = crypto.createHash('sha256').update(hashPayload).digest('hex');
+
+  db.prepare(`
+    INSERT INTO audit_logs(id, user_id, action, entity, entity_id, after_json, integrity_hash)
+    VALUES(?, ?, 'CLEANUP_INAUGURACAO', 'sistema', 'xiquim-vargas-erp', ?, ?)
+  `).run(crypto.randomUUID(), adminId, auditPayload, auditIntegrityHash);
 
   db.exec('COMMIT;');
   console.log(`[3/4] Transação confirmada com sucesso! ${prods.length} produtos atualizados com 10.000 unidades.`);

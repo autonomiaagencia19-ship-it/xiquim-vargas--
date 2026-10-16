@@ -127,7 +127,7 @@ async function runAllFlows() {
     .send({ nome: `Vendedor Teste Atualizado ${ts}`, telefone: '11988887777' });
   assert(updateSellerRes.status === 200 && updateSellerRes.body.item.nome.includes('Atualizado'), 'PUT /api/users/:id atualiza dados de usuário');
 
-  const impersonation=await request(app).post('/api/admin/impersonate').set('Authorization',`Bearer ${adminToken}`).send({user_id:sellerId});
+  const impersonation=await request(server).post('/api/admin/impersonate').set('Authorization',`Bearer ${adminToken}`).send({user_id:sellerUser.id});
   assert(impersonation.status===404,'impersonation endpoint has been removed');
 
   // =========================================================================
@@ -681,6 +681,99 @@ async function runAllFlows() {
     .get('/api/settings')
     .set('Authorization', `Bearer ${adminToken}`);
   assert(settingsRes.status === 200 && Array.isArray(settingsRes.body.items), 'GET /api/settings lê configurações do ERP');
+
+  // =========================================================================
+  // FASE 11: REGRAS DA LOJA ONLINE E MODALIDADES DE ROTAS (VENDEDOR E ENTREGA)
+  // =========================================================================
+  console.log('\n--- FASE 11: Valor Mínimo da Loja Online, Cronograma de Entregas e Modalidades de Rotas ---');
+
+  // 11.1 Configurar Valor Mínimo de Compra na Loja Online via /api/settings
+  const setMinOrderRes = await request(server)
+    .post('/api/settings')
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({ chave: 'store.min_order_value', valor: '50.00' });
+  assert(setMinOrderRes.status === 200 && setMinOrderRes.body.item, 'POST /api/settings define store.min_order_value como 50.00');
+
+  // 11.2 Ler Configurações da Loja Online via /api/store-config
+  const getStoreCfgRes = await request(server)
+    .get('/api/store-config');
+  assert(getStoreCfgRes.status === 200 && getStoreCfgRes.body.config['store.min_order_value'] === '50.00', 'GET /api/store-config retorna valor mínimo configurado');
+
+  // 11.3 Tentar emitir pedido na Loja Online ABAIXO do valor mínimo (deve ser rejeitado)
+  const belowMinOrderRes = await request(server)
+    .post('/api/orders')
+    .set('Authorization', `Bearer ${webToken}`)
+    .send({
+      cliente_id: webClientId,
+      itens: [{ produto_id: prod1Id, quantidade: 1 }], // valor de 1 un é ~12.50 ou 10.00, bem abaixo de 50.00
+      origem: 'WEB',
+      modalidade_entrega: 'ENTREGA',
+      forma_pagamento: 'PIX'
+    });
+  assert(belowMinOrderRes.status === 400 && belowMinOrderRes.body.error && belowMinOrderRes.body.error.includes('compra mínima é de'), 'POST /api/orders WEB bloqueia pedido abaixo do valor mínimo com mensagem explicativa');
+
+  // 11.4 Emitir pedido na Loja Online ATINGINDO o valor mínimo (deve ser aceito)
+  const validMinOrderRes = await request(server)
+    .post('/api/orders')
+    .set('Authorization', `Bearer ${webToken}`)
+    .send({
+      cliente_id: webClientId,
+      itens: [{ produto_id: prod1Id, quantidade: 8 }], // valor > 50.00
+      origem: 'WEB',
+      modalidade_entrega: 'ENTREGA',
+      forma_pagamento: 'PIX',
+      observacoes: 'Previsão de entrega: Seu bairro (Industrial) é atendido na Quarta-feira'
+    });
+  assert(validMinOrderRes.status === 201 && validMinOrderRes.body.item.id, 'POST /api/orders WEB aceita pedido igual ou acima do valor mínimo com previsão de entrega');
+
+  // 11.5 Modalidade 2: Rotas de Entrega - Obter Cronograma
+  const getDelivRoutesRes = await request(server)
+    .get('/api/logistics/delivery-routes-config')
+    .set('Authorization', `Bearer ${adminToken}`);
+  assert(getDelivRoutesRes.status === 200 && Array.isArray(getDelivRoutesRes.body.items), 'GET /api/logistics/delivery-routes-config retorna itens do cronograma');
+
+  // 11.6 Modalidade 2: Atualizar Cronograma de Entregas e Designar Motorista
+  const testScheduleItems = [
+    { dia: 'segunda', dia_nome: 'Segunda-feira', bairros: ['Vila Isa', 'Vila Mariana'], motorista_id: null, motorista_nome: null },
+    { dia: 'terca', dia_nome: 'Terça-feira', bairros: ['Altinópolis', 'São Pedro'], motorista_id: null, motorista_nome: null },
+    { dia: 'quarta', dia_nome: 'Quarta-feira', bairros: ['Industrial', 'Trevo', 'Bairro Novo E2E'], motorista_id: driverUser.id, motorista_nome: driverUser.nome },
+    { dia: 'quinta', dia_nome: 'Quinta-feira', bairros: ['Santa Rita', 'Vila Rica'], motorista_id: null, motorista_nome: null },
+    { dia: 'sexta', dia_nome: 'Sexta-feira', bairros: ['Palmeiras', 'Vila Ozanan'], motorista_id: null, motorista_nome: null },
+    { dia: 'sabado', dia_nome: 'Sábado', bairros: ['Carapina', 'Santa Helena'], motorista_id: null, motorista_nome: null }
+  ];
+  const updateDelivRoutesRes = await request(server)
+    .post('/api/logistics/delivery-routes-config')
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({ items: testScheduleItems });
+  assert(updateDelivRoutesRes.status === 200 && updateDelivRoutesRes.body.ok, 'POST /api/logistics/delivery-routes-config salva cronograma de entregas e motorista');
+
+  // Verificar persistência do cronograma
+  const checkDelivRoutesRes = await request(server)
+    .get('/api/logistics/delivery-routes-config')
+    .set('Authorization', `Bearer ${adminToken}`);
+  const quartaSchedule = checkDelivRoutesRes.body.items.find(s => s.dia === 'quarta');
+  assert(quartaSchedule && quartaSchedule.motorista_id === driverUser.id && quartaSchedule.bairros.includes('Bairro Novo E2E'), 'Cronograma de rotas de entrega e motorista persistidos com sucesso');
+
+  // 11.7 Modalidade 1: Rotas de Vendedor - Criar Rota Comercial e Designar Vendedor (sem afetar entregas)
+  const sellerRouteRes = await request(server)
+    .post('/api/logistics/route-config')
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({
+      nome: `Rota Comercial Vendedor ${ts}`,
+      bairros: ['Centro', 'Ilha dos Araújos', 'Vila Bretas']
+    });
+  assert(sellerRouteRes.status === 201 && sellerRouteRes.body.item.id, 'POST /api/logistics/route-config cria rota comercial para vendedores');
+  const sellerRouteId = sellerRouteRes.body.item.id;
+
+  const assignSellerRes = await request(server)
+    .post('/api/logistics/route-assignments')
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({
+      vendedor_id: sellerUser.id,
+      dia_semana: 3, // Quarta-feira
+      rota_config_id: sellerRouteId
+    });
+  assert(assignSellerRes.status === 200 && assignSellerRes.body.ok, 'POST /api/logistics/route-assignments designa vendedor para rota de visita sem afetar entregas');
 
   console.log('\n' + '='.repeat(80));
   console.log(`TODOS OS ${results.passed} PASSOS DE TESTES PASSARAM COM SUCESSO! (0 FALHAS)`);

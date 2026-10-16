@@ -1,4 +1,4 @@
-const CACHE = 'xv-shell-v1-8-2';
+const CACHE = 'xv-shell-v1-8-2-routes-modality';
 const SHELL = [
   '/',
   '/admin.html',

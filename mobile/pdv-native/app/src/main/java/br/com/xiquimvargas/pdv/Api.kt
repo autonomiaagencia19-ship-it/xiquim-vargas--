@@ -33,4 +33,10 @@ object Api {
         base = clean
         isConfiguredByUser = true
     }
+
+    fun clearConfig(context: Context) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(KEY).apply()
+        base = BuildConfig.API_BASE_URL.trimEnd('/')
+        isConfiguredByUser = false
+    }
 }

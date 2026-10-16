@@ -27,6 +27,7 @@ function ShouldExclude([string]$fullPath, [string]$name) {
         $fullPath -match '\\node_modules(\\|$)' -or
         $fullPath -match '\\coverage(\\|$)' -or
         $fullPath -match '\\xiquim_imagens_renomeadas(\\|$)' -or
+        $fullPath -match '\\max_atendente' -or
         $fullPath -match '\\descri' -or
         $fullPath -match '\\build(\\|$)' -or
         $fullPath -match '\\\.gradle(\\|$)' -or

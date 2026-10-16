@@ -125,16 +125,25 @@ async function api(path,opt={}){
   }
 }
 
-window.addEventListener('online',async()=>{
-  const el=document.getElementById('offlineIndicator');if(el)el.style.display='none';
-  toast("Conexão restabelecida! Atualizando Torre de Controle...");
-  await syncAdminOutbox();
-  refreshCurrentViewSilently();
-});
-window.addEventListener('offline',()=>{
-  const el=document.getElementById('offlineIndicator');if(el)el.style.display='flex';
-  toast("Torre em Modo Offline. Operando com dados salvos no aparelho.");
-});
+let _netStatusTimer=null;
+function handleNetworkChange(isOnline){
+  clearTimeout(_netStatusTimer);
+  _netStatusTimer=setTimeout(async()=>{
+    const reallyOnline = typeof navigator.onLine==='boolean' ? navigator.onLine : isOnline;
+    const el=document.getElementById('offlineIndicator');
+    if(reallyOnline){
+      if(el)el.style.display='none';
+      toast("Conexão restabelecida! Atualizando Torre de Controle...");
+      await syncAdminOutbox();
+      refreshCurrentViewSilently();
+    }else{
+      if(el)el.style.display='flex';
+      toast("Torre em Modo Offline. Operando com dados salvos no aparelho.", true);
+    }
+  }, 300);
+}
+window.addEventListener('online',()=>handleNetworkChange(true));
+window.addEventListener('offline',()=>handleNetworkChange(false));
 let _toastTimer=null;
 function toast(m,isError=false){let t=$('#toast');if(!t){t=document.createElement('div');t.id='toast';t.className='toast';document.body.appendChild(t)}clearTimeout(_toastTimer);t.textContent=m;t.style.display='block';t.style.opacity='1';t.style.backgroundColor=isError?'#991b1b':'var(--xv-primary,#0f172a)';t.style.color='#fff';_toastTimer=setTimeout(()=>{t.style.opacity='0';setTimeout(()=>{t.style.display='none'},300)},2500)}
 
@@ -1339,7 +1348,266 @@ async function advance(id,status){
   Realtime.emit('orders_changed',{id,status:next});
   try{await api(`/api/orders/${id}/status`,{method:'POST',body:JSON.stringify({status:next})})}catch(e){toast(e.message,true);refreshCurrentViewSilently('orders_changed')}
 }
-async function storeSettings(v){const s=await api('/api/settings');const keys=['store.title','store.subtitle','store.hero','store.footer','store.cover'];const vals=Object.fromEntries(s.items.map(x=>[x.chave,x.valor]));v.innerHTML=`<div class="panel"><div class="panel-title"><div><h3>Gestão da Loja Online</h3><p class="muted">Controle editorial da vitrine. Produtos, fotos e promoções continuam sendo administrados nos módulos correspondentes.</p></div><button class="btn" onclick="show('products')">Abrir catálogo</button></div><form id="storeConfigForm" class="form"><div class="field"><label>Título da loja</label><input name="store.title" value="${esc(vals['store.title']||'Catálogo Xiquim Vargas')}"></div><div class="field"><label>Subtítulo</label><input name="store.subtitle" value="${esc(vals['store.subtitle']||'Distribuição, reposição e condições comerciais em um só lugar.')}"></div><div class="field" style="grid-column:1/-1"><label>Texto principal / Hero</label><textarea name="store.hero" rows="4">${esc(vals['store.hero']||'Encontre produtos, condições e reposição para o seu negócio.')}</textarea></div><div class="field" style="grid-column:1/-1"><label>Foto de capa da loja</label><input id="storeCoverInput" type="file" accept="image/png,image/jpeg,image/webp"><div id="storeCoverPreview" class="store-cover-preview">${vals['store.cover']?`<img src="${esc(vals['store.cover'])}" alt="Capa atual">`:'<span class="muted">Nenhuma capa cadastrada.</span>'}</div><span class="muted">PNG, JPG ou WEBP · até 8 MB. A capa aparece imediatamente abaixo do cabeçalho da Loja Online.</span></div><div class="field" style="grid-column:1/-1"><label>Rodapé</label><textarea name="store.footer" rows="3">${esc(vals['store.footer']||'Pedido, catálogo e operação integrados.')}</textarea></div><div class="actions"><button class="btn primary">Salvar identidade da loja</button></div></form></div>`;$('#storeCoverInput').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;if(f.size>8*1024*1024)return toast('A imagem excede 8 MB');const r=new FileReader();r.onload=async()=>{try{const out=await api('/api/store-cover',{method:'POST',body:JSON.stringify({data_url:r.result})});$('#storeCoverPreview').innerHTML=`<img src="${esc(out.url)}" alt="Capa atual">`;toast('Foto de capa atualizada')}catch(z){toast(z.message)}};r.readAsDataURL(f)};$('#storeConfigForm').onsubmit=async e=>{e.preventDefault();for(const [chave,valor] of Object.entries(Object.fromEntries(new FormData(e.currentTarget))))await api('/api/settings',{method:'POST',body:JSON.stringify({chave,valor})});toast('Loja Online atualizada');show('store')}}
+const defaultInstitutionalCards = [
+  {
+    id: 'horarios',
+    badge: 'Atendimento',
+    title: 'Horários de Atendimento',
+    description: 'Confira nossos horários de funcionamento presencial e entregas: Segunda à Sexta das 07:30 às 17:30 e Sábado das 07:30 às 12:30.',
+    image: '/assets/institucional/02_Horarios_de_Atendimento_HD.png',
+    link: '',
+    link_text: ''
+  },
+  {
+    id: 'localizacao',
+    badge: 'Endereço',
+    title: 'Nossa Localização',
+    description: 'Venha nos visitar! Rua José Luiz Nogueira, 645 - Centro, Governador Valadares/MG (Próximo ao Mercado Municipal).',
+    image: '/assets/institucional/03_Nossa_Localizacao_Fachada_HD.png',
+    link: 'https://maps.google.com/?q=Rua+Jose+Luiz+Nogueira+645+Centro+Governador+Valadares+MG',
+    link_text: '📍 Abrir no Google Maps'
+  },
+  {
+    id: 'rotas',
+    badge: 'Logística & Entregas',
+    title: 'Rotas de Entrega & Dias da Região',
+    description: 'Entregas diárias no centro e cronograma semanal organizado por bairros em toda a região com agilidade e compromisso.',
+    image: '/assets/institucional/04_Rotas_de_Entrega_Dias_HD.png',
+    link: '',
+    link_text: ''
+  }
+];
+
+async function storeSettings(v){
+  const s = await api('/api/settings');
+  const vals = Object.fromEntries(s.items.map(x=>[x.chave,x.valor]));
+  let aboutCards = defaultInstitutionalCards;
+  if(vals['store.about_cards']){
+    try {
+      const parsed = JSON.parse(vals['store.about_cards']);
+      if(Array.isArray(parsed) && parsed.length) aboutCards = parsed;
+    } catch(e){}
+  }
+  window._adminAboutCards = JSON.parse(JSON.stringify(aboutCards));
+
+  v.innerHTML = `
+    <div class="panel">
+      <div class="panel-title">
+        <div>
+          <h3>Gestão da Loja Online</h3>
+          <p class="muted">Controle editorial da vitrine, identidade visual e dashboard institucional "Sobre Nós".</p>
+        </div>
+        <div class="actions">
+          <a class="btn" href="/loja.html" target="_blank">🌐 Visualizar Loja</a>
+          <button class="btn" onclick="show('products')">Abrir catálogo</button>
+        </div>
+      </div>
+      <form id="storeConfigForm" class="form">
+        <div class="field">
+          <label>Título da loja</label>
+          <input name="store.title" value="${esc(vals['store.title']||'Catálogo Xiquim Vargas')}">
+        </div>
+        <div class="field">
+          <label>Subtítulo</label>
+          <input name="store.subtitle" value="${esc(vals['store.subtitle']||'Distribuição, reposição e condições comerciais em um só lugar.')}">
+        </div>
+        <div class="field" style="grid-column:1/-1">
+          <label>Texto principal / Hero</label>
+          <textarea name="store.hero" rows="3">${esc(vals['store.hero']||'Encontre produtos, condições e reposição para o seu negócio.')}</textarea>
+        </div>
+        <div class="field" style="grid-column:1/-1">
+          <label>Foto de capa da loja</label>
+          <input id="storeCoverInput" type="file" accept="image/png,image/jpeg,image/webp">
+          <div id="storeCoverPreview" class="store-cover-preview">
+            ${vals['store.cover']?`<img src="${esc(vals['store.cover'])}" alt="Capa atual">`:'<span class="muted">Nenhuma capa cadastrada.</span>'}
+          </div>
+          <span class="muted">PNG, JPG ou WEBP · até 8 MB. A capa aparece imediatamente abaixo do cabeçalho da Loja Online.</span>
+        </div>
+        <div class="field" style="grid-column:1/-1">
+          <label>💰 Valor Mínimo de Compra na Loja Online (R$)</label>
+          <input name="store.min_order_value" type="number" step="0.01" min="0" placeholder="0.00 (deixe 0 ou vazio para sem valor mínimo)" value="${esc(vals['store.min_order_value']||'')}">
+          <span class="muted">Exibido com destaque na página inicial de todos os clientes da loja online e bloqueia finalizações abaixo deste valor.</span>
+        </div>
+        <div class="field" style="grid-column:1/-1">
+          <label>Rodapé</label>
+          <textarea name="store.footer" rows="2">${esc(vals['store.footer']||'Pedido, catálogo e operação integrados.')}</textarea>
+        </div>
+        <div class="actions" style="grid-column:1/-1">
+          <button class="btn primary">Salvar identidade da loja</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="panel" style="margin-top:20px">
+      <div class="panel-title">
+        <div>
+          <h3>🏢 Configuração do Painel "Sobre Nós" (Cards Institucionais)</h3>
+          <p class="muted">Adicione, edite ou remova cards com fotos, horários de atendimento, localização e rotas de entrega que aparecem no botão "Sobre Nós" da loja online.</p>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn primary" onclick="adminAddAboutCard()">+ Novo Card Institucional</button>
+          <button type="button" class="btn" onclick="adminResetAboutCards()">↺ Restaurar Padrão Oficial</button>
+        </div>
+      </div>
+      <div id="adminAboutCardsList" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-top:16px">
+      </div>
+      <div class="actions" style="margin-top:20px;border-top:1px solid #1f2d40;padding-top:16px;justify-content:flex-end">
+        <button type="button" class="btn primary" style="padding:12px 20px;font-size:15px" onclick="adminSaveAboutCards()">💾 Salvar Todos os Cards do Sobre Nós</button>
+      </div>
+    </div>
+  `;
+
+  renderAdminAboutCardsList();
+
+  $('#storeCoverInput').onchange = async e => {
+    const f = e.target.files?.[0];
+    if(!f) return;
+    if(f.size > 8*1024*1024) return toast('A imagem excede 8 MB');
+    const r = new FileReader();
+    r.onload = async() => {
+      try {
+        const out = await api('/api/store-cover', { method: 'POST', body: JSON.stringify({ data_url: r.result }) });
+        $('#storeCoverPreview').innerHTML = `<img src="${esc(out.url)}" alt="Capa atual">`;
+        toast('Foto de capa atualizada');
+      } catch(z) { toast(z.message, true); }
+    };
+    r.readAsDataURL(f);
+  };
+
+  $('#storeConfigForm').onsubmit = async e => {
+    e.preventDefault();
+    for(const [chave,valor] of Object.entries(Object.fromEntries(new FormData(e.currentTarget)))) {
+      await api('/api/settings', { method: 'POST', body: JSON.stringify({ chave, valor }) });
+    }
+    toast('Identidade da Loja Online atualizada com sucesso!');
+  };
+}
+
+function renderAdminAboutCardsList(){
+  const container = document.getElementById('adminAboutCardsList');
+  if(!container) return;
+  const cards = window._adminAboutCards || [];
+  if(!cards.length){
+    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1">Nenhum card cadastrado. Clique em "+ Novo Card Institucional".</div>`;
+    return;
+  }
+  container.innerHTML = cards.map((c, idx) => `
+    <div class="card" style="display:flex;flex-direction:column;gap:12px;position:relative;background:#0d1827;border:1px solid #23344d;border-radius:12px;padding:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="badge" style="background:rgba(253,94,2,0.18);color:#fd5e02">Card #${idx+1}</span>
+        <div style="display:flex;gap:6px">
+          ${idx > 0 ? `<button type="button" class="btn" style="padding:4px 8px;font-size:12px" title="Subir" onclick="adminMoveAboutCard(${idx}, -1)">▲</button>` : ''}
+          ${idx < cards.length - 1 ? `<button type="button" class="btn" style="padding:4px 8px;font-size:12px" title="Descer" onclick="adminMoveAboutCard(${idx}, 1)">▼</button>` : ''}
+          <button type="button" class="btn danger" style="padding:4px 8px;font-size:12px" title="Excluir card" onclick="adminDeleteAboutCard(${idx})">🗑</button>
+        </div>
+      </div>
+      <div style="width:100%;height:180px;background:#070f1a;border-radius:8px;overflow:hidden;border:1px solid #1a2a3f;display:flex;align-items:center;justify-content:center;position:relative">
+        ${c.image ? `<img src="${esc(c.image)}" alt="" style="width:100%;height:100%;object-fit:contain">` : `<span class="muted" style="font-size:12px">Sem imagem</span>`}
+        <label style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.75);color:#fff;padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid rgba(255,255,255,0.25)">
+          📷 Trocar Foto
+          <input type="file" accept="image/*" style="display:none" onchange="adminUploadCardImage(${idx}, this)">
+        </label>
+      </div>
+      <div class="field">
+        <label>Etiqueta / Tag (Ex: Atendimento, Endereço, Logística)</label>
+        <input value="${esc(c.badge||'')}" oninput="window._adminAboutCards[${idx}].badge = this.value" placeholder="Tag de identificação">
+      </div>
+      <div class="field">
+        <label>Título do Card</label>
+        <input value="${esc(c.title||'')}" oninput="window._adminAboutCards[${idx}].title = this.value" placeholder="Ex: Horários de Atendimento" required>
+      </div>
+      <div class="field">
+        <label>Descrição detalhada</label>
+        <textarea rows="3" oninput="window._adminAboutCards[${idx}].description = this.value" placeholder="Texto explicativo do card...">${esc(c.description||'')}</textarea>
+      </div>
+      <div class="field">
+        <label>Link Externo ou Mapa (opcional)</label>
+        <input value="${esc(c.link||'')}" oninput="window._adminAboutCards[${idx}].link = this.value" placeholder="https://maps.google.com/...">
+      </div>
+      <div class="field">
+        <label>Texto do Botão do Link</label>
+        <input value="${esc(c.link_text||'')}" oninput="window._adminAboutCards[${idx}].link_text = this.value" placeholder="Ex: 📍 Abrir no Google Maps">
+      </div>
+    </div>
+  `).join('');
+}
+
+window.adminAddAboutCard = function(){
+  window._adminAboutCards = window._adminAboutCards || [];
+  window._adminAboutCards.push({
+    id: 'card_' + Date.now(),
+    badge: 'Institucional',
+    title: 'Novo Card Informativo',
+    description: 'Insira a descrição detalhada para seus clientes aqui.',
+    image: '/assets/institucional/01_Logo_Xiquim_Vargas_HD.png',
+    link: '',
+    link_text: ''
+  });
+  renderAdminAboutCardsList();
+  toast('Novo card adicionado. Preencha os campos e salve.');
+};
+
+window.adminDeleteAboutCard = function(idx){
+  if(!confirm('Deseja realmente remover este card institucional?')) return;
+  window._adminAboutCards.splice(idx, 1);
+  renderAdminAboutCardsList();
+};
+
+window.adminMoveAboutCard = function(idx, dir){
+  const cards = window._adminAboutCards;
+  const target = idx + dir;
+  if(target < 0 || target >= cards.length) return;
+  const temp = cards[idx];
+  cards[idx] = cards[target];
+  cards[target] = temp;
+  renderAdminAboutCardsList();
+};
+
+window.adminUploadCardImage = function(idx, input){
+  const file = input.files?.[0];
+  if(!file) return;
+  if(file.size > 8*1024*1024) return alert('A imagem excede 8 MB');
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      toast('Fazendo upload da imagem do card...');
+      const res = await api('/api/store-image', {
+        method: 'POST',
+        body: JSON.stringify({ data_url: reader.result })
+      });
+      window._adminAboutCards[idx].image = res.url;
+      renderAdminAboutCardsList();
+      toast('✓ Foto do card atualizada!');
+    } catch(err) {
+      alert(err.message);
+    }
+  };
+  reader.readAsDataURL(file);
+};
+
+window.adminResetAboutCards = function(){
+  if(!confirm('Restaurar os 3 cards padrão oficiais (Horários, Fachada/Localização e Rotas de Entrega)?')) return;
+  window._adminAboutCards = JSON.parse(JSON.stringify(defaultInstitutionalCards));
+  renderAdminAboutCardsList();
+  toast('Cards restaurados para o padrão.');
+};
+
+window.adminSaveAboutCards = async function(){
+  try {
+    toast('Salvando cards institucionais...');
+    const cards = window._adminAboutCards || [];
+    await api('/api/settings', {
+      method: 'POST',
+      body: JSON.stringify({
+        chave: 'store.about_cards',
+        valor: JSON.stringify(cards)
+      })
+    });
+    toast('✓ Cards do "Sobre Nós" salvos e publicados na Loja Online!');
+  } catch(err) {
+    toast(err.message, true);
+  }
+};
 
 async function prices(v){
   const [x, cl, usrs]=await Promise.all([api('/api/price-tables'),api('/api/clients'),api('/api/users')]);
@@ -1916,6 +2184,8 @@ async function logistics(v){
     if(document.getElementById('logisticsMain')) document.getElementById('logisticsMain').style.display='none';
     if(document.getElementById('returnedOrdersDashboard')) document.getElementById('returnedOrdersDashboard').style.display='none';
     if(document.getElementById('logisticsDashboard')) document.getElementById('logisticsDashboard').style.display='none';
+    if(document.getElementById('sellerRoutesDashboard')) document.getElementById('sellerRoutesDashboard').style.display='none';
+    if(document.getElementById('deliveryRoutesDashboard')) document.getElementById('deliveryRoutesDashboard').style.display='none';
     const modDb=document.getElementById('logisticsModalityDashboard');
     if(modDb) {
       modDb.style.display='block';
@@ -1932,6 +2202,8 @@ async function logistics(v){
     if(document.getElementById('logisticsMain')) document.getElementById('logisticsMain').style.display='none';
     if(document.getElementById('logisticsModalityDashboard')) document.getElementById('logisticsModalityDashboard').style.display='none';
     if(document.getElementById('logisticsDashboard')) document.getElementById('logisticsDashboard').style.display='none';
+    if(document.getElementById('sellerRoutesDashboard')) document.getElementById('sellerRoutesDashboard').style.display='none';
+    if(document.getElementById('deliveryRoutesDashboard')) document.getElementById('deliveryRoutesDashboard').style.display='none';
     const retDb = document.getElementById('returnedOrdersDashboard');
     if(retDb) {
       retDb.style.display='block';
@@ -2161,6 +2433,8 @@ async function logistics(v){
     if(document.getElementById('logisticsMain')) document.getElementById('logisticsMain').style.display = 'none';
     if(document.getElementById('logisticsModalityDashboard')) document.getElementById('logisticsModalityDashboard').style.display = 'none';
     if(document.getElementById('returnedOrdersDashboard')) document.getElementById('returnedOrdersDashboard').style.display = 'none';
+    if(document.getElementById('sellerRoutesDashboard')) document.getElementById('sellerRoutesDashboard').style.display = 'none';
+    if(document.getElementById('deliveryRoutesDashboard')) document.getElementById('deliveryRoutesDashboard').style.display = 'none';
     const db = document.getElementById('logisticsDashboard');
     if(db) {
       db.style.display = 'block';
@@ -2437,6 +2711,8 @@ async function logistics(v){
     </div>
 
     <div style="text-align:center; margin:16px 0 24px; display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
+      <button class="btn" style="border:1px solid #fd5e02; background:rgba(253,94,2,0.1); color:#fd5e02; font-weight:700" onclick="openSellerRoutesDashboard()">👔 Criar Rota de Vendedor (Tela Cheia) →</button>
+      <button class="btn" style="border:1px solid #10b981; background:rgba(16,185,129,0.1); color:#10b981; font-weight:700" onclick="openDeliveryRoutesDashboard()">🚚 Criar Rotas de Entrega (Tela Cheia) →</button>
       <button class="btn" onclick="openLogisticsInRoute()">🚚 Ver pedidos em rota → <span id="ordersInRouteCountBadge" class="badge" style="margin-left:6px;background:${(o.em_rota||[]).length?'#3b82f6':'var(--border)'};color:#fff">${(o.em_rota||[]).length}</span></button>
       <button class="btn" onclick="openReturnedOrdersDashboard()">↩ Ver pedidos que retornaram → <span id="returnedOrdersCountBadge" class="badge" style="margin-left:6px;background:${returnedOrders.length?'#ef4444':'var(--border)'};color:#fff">${returnedOrders.length}</span></button>
     </div>
@@ -2464,12 +2740,27 @@ async function logistics(v){
     </div>
 
     <div class="panel">
-      <div class="panel-title"><div><h3>Rotas e bairros</h3><p class="muted">Configure o nome da rota e os bairros. O dia da semana é definido separadamente quando necessário.</p></div><button class="btn primary" onclick="newRouteConfig()">+ Criar rota</button></div>
+      <div class="panel-title">
+        <div>
+          <h3>Rotas e bairros</h3>
+          <p class="muted">Configure o nome da rota e os bairros. O dia da semana é definido separadamente quando necessário.</p>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn" onclick="openSellerRoutesDashboard()">Abrir Painel de Vendedores</button>
+          <button class="btn primary" onclick="newRouteConfig()">+ Criar rota</button>
+        </div>
+      </div>
       <div class="tablewrap"><table class="table"><thead><tr><th>Rota</th><th>Bairros</th><th></th></tr></thead><tbody>${u.routes.map(x=>`<tr><td>${esc(x.nome)}</td><td>${x.bairros.map(b=>esc(b.bairro)).join(' · ')}</td><td><button class="btn" onclick="editRouteConfig(parseJsonArg('${jsonArg(x)}'))">Editar</button></td></tr>`).join('')||'<tr><td colspan="3">Nenhuma rota configurada.</td></tr>'}</tbody></table></div>
     </div>
 
     <div class="panel">
-      <div class="panel-title"><div><h3>Designação de rota do vendedor</h3></div></div>
+      <div class="panel-title">
+        <div>
+          <h3>Designação de rota do vendedor</h3>
+          <p class="muted">Designação rápida de vendedores para rotas cadastradas.</p>
+        </div>
+        <button class="btn" onclick="openSellerRoutesDashboard()">Abrir Painel Completo</button>
+      </div>
       <div class="form"><div class="field"><label>Vendedor</label><select id="assignSeller">${sellers.map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join('')}</select></div><div class="field"><label>Dia</label><select id="assignDay">${['Segunda','Terça','Quarta','Quinta','Sexta','Sábado'].map((x,i)=>`<option value="${i+1}">${x}</option>`).join('')}</select></div><div class="field"><label>Rota</label><select id="assignRoute">${u.routes.map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join('')}</select></div><div class="actions"><button class="btn primary" onclick="assignSellerRoute()">Designar rota</button></div></div>
       <div class="tablewrap" style="margin-top:15px"><table class="table"><thead><tr><th>Vendedor</th><th>Rota</th><th>Dia</th><th>Ações</th></tr></thead><tbody>${(u.assignments||[]).map(a=>`<tr><td>${esc(a.vendedor_nome)}</td><td>${esc(a.rota_nome)}</td><td>${['Segunda','Terça','Quarta','Quinta','Sexta','Sábado'][a.dia_semana-1]}</td><td class="actions"><button class="btn danger" onclick="removeRouteAssignment('${a.vendedor_id}',${a.dia_semana})">Remover</button></td></tr>`).join('')||'<tr><td colspan="4">Nenhuma designação configurada.</td></tr>'}</tbody></table></div>
     </div>
@@ -2486,6 +2777,14 @@ async function logistics(v){
     </div>
   </div>
 
+  <div id="sellerRoutesDashboard" style="display:none; width:100%;">
+    <div id="sellerRoutesDashboardContainer"></div>
+  </div>
+
+  <div id="deliveryRoutesDashboard" style="display:none; width:100%;">
+    <div id="deliveryRoutesDashboardContainer"></div>
+  </div>
+
   <div id="logisticsDashboard" style="display:none; width:100%;">
     <div id="logisticsDashboardContainer"></div>
   </div>
@@ -2497,6 +2796,416 @@ async function logistics(v){
 function newRouteConfig(){routeConfigModal()}
 
 function editRouteConfig(x){routeConfigModal(x)}
+
+window.openSellerRoutesDashboard = async function(){
+  const mw = document.getElementById('logisticsMainWrapper');
+  if(mw) mw.style.display = 'none';
+  if(document.getElementById('logisticsMain')) document.getElementById('logisticsMain').style.display = 'none';
+  if(document.getElementById('logisticsModalityDashboard')) document.getElementById('logisticsModalityDashboard').style.display = 'none';
+  if(document.getElementById('returnedOrdersDashboard')) document.getElementById('returnedOrdersDashboard').style.display = 'none';
+  if(document.getElementById('logisticsDashboard')) document.getElementById('logisticsDashboard').style.display = 'none';
+  if(document.getElementById('deliveryRoutesDashboard')) document.getElementById('deliveryRoutesDashboard').style.display = 'none';
+  const sDb = document.getElementById('sellerRoutesDashboard');
+  if(sDb) {
+    sDb.style.display = 'block';
+    const t = document.getElementById('title');
+    if(t) t.textContent = 'Logística · Rotas de Vendedor';
+    window.scrollTo({top:0, behavior:'smooth'});
+    await renderSellerRoutesDashboardContent();
+  }
+};
+
+window.closeSellerRoutesDashboard = function(){
+  const sDb = document.getElementById('sellerRoutesDashboard');
+  if(sDb) sDb.style.display = 'none';
+  const mw = document.getElementById('logisticsMainWrapper');
+  if(mw) mw.style.display = 'block';
+  if(document.getElementById('logisticsMain')) document.getElementById('logisticsMain').style.display = 'block';
+  const t = document.getElementById('title');
+  if(t) t.textContent = 'Logística';
+  window.scrollTo({top:0, behavior:'smooth'});
+};
+
+window.renderSellerRoutesDashboardContent = async function(){
+  const container = document.getElementById('sellerRoutesDashboardContainer');
+  if(!container) return;
+  container.innerHTML = '<div class="panel">Carregando rotas de vendedores...</div>';
+  try {
+    const [u, usersReq] = await Promise.all([
+      api('/api/logistics/route-config'),
+      api('/api/users')
+    ]);
+    const sellers = usersReq.items.filter(x => x.role === 'seller' && x.ativo === 1);
+    const routes = u.routes || [];
+    const assignments = u.assignments || [];
+    const diasSemana = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+
+    container.innerHTML = `
+      <div class="panel" style="margin-bottom:18px;border-left:4px solid #fd5e02">
+        <div class="panel-title" style="margin-bottom:0;flex-wrap:wrap;gap:14px">
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+            <button class="btn" onclick="closeSellerRoutesDashboard()" style="display:inline-flex;align-items:center;gap:6px">
+              ← Voltar para Logística
+            </button>
+            <div>
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <h2 style="margin:0;font-size:22px;letter-spacing:-0.5px">👔 Modalidade 1: Rotas de Vendedor</h2>
+                <span class="badge" style="background:rgba(253,94,2,0.15);color:#fd5e02;border:1px solid rgba(253,94,2,0.3);font-size:12px;font-weight:700">
+                  Carteira Comercial
+                </span>
+              </div>
+              <p class="muted" style="margin-top:4px;font-size:13px">
+                ℹ️ <strong>Finalidade desta modalidade:</strong> Serve <strong>apenas para designar vendedores</strong> para aquela rota / carteira de atendimento. <span style="color:#fd5e02;font-weight:600">Não causa nenhuma mudança na parte de entregas ou logística física.</span>
+              </p>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn primary" onclick="newRouteConfig()" style="background:#fd5e02;border-color:#fd5e02">+ Criar Nova Rota</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid" style="margin-bottom:18px">
+        <div class="card" style="border-top:3px solid #fd5e02">
+          <small class="muted">Vendedores Ativos</small>
+          <h2 style="color:#fd5e02;margin:4px 0">${sellers.length}</h2>
+          <small class="muted">Equipe externa disponível</small>
+        </div>
+        <div class="card" style="border-top:3px solid #3b82f6">
+          <small class="muted">Rotas de Visitas Cadastradas</small>
+          <h2 style="color:#3b82f6;margin:4px 0">${routes.length}</h2>
+          <small class="muted">Regiões e agrupamentos</small>
+        </div>
+        <div class="card" style="border-top:3px solid #10b981">
+          <small class="muted">Designações Ativas</small>
+          <h2 style="color:#10b981;margin:4px 0">${assignments.length}</h2>
+          <small class="muted">Vendedor ➔ Rota ➔ Dia</small>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:18px">
+        <div class="panel-title">
+          <div>
+            <h3>➕ Designar Vendedor para Rota</h3>
+            <p class="muted">Defina em qual dia da semana o vendedor visita e atende os clientes desta rota comercial.</p>
+          </div>
+        </div>
+        <div class="form">
+          <div class="field">
+            <label>Vendedor</label>
+            <select id="dashAssignSeller">
+              ${sellers.map(s => `<option value="${s.id}">${esc(s.nome)} (${esc(s.email)})</option>`).join('') || '<option value="">Nenhum vendedor cadastrado</option>'}
+            </select>
+          </div>
+          <div class="field">
+            <label>Dia da Semana de Atendimento</label>
+            <select id="dashAssignDay">
+              ${diasSemana.map((x, i) => `<option value="${i+1}">${x}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field">
+            <label>Rota / Região</label>
+            <select id="dashAssignRoute">
+              ${routes.map(r => `<option value="${r.id}">${esc(r.nome)} (${r.bairros.length} bairros)</option>`).join('') || '<option value="">Nenhuma rota cadastrada</option>'}
+            </select>
+          </div>
+          <div class="actions">
+            <button class="btn primary" style="background:#fd5e02;border-color:#fd5e02" onclick="assignSellerRouteFromDash()">Designar Rota ao Vendedor</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:18px">
+        <div class="panel-title">
+          <div>
+            <h3>📋 Designações de Vendedores Ativas</h3>
+            <p class="muted">Vendedores associados aos dias da semana para atendimento aos clientes das rotas.</p>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Vendedor</th>
+                <th>Dia da Semana</th>
+                <th>Rota Comercial</th>
+                <th>Bairros Abrangidos</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${assignments.map(a => {
+                const rt = routes.find(r => r.id === a.rota_config_id);
+                const bList = rt ? rt.bairros.map(b => b.bairro).join(', ') : '-';
+                return `<tr>
+                  <td><strong>👤 ${esc(a.vendedor_nome)}</strong></td>
+                  <td><span class="badge" style="background:rgba(253,94,2,0.15);color:#fd5e02;font-weight:700">📅 ${diasSemana[a.dia_semana-1]}</span></td>
+                  <td><strong>${esc(a.rota_nome)}</strong></td>
+                  <td style="max-width:320px;word-break:break-word"><small class="muted">${esc(bList)}</small></td>
+                  <td class="actions">
+                    <button class="btn danger" style="padding:4px 8px;font-size:12px" onclick="removeRouteAssignmentFromDash('${a.vendedor_id}',${a.dia_semana})">Remover</button>
+                  </td>
+                </tr>`;
+              }).join('') || '<tr><td colspan="5" class="empty-state">Nenhuma designação de rota configurada para vendedores.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">
+          <div>
+            <h3>🗺️ Rotas e Bairros Comerciais</h3>
+            <p class="muted">Cadastros de rotas e suas listas de bairros.</p>
+          </div>
+          <button class="btn primary" onclick="newRouteConfig()">+ Nova Rota</button>
+        </div>
+        <div class="tablewrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Nome da Rota</th>
+                <th>Qtd. Bairros</th>
+                <th>Bairros Cadastrados</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${routes.map(x => `
+                <tr>
+                  <td><strong>${esc(x.nome)}</strong></td>
+                  <td><span class="badge">${(x.bairros||[]).length}</span></td>
+                  <td style="max-width:380px;word-break:break-word">${(x.bairros||[]).map(b => esc(b.bairro)).join(' · ') || '<span class="muted">Sem bairros</span>'}</td>
+                  <td class="actions">
+                    <button class="btn" onclick="editRouteConfig(parseJsonArg('${jsonArg(x)}'))">Editar</button>
+                  </td>
+                </tr>
+              `).join('') || '<tr><td colspan="4" class="empty-state">Nenhuma rota cadastrada.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  } catch(e) {
+    container.innerHTML = `<div class="panel"><p class="muted">Erro ao carregar dados: ${esc(e.message)}</p></div>`;
+  }
+};
+
+window.assignSellerRouteFromDash = async function(){
+  const s = document.getElementById('dashAssignSeller')?.value;
+  const d = Number(document.getElementById('dashAssignDay')?.value);
+  const r = document.getElementById('dashAssignRoute')?.value;
+  if(!s || !d || !r) return toast('Preencha todos os campos.');
+  try {
+    await api('/api/logistics/route-assignments', {
+      method: 'POST',
+      body: JSON.stringify({ vendedor_id: s, dia_semana: d, rota_config_id: r })
+    });
+    toast('Rota designada ao vendedor com sucesso!');
+    await renderSellerRoutesDashboardContent();
+  } catch(e) {
+    toast(e.message, true);
+  }
+};
+
+window.removeRouteAssignmentFromDash = async function(vid, dia){
+  if(!confirm('Remover designação de rota deste vendedor neste dia?')) return;
+  try {
+    await api('/api/logistics/route-assignments/' + vid + '/' + dia, { method: 'DELETE' });
+    toast('Designação removida com sucesso!');
+    await renderSellerRoutesDashboardContent();
+  } catch(e) {
+    toast(e.message, true);
+  }
+};
+
+window.openDeliveryRoutesDashboard = async function(){
+  const mw = document.getElementById('logisticsMainWrapper');
+  if(mw) mw.style.display = 'none';
+  if(document.getElementById('logisticsMain')) document.getElementById('logisticsMain').style.display = 'none';
+  if(document.getElementById('logisticsModalityDashboard')) document.getElementById('logisticsModalityDashboard').style.display = 'none';
+  if(document.getElementById('returnedOrdersDashboard')) document.getElementById('returnedOrdersDashboard').style.display = 'none';
+  if(document.getElementById('logisticsDashboard')) document.getElementById('logisticsDashboard').style.display = 'none';
+  if(document.getElementById('sellerRoutesDashboard')) document.getElementById('sellerRoutesDashboard').style.display = 'none';
+  const dDb = document.getElementById('deliveryRoutesDashboard');
+  if(dDb) {
+    dDb.style.display = 'block';
+    const t = document.getElementById('title');
+    if(t) t.textContent = 'Logística · Rotas de Entrega';
+    window.scrollTo({top:0, behavior:'smooth'});
+    await renderDeliveryRoutesDashboardContent();
+  }
+};
+
+window.closeDeliveryRoutesDashboard = function(){
+  const dDb = document.getElementById('deliveryRoutesDashboard');
+  if(dDb) dDb.style.display = 'none';
+  const mw = document.getElementById('logisticsMainWrapper');
+  if(mw) mw.style.display = 'block';
+  if(document.getElementById('logisticsMain')) document.getElementById('logisticsMain').style.display = 'block';
+  const t = document.getElementById('title');
+  if(t) t.textContent = 'Logística';
+  window.scrollTo({top:0, behavior:'smooth'});
+};
+
+window.renderDeliveryRoutesDashboardContent = async function(){
+  const container = document.getElementById('deliveryRoutesDashboardContainer');
+  if(!container) return;
+  container.innerHTML = '<div class="panel">Carregando cronograma de rotas de entrega...</div>';
+  try {
+    const [delivRes, usersReq] = await Promise.all([
+      api('/api/logistics/delivery-routes-config'),
+      api('/api/users')
+    ]);
+    const schedule = delivRes.schedule || [];
+    window._currentDeliverySchedule = JSON.parse(JSON.stringify(schedule));
+    const drivers = usersReq.items.filter(x => x.role === 'driver' && x.ativo === 1);
+    window._currentDeliveryDrivers = drivers;
+
+    const totalBairros = schedule.reduce((acc, s) => acc + (s.bairros || []).length, 0);
+
+    container.innerHTML = `
+      <div class="panel" style="margin-bottom:18px;border-left:4px solid #10b981">
+        <div class="panel-title" style="margin-bottom:0;flex-wrap:wrap;gap:14px">
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+            <button class="btn" onclick="closeDeliveryRoutesDashboard()" style="display:inline-flex;align-items:center;gap:6px">
+              ← Voltar para Logística
+            </button>
+            <div>
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <h2 style="margin:0;font-size:22px;letter-spacing:-0.5px">🚚 Modalidade 2: Rotas de Entrega</h2>
+                <span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3);font-size:12px;font-weight:700">
+                  Logística Física & Entregas
+                </span>
+              </div>
+              <p class="muted" style="margin-top:4px;font-size:13px">
+                ℹ️ <strong>Finalidade desta modalidade:</strong> Serve para <strong>estabelecer quais bairros serão atendidos naquela rota naquele dia da semana e designar os motoristas daquela rota</strong>.
+                Esta configuração orienta automaticamente a previsão de entrega calculada no checkout e na área de pedidos dos clientes da loja online!
+              </p>
+            </div>
+          </div>
+          <div class="actions" style="display:flex;gap:8px">
+            <button class="btn" onclick="renderDeliveryRoutesDashboardContent()">↻ Recarregar</button>
+            <button class="btn primary" style="background:#10b981;border-color:#10b981" onclick="saveDeliveryRoutesSchedule()">💾 Salvar Cronograma de Entregas</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid" style="margin-bottom:18px">
+        <div class="card" style="border-top:3px solid #10b981">
+          <small class="muted">Dias com Rotas Configuradas</small>
+          <h2 style="color:#10b981;margin:4px 0">${schedule.length}</h2>
+          <small class="muted">Dias da semana ativos</small>
+        </div>
+        <div class="card" style="border-top:3px solid #3b82f6">
+          <small class="muted">Bairros Mapeados para Entrega</small>
+          <h2 style="color:#3b82f6;margin:4px 0">${totalBairros}</h2>
+          <small class="muted">Regiões atendidas</small>
+        </div>
+        <div class="card" style="border-top:3px solid #8b5cf6">
+          <small class="muted">Motoristas Ativos no Sistema</small>
+          <h2 style="color:#8b5cf6;margin:4px 0">${drivers.length}</h2>
+          <small class="muted">Entregadores disponíveis</small>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title" style="margin-bottom:12px">
+          <div>
+            <h3>📅 Cronograma Semanal de Entregas por Bairros e Motoristas</h3>
+            <p class="muted">Edite os bairros atendidos em cada dia da semana (separados por vírgula ou nova linha) e selecione o motorista responsável por cada rota de entrega.</p>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:16px;">
+          ${schedule.map((item, index) => {
+            const bairrosText = (item.bairros || []).join(', ');
+            return `
+              <div class="card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.03); display:flex; flex-direction:column; justify-content:space-between">
+                <div>
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
+                    <strong style="font-size:16px; color:#10b981">📅 ${esc(item.dia_nome || item.dia)}</strong>
+                    <span class="badge" style="background:#10b981;color:#fff">${(item.bairros||[]).length} bairros</span>
+                  </div>
+
+                  <div class="field" style="margin-bottom:12px">
+                    <label style="font-size:12px; font-weight:700">🚚 Motorista Responsável pela Rota</label>
+                    <select id="deliv_driver_${index}" class="field-input" style="width:100%" onchange="updateDeliveryDriverInSchedule(${index}, this.value)">
+                      <option value="">-- Selecione ou Deixe sem motorista fixo --</option>
+                      ${drivers.map(d => `<option value="${d.id}" ${item.motorista_id === d.id ? 'selected' : ''}>👤 ${esc(d.nome)} (${esc(d.email)})</option>`).join('')}
+                    </select>
+                  </div>
+
+                  <div class="field">
+                    <label style="font-size:12px; font-weight:700">📍 Bairros Atendidos (separados por vírgula ou linha)</label>
+                    <textarea id="deliv_bairros_${index}" rows="4" class="field-input" style="width:100%; font-size:13px; line-height:1.5" placeholder="Ex: Centro, Vila Isa, JK..." onchange="updateDeliveryBairrosInSchedule(${index}, this.value)">${esc(bairrosText)}</textarea>
+                  </div>
+                </div>
+
+                <div style="margin-top:10px; font-size:11px; color:var(--muted)">
+                  ${item.motorista_nome ? `Motorista atual: <strong>${esc(item.motorista_nome)}</strong>` : 'Nenhum motorista designado no momento'}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+
+        <div class="actions" style="margin-top:20px; text-align:right">
+          <button class="btn primary" style="background:#10b981;border-color:#10b981; font-size:14px; padding:10px 20px" onclick="saveDeliveryRoutesSchedule()">
+            💾 Salvar Cronograma Completo de Entregas
+          </button>
+        </div>
+      </div>
+    `;
+  } catch(e) {
+    container.innerHTML = `<div class="panel"><p class="muted">Erro ao carregar dados: ${esc(e.message)}</p></div>`;
+  }
+};
+
+window.updateDeliveryDriverInSchedule = function(index, driverId){
+  if(!window._currentDeliverySchedule || !window._currentDeliverySchedule[index]) return;
+  const drv = (window._currentDeliveryDrivers || []).find(d => d.id === driverId);
+  window._currentDeliverySchedule[index].motorista_id = driverId || null;
+  window._currentDeliverySchedule[index].motorista_nome = drv ? drv.nome : null;
+};
+
+window.updateDeliveryBairrosInSchedule = function(index, text){
+  if(!window._currentDeliverySchedule || !window._currentDeliverySchedule[index]) return;
+  const arr = text.split(/\n|,/).map(x => x.trim()).filter(Boolean);
+  window._currentDeliverySchedule[index].bairros = arr;
+};
+
+window.saveDeliveryRoutesSchedule = async function(){
+  if(!window._currentDeliverySchedule) return;
+  // Read current values from textareas and selects
+  window._currentDeliverySchedule.forEach((item, index) => {
+    const drvSelect = document.getElementById('deliv_driver_' + index);
+    if(drvSelect) {
+      const driverId = drvSelect.value;
+      const drv = (window._currentDeliveryDrivers || []).find(d => d.id === driverId);
+      item.motorista_id = driverId || null;
+      item.motorista_nome = drv ? drv.nome : null;
+    }
+    const txtArea = document.getElementById('deliv_bairros_' + index);
+    if(txtArea) {
+      item.bairros = txtArea.value.split(/\n|,/).map(x => x.trim()).filter(Boolean);
+    }
+  });
+
+  try {
+    toast('Salvando cronograma de rotas de entrega...');
+    await api('/api/logistics/delivery-routes-config', {
+      method: 'POST',
+      body: JSON.stringify({ schedule: window._currentDeliverySchedule })
+    });
+    toast('Cronograma de rotas de entrega salvo com sucesso!');
+    Realtime.emit('delivery_routes_changed');
+    await renderDeliveryRoutesDashboardContent();
+  } catch(e) {
+    toast('Erro ao salvar cronograma: ' + e.message, true);
+  }
+};
+
 window.saveDepotCoordinates = async function(){
   const lat = document.getElementById('depotLatInput')?.value?.trim() || '';
   const lng = document.getElementById('depotLngInput')?.value?.trim() || '';
