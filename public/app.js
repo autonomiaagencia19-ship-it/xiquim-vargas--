@@ -300,7 +300,7 @@ async function refreshCurrentViewSilently(eventType,payload){
           if(v&&!hasOpenModal){
             if(document.getElementById('returnedOrdersDashboard')?.style.display==='block'){
               if(typeof window.refreshReturnedOrders==='function')window.refreshReturnedOrders();
-            }else if(document.getElementById('logisticsModalityDashboard')?.style.display==='block'){
+            }else if(document.getElementById('deliveryRoutesDashboard')?.style.display==='block'){if(typeof window.refreshDeliveryRoutesSilently==='function')window.refreshDeliveryRoutesSilently();}else if(document.getElementById('logisticsModalityDashboard')?.style.display==='block'){
               if(typeof window.renderModalityDashboard==='function'){
                 const groupsReq=await api('/api/logistics/grouped-orders').catch(()=>[]);
                 window._logisticsGroups=groupsReq;
@@ -458,13 +458,13 @@ const menu=[['Visão Geral','home'],['Catálogo','products'],['Tabelas de preço
 function shell(){const dot='•';const groups=[['Operação',[[dot,'Visão Geral','home'],[dot,'Pedidos','orders'],[dot,'Catálogo','products'],[dot,'Loja Online','store'],[dot,'Estoque Inteligente','stock'],[dot,'Clientes & CRM','clients'],[dot,'Logística','logistics']]],['Suprimentos',[[dot,'Fornecedores','suppliers'],[dot,'Recebimento de Mercadorias','inbound']]],['Gestão',[[dot,'Vendedores','sellers'],[dot,'Usuários','users'],[dot,'Tabelas de preço','prices'],[dot,'Relatórios','reports']]],['Governança',[[dot,'Auditoria','audit'],[dot,'IA Administrativa','ai']]]];return `<div class="app"><aside class="sidebar"><img class="xv-logo" src="/assets/institucional/01_Logo_Xiquim_Vargas_HD.png" alt="Xiquim Vargas ERP"><div class="group">Torre de Controle</div>${groups.map(([title,items])=>`<div class="group">${title}</div><div class="nav">${items.map(([i,l,k])=>`<button data-view="${k}"><span style="width:16px;text-align:center;font-size:16px;line-height:1;display:inline-block">${i}</span>${l}</button>`).join('')}</div>`).join('')}<div class="group">Sessão</div><div class="nav"><button onclick="logout()"><span style="width:16px;text-align:center;font-size:16px;line-height:1;display:inline-block">•</span>Sair</button></div></aside><main class="main"><div class="topbar"><div class="brand-dark"><button class="mobile-back-btn btn" onclick="window.showSidebar()">← Voltar</button><div><h1 id="title">Visão Geral</h1></div></div><div class="topbar-actions"><span id="offlineIndicator" style="display:${navigator.onLine?'none':'inline-flex'};background:#e11d48;color:#fff;font-weight:700;font-size:11px;padding:3px 8px;border-radius:12px;margin-right:6px">OFFLINE</span><span class="badge">${esc(ROLE_LABELS[me?.role]||me?.role||'Administrador')}</span></div></div><div id="view"></div></main></div><div id="toast" class="toast"></div>`}
 async function render(){if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});Realtime.init((type,payload)=>refreshCurrentViewSilently(type,payload));document.body.innerHTML=shell();window.showSidebar=()=>document.querySelector('.app').classList.remove('view-open');document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{document.querySelector('.app').classList.add('view-open');show(b.dataset.view)});const h=location.hash.slice(1);if(h&&window.innerWidth<=800)document.querySelector('.app').classList.add('view-open');await show(h||'home')}
 async function show(view){document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));$('#title').textContent=({home:'Visão Geral',products:'Catálogo',stock:'Estoque Inteligente',clients:'Clientes & CRM',orders:'Pedidos',users:'Usuários',sellers:'Vendedores',logistics:'Logística',suppliers:'Fornecedores',inbound:'Recebimento de Mercadorias',reports:'Relatórios',store:'Loja Online',audit:'Auditoria',prices:'Tabelas de preço',ai:'IA Administrativa'})[view]||view;location.hash=view;const v=$('#view');v.innerHTML='<div class="panel">Carregando...</div>';try{if(view==='home')return home(v);if(view==='products')return products(v);if(view==='prices')return prices(v);if(view==='store')return storeSettings(v);if(view==='stock')return stock(v);if(view==='clients')return clients(v);if(view==='orders')return orders(v);if(view==='users')return users(v);if(view==='sellers')return sellers(v);if(view==='logistics')return logistics(v);if(view==='suppliers')return suppliers(v);if(view==='inbound')return inbound(v);if(view==='reports')return reports(v);if(view==='audit')return auditView(v);if(view==='ai')return ai(v)}catch(e){v.innerHTML=`<div class="panel">Erro: ${esc(e.message)}</div>`}}
-async function home(v){const d=await api('/api/dashboard');window._dashboardData=d;const cards=[['🛍','Pedidos hoje',d.pedidosHoje],['●','Pendentes',d.pendentes],['●','Separação',d.separacao],['🚚','Em rota',d.rota],['✓','Concluídos',d.concluidos],['R$','Faturamento',`${brl(d.faturamento)}`],['▪','Produtos',d.produtos],['!','Estoque baixo',d.criticos],['♣','Clientes',d.clientes],['♣','Vendedores',d.vendedores]];const kan=[['PENDENTE',d.pendentes,'status-pendente'],['SEPARACAO',d.separacao,'status-separacao'],['ROTA',d.rota,'status-rota'],['CONCLUIDO',d.concluidos,'status-concluido']];const top=d.topProdutos||[];const chunked=[];for(let i=0;i<top.length;i+=5)chunked.push(top.slice(i,i+5));const topKanbanHtml=chunked.length?`<div class="panel" style="margin-top:16px"><div class="panel-title"><h3>Top 20 Produtos Mais Vendidos</h3></div><div class="kanban">${chunked.map((chunk,idx)=>`<div class="kanban-col"><div class="kanban-head"><span><span class="dot" style="background:var(--xv-orange)"></span>Top ${idx*5+1} ao ${idx*5+chunk.length}</span><span class="badge">${chunk.length}</span></div>${chunk.map((p,i)=>`<div class="kanban-card" style="display:flex;gap:12px;align-items:center"><div class="catalog-product-cell">${p.foto_url?`<img class="catalog-mini-photo" src="${esc(p.foto_url)}" alt="">`:'<div class="catalog-mini-photo placeholder">XV</div>'}</div><div><strong>#${idx*5+i+1} - ${esc(p.nome)}</strong><br><small class="muted">${p.total_vendido} un vendidas</small><br><small class="orange">${brl(p.total_receita)}</small></div></div>`).join('')}</div>`).join('')}</div></div>`:'';window.renderModalidadeRanking=function(periodo='geral'){window._currentModalidadePeriodo=periodo;const db=window._dashboardData||d;const periodosMap=db.vendasPorOrigemPeriodos||{geral:db.vendasPorOrigem||[],semanal:[],mensal:[]};const rawList=periodosMap[periodo]||db.vendasPorOrigem||[];const originLabels={VENDEDOR:'Vendedor Externo',BALCAO:'Frente de Loja / Caixa',WEB:'Loja Online'};const originIcons={VENDEDOR:'👤',BALCAO:'🏪',WEB:'🛒'};const originColors={VENDEDOR:'var(--xv-orange)',BALCAO:'#4a90e2',WEB:'#2ecc71'};const originsData=rawList.reduce((acc,x)=>({...acc,[x.origem]:x}),{});const origensList=['VENDEDOR','BALCAO','WEB'].map(o=>({origem:o,label:originLabels[o],icon:originIcons[o],color:originColors[o],pedidos:Number(originsData[o]?.pedidos||0),faturamento:Number(originsData[o]?.faturamento||0)})).sort((a,b)=>b.faturamento-a.faturamento);const rankBadges=['🥇 1º Lugar','🥈 2º Lugar','🥉 3º Lugar'];const pLabels={geral:'Todo o histórico',semanal:'Últimos 7 dias',mensal:'Últimos 30 dias'};const el=document.getElementById('modalidadeRankingContainer');if(!el)return;el.innerHTML=`<div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px"><div><h3 style="margin:0">Ranking de Vendas por Modalidade</h3><p class="muted" style="margin:4px 0 0;font-size:12px">Período selecionado: <strong>${pLabels[periodo]||periodo}</strong></p></div><div class="actions" style="display:flex;gap:6px"><button class="btn ${periodo==='geral'?'primary':''}" style="font-size:12px;padding:6px 12px" onclick="renderModalidadeRanking('geral')">Geral</button><button class="btn ${periodo==='semanal'?'primary':''}" style="font-size:12px;padding:6px 12px" onclick="renderModalidadeRanking('semanal')">Semanal (7d)</button><button class="btn ${periodo==='mensal'?'primary':''}" style="font-size:12px;padding:6px 12px" onclick="renderModalidadeRanking('mensal')">Mensal (30d)</button></div></div><div class="kanban" style="margin-top:14px">${origensList.map((x,idx)=>`<div class="kanban-col"><div class="kanban-head"><span><span class="dot" style="background:${x.color}"></span>${x.label}</span><span class="badge" style="background:${idx===0?'rgba(253,94,2,0.18)':''};color:${idx===0?'#fd5e02':''}">${rankBadges[idx]}</span></div><div class="kanban-card" style="text-align:center;padding:22px;border:1px solid ${idx===0?'rgba(253,94,2,0.3)':'var(--border)'}"><div style="font-size:30px;margin-bottom:6px">${x.icon}</div><div class="v" style="font-size:22px;color:${x.color};font-weight:800">${brl(x.faturamento)}</div><div style="margin-top:8px"><span class="badge" style="font-size:11px">${x.pedidos} pedido(s)</span></div><small class="muted" style="display:block;margin-top:8px">${x.faturamento>0?`${brl(x.pedidos?x.faturamento/x.pedidos:0)} ticket médio`:'Sem vendas no período'}</small></div></div>`).join('')}</div>`};v.innerHTML=`<div class="grid">${cards.map(x=>`<div class="card kpi"><div style="font-size:16px;color:#8193a9;margin-bottom:7px">${x[0]} &nbsp; ${x[1]}</div><div class="v">${x[2]}</div></div>`).join('')}</div><div class="panel" style="margin-top:16px"><div class="panel-title"><h3>Fluxo operacional</h3><button class="btn" onclick="show('orders')">Ver pedidos</button></div><div class="kanban">${kan.map(k=>`<div class="kanban-col"><div class="kanban-head"><span><span class="dot"></span>${k[0]}</span><span class="badge">${k[1]}</span></div><div class="kanban-card"><strong>${k[1]} pedido(s)</strong><small>Monitorado em tempo real pela Torre de Controle</small></div></div>`).join('')}</div></div><div class="panel" id="modalidadeRankingContainer" style="margin-top:16px"></div>${topKanbanHtml}`;window.renderModalidadeRanking(window._currentModalidadePeriodo||'geral')}
+async function home(v){const d=await api('/api/dashboard');window._dashboardData=d;const cards=[['🛍','Pedidos hoje',d.pedidosHoje],['●','Pendentes',d.pendentes],['●','Separação',d.separacao],['🚚','Em rota',d.rota],['✓','Concluídos',d.concluidos],['R$','Faturamento',`${brl(d.faturamento)}`],['▪','Produtos',d.produtos],['!','Estoque baixo',d.criticos],['♣','Clientes',d.clientes],['♣','Vendedores',d.vendedores]];const kan=[['PENDENTE',d.pendentes,'status-pendente'],['SEPARACAO',d.separacao,'status-separacao'],['ROTA',d.rota,'status-rota'],['CONCLUIDO',d.concluidos,'status-concluido']];const top=d.topProdutos||[];const chunked=[];for(let i=0;i<top.length;i+=5)chunked.push(top.slice(i,i+5));const topKanbanHtml=chunked.length?`<div class="panel" style="margin-top:16px"><div class="panel-title"><h3>Top 20 Produtos Mais Vendidos</h3></div><div class="kanban">${chunked.map((chunk,idx)=>`<div class="kanban-col"><div class="kanban-head"><span><span class="dot" style="background:var(--xv-orange)"></span>Top ${idx*5+1} ao ${idx*5+chunk.length}</span><span class="badge">${chunk.length}</span></div>${chunk.map((p,i)=>`<div class="kanban-card" style="display:flex;gap:12px;align-items:center"><div class="catalog-product-cell">${p.foto_url?`<img class="catalog-mini-photo" src="${esc(p.foto_url)}" alt="">`:'<div class="catalog-mini-photo placeholder">XV</div>'}</div><div><strong>#${idx*5+i+1} - ${esc(p.nome)}</strong><br><small class="muted">${p.total_vendido} un vendidas</small><br><small class="orange">${brl(p.total_receita)}</small></div></div>`).join('')}</div>`).join('')}</div></div>`:'';window.renderModalidadeRanking=function(periodo='geral'){window._currentModalidadePeriodo=periodo;const db=window._dashboardData||d;const periodosMap=db.vendasPorOrigemPeriodos||{geral:db.vendasPorOrigem||[],semanal:[],mensal:[]};const rawList=periodosMap[periodo]||db.vendasPorOrigem||[];const originLabels={VENDEDOR:'Vendedor Externo',BALCAO:'Frente de Loja / Caixa',WEB:'Loja Online'};const originIcons={VENDEDOR:'👤',BALCAO:'🏪',WEB:'🛒'};const originColors={VENDEDOR:'var(--xv-orange)',BALCAO:'#4a90e2',WEB:'#2ecc71'};const originsData=rawList.reduce((acc,x)=>({...acc,[x.origem]:x}),{});const origensList=['VENDEDOR','BALCAO','WEB'].map(o=>({origem:o,label:originLabels[o],icon:originIcons[o],color:originColors[o],pedidos:Number(originsData[o]?.pedidos||0),faturamento:Number(originsData[o]?.faturamento||0)})).sort((a,b)=>b.faturamento-a.faturamento);const rankBadges=['🥇 1º Lugar','🥈 2º Lugar','🥉 3º Lugar'];const pLabels={geral:'Todo o histórico',semanal:'Últimos 7 dias',mensal:'Últimos 30 dias'};const el=document.getElementById('modalidadeRankingContainer');if(!el)return;el.innerHTML=`<div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px"><div><h3 style="margin:0">Ranking de Vendas por Modalidade</h3><p class="muted" style="margin:4px 0 0;font-size:12px">Período selecionado: <strong>${pLabels[periodo]||periodo}</strong></p></div><div class="actions" style="display:flex;gap:6px"><button class="btn ${periodo==='geral'?'primary':''}" style="font-size:12px;padding:6px 12px" onclick="renderModalidadeRanking('geral')">Geral</button><button class="btn ${periodo==='semanal'?'primary':''}" style="font-size:12px;padding:6px 12px" onclick="renderModalidadeRanking('semanal')">Semanal (7d)</button><button class="btn ${periodo==='mensal'?'primary':''}" style="font-size:12px;padding:6px 12px" onclick="renderModalidadeRanking('mensal')">Mensal (30d)</button></div></div><div class="kanban" style="margin-top:14px">${origensList.map((x,idx)=>`<div class="kanban-col"><div class="kanban-head"><span><span class="dot" style="background:${x.color}"></span>${x.label}</span><span class="badge" style="background:${idx===0?'rgba(253,94,2,0.18)':''};color:${idx===0?'#fd5e02':''}">${rankBadges[idx]}</span></div><div class="kanban-card" style="text-align:center;padding:22px;border:1px solid ${idx===0?'rgba(253,94,2,0.3)':'var(--border)'}"><div style="font-size:30px;margin-bottom:6px">${x.icon}</div><div class="v" style="font-size:22px;color:${x.color};font-weight:800">${brl(x.faturamento)}</div><div style="margin-top:8px"><span class="badge" style="font-size:11px">${x.pedidos} pedido(s)</span></div><small class="muted" style="display:block;margin-top:8px">${x.faturamento>0?`${brl(x.pedidos?x.faturamento/x.pedidos:0)} ticket médio`:'Sem vendas no período'}</small></div></div>`).join('')}</div>`};v.innerHTML=`<div class="grid">${cards.map(x=>`<div class="card kpi"><div class="kpi-title" style="font-size:19px;font-weight:850;color:#000000;margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#000;flex:0 0 10px"></span> <span>${x[1]}</span></div><div class="v">${x[2]}</div></div>`).join('')}</div><div class="panel" style="margin-top:16px"><div class="panel-title"><h3>Fluxo operacional</h3><button class="btn" onclick="show('orders')">Ver pedidos</button></div><div class="kanban kanban-orders">${kan.map(k=>`<div class="kanban-col" style="min-height:150px;display:flex;flex-direction:column"><div class="kanban-head"><span><span class="dot"></span>${k[0]}</span><span class="badge">${k[1]}</span></div><div class="kanban-card" style="flex:1;min-height:95px;margin:0;padding:18px 16px;display:flex;align-items:center;justify-content:center;text-align:center"><strong style="font-size:19px;font-weight:800;color:var(--xv-brand-navy,#0f172a);margin:0;letter-spacing:-0.2px">${k[1]} pedido(s)</strong></div></div>`).join('')}</div></div><div class="panel" id="modalidadeRankingContainer" style="margin-top:16px"></div>${topKanbanHtml}`;window.renderModalidadeRanking(window._currentModalidadePeriodo||'geral')}
 async function products(v){const [p,c,promo]=await Promise.all([api('/api/products?limit=100000'),api('/api/categories'),api('/api/promotions')]);window.adminProducts=p;window.adminCategories=c;window.catalogCategories=c.categorias;window.catalogSubcategories=c.subcategorias;window.adminPromotions=promo;renderAdminCatalog(v)}
 function renderAdminCatalogToolbar(){const cats=window.adminCategories?.categorias||[];const subs=window.adminCategories?.subcategorias||[];return `<div class="panel catalog-toolbar"><div class="actions"><input id="pq" class="search" placeholder="Pesquisar por nome, SKU ou código de barras" oninput="catalogFilter(this)"><button class="btn primary" onclick="newProduct()">+ Produto</button><button class="btn" onclick="newCategory()">+ Categoria</button><button class="btn" onclick="newSubcategory()">+ Subcategoria</button><button class="btn" onclick="exportCatalogPdf()">⇩ PDF do catálogo</button></div><div class="catalog-filters"><select id="catFilter" class="field-input" onchange="onAdminCatFilterChange(this.value)"><option value="">Todas as categorias</option>${cats.map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join('')}</select><select id="subFilter" class="field-input" onchange="catalogFilter()"><option value="">Todas as subcategorias</option>${subs.map(x=>`<option data-cat="${x.categoria_id}" value="${x.id}">${esc(x.nome)}</option>`).join('')}</select></div></div>`}
 function onAdminCatFilterChange(catId){const subSel=document.getElementById('subFilter');if(subSel){subSel.querySelectorAll('option[data-cat]').forEach(opt=>{opt.hidden=!!catId&&opt.dataset.cat!==catId});if(subSel.selectedOptions[0]?.hidden)subSel.value=''}catalogFilter()}
-function renderAdminCatalog(v){window.adminCurrentCatId='';window.adminCurrentSubId='';const p=window.adminProducts;const c=window.adminCategories;const promo=window.adminPromotions;const cats=c.categorias;const catCards=cats.length?`<div class="grid" style="margin-top:14px;margin-bottom:24px;">${cats.map(cat=>{const count=(p.items||[]).filter(x=>x.categoria_id===cat.id).length;return `<div class="card" style="cursor:pointer" onclick="adminSubcategorias('${cat.id}')"><h3>${esc(cat.nome)}</h3><p class="muted">${count} produtos · ${c.subcategorias.filter(s=>s.categoria_id===cat.id).length} subcategorias</p></div>`}).join('')}</div>`:'';v.innerHTML=`${renderAdminCatalogToolbar()}<div class="catalog-summary"><span><b>${p.total}</b> produtos ativos</span><span><b>${cats.length}</b> categorias</span><span><b>${c.subcategorias.length}</b> subdivisões</span><span><b>${promo.items.length}</b> promoções ativas</span></div><div class="panel-title" style="margin-top:16px;"><h2>Categorias do Catálogo</h2></div>${catCards}<div class="panel-title" style="margin-top:24px;"><h2>Todos os Produtos</h2></div><div id="catalogTable" class="tablewrap"><table class="table"><thead><tr><th>Produto</th><th>SKU</th><th>Categoria</th><th>Subcategoria</th><th>Preço</th><th>Promoção</th><th>Ações</th></tr></thead><tbody>${p.items.map(x=>catalogRow(x)).join('')}</tbody></table></div><div class="panel category-panel" style="margin-top:24px"><div class="panel-title"><h3>Estrutura do catálogo</h3><span class="badge">Editável pela Torre</span></div><div class="category-tree">${cats.map(cat=>`<div class="category-node"><div><strong>${esc(cat.nome)}</strong><small>${esc(cat.descricao||'Sem descrição')}</small></div><div class="category-actions"><button class="btn" onclick="editCategory(parseJsonArg('${jsonArg(cat)}'))">Editar</button><span>${c.subcategorias.filter(s=>s.categoria_id===cat.id).map(s=>esc(s.nome)).join(' · ')||'Sem subdivisões'}</span></div></div>`).join('')}</div></div>`}
-function adminSubcategorias(catId){const v=$('#view');window.adminCurrentCatId=catId;window.adminCurrentSubId='';const cat=window.adminCategories.categorias.find(c=>c.id===catId);const subs=window.adminCategories.subcategorias.filter(s=>s.categoria_id===catId);const p=window.adminProducts;const catItems=(p.items||[]).filter(x=>x.categoria_id===catId);v.innerHTML=`${renderAdminCatalogToolbar()}<div class="mobile-nav" style="margin-bottom:14px"><button class="btn" onclick="renderAdminCatalog(document.getElementById('view'))">← Voltar a Todas as Categorias</button></div><div class="panel-title"><h2>Categoria: ${esc(cat?.nome||'')}</h2><span class="badge">${catItems.length} produtos cadastrados</span></div><div class="grid" style="margin-top:14px;margin-bottom:24px;"><div class="card" style="cursor:pointer;border-left:4px solid #f97316" onclick="adminProdutosSub('','Todos os Produtos (${catItems.length})','${catId}')"><h3>Todos os Produtos</h3><p class="muted">Exibir todos os ${catItems.length} produtos desta categoria</p></div>${subs.length?subs.map(s=>{const count=(p.items||[]).filter(x=>x.subcategoria_id===s.id).length;return `<div class="card" style="cursor:pointer" onclick="adminProdutosSub('${s.id}','${esc(s.nome).replace(/'/g,"\\'").replace(/"/g,"&quot;")}','${catId}')"><h3>${esc(s.nome)}</h3><p class="muted">${count} produtos</p></div>`}).join(''):'<p class="muted">Nenhuma subcategoria encontrada.</p>'}</div><div class="panel-title" style="margin-top:20px"><h2>Produtos em ${esc(cat?.nome||'')}</h2></div><div id="catalogTable" class="tablewrap"><table class="table"><thead><tr><th>Produto</th><th>SKU</th><th>Categoria</th><th>Subcategoria</th><th>Preço</th><th>Promoção</th><th>Ações</th></tr></thead><tbody>${catItems.map(x=>catalogRow(x)).join('')}</tbody></table></div>`;const cf=$('#catFilter');if(cf){cf.value=catId;onAdminCatFilterChange(catId)}}
-function adminProdutosSub(subId,subName,catId){const v=$('#view');window.adminCurrentSubId=subId;window.adminCurrentCatId=catId;const p=window.adminProducts;const items=(p.items||[]).filter(x=>{if(catId&&x.categoria_id!==catId)return false;if(subId&&x.subcategoria_id!==subId)return false;return true});v.innerHTML=`${renderAdminCatalogToolbar()}<div class="mobile-nav" style="margin-bottom:14px;display:flex;gap:8px"><button class="btn" onclick="adminSubcategorias('${catId||''}')">← Subcategorias</button><button class="btn" onclick="renderAdminCatalog(document.getElementById('view'))">🏠 Catálogo Geral</button></div><div class="panel-title"><h2>${esc(subName)}</h2><span class="badge">${items.length} produtos</span></div><div class="form" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;"><div class="field"><label>Menor preço</label><input type="number" step="0.01" id="adminSubMin" class="search" placeholder="R$ 0,00" oninput="catalogFilter()"></div><div class="field"><label>Maior preço</label><input type="number" step="0.01" id="adminSubMax" class="search" placeholder="Sem limite" oninput="catalogFilter()"></div></div><div id="catalogTable" class="tablewrap"><table class="table"><thead><tr><th>Produto</th><th>SKU</th><th>Categoria</th><th>Subcategoria</th><th>Preço</th><th>Promoção</th><th>Ações</th></tr></thead><tbody>${items.map(x=>catalogRow(x)).join('')}</tbody></table></div>`;const cf=$('#catFilter');if(cf){cf.value=catId||'';onAdminCatFilterChange(catId||'');if(subId&&$('#subFilter'))$('#subFilter').value=subId}catalogFilter()}
+function renderAdminCatalog(v){window.adminCurrentCatId='';window.adminCurrentSubId='';const p=window.adminProducts;const c=window.adminCategories;const promo=window.adminPromotions;const cats=c.categorias;const catCards=cats.length?`<div class="grid" style="margin-top:14px;margin-bottom:24px;">${cats.map(cat=>{const count=(p.items||[]).filter(x=>x.categoria_id===cat.id).length;const subCount=c.subcategorias.filter(s=>s.categoria_id===cat.id).length;return `<div class="card" style="cursor:pointer;position:relative" onclick="adminSubcategorias('${cat.id}')"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><h3 style="margin:0">${esc(cat.nome)}</h3><div style="display:flex;gap:4px;flex-shrink:0" onclick="event.stopPropagation()"><button class="btn" style="padding:4px 8px;font-size:12px" title="Editar categoria" onclick="editCategory(parseJsonArg('${jsonArg(cat)}'))">✏</button><button class="btn" style="padding:4px 8px;font-size:12px;color:#b42318" title="Excluir categoria" onclick="deleteCategory('${cat.id}',parseJsonArg('${jsonArg(cat.nome)}'))">🗑</button></div></div><p class="muted" style="margin-top:8px">${count} produtos · ${subCount} subcategorias</p></div>`}).join('')}</div>`:'';v.innerHTML=`${renderAdminCatalogToolbar()}<div class="catalog-summary"><span><b>${p.total}</b> produtos ativos</span><span><b>${cats.length}</b> categorias</span><span><b>${c.subcategorias.length}</b> subdivisões</span><span><b>${promo.items.length}</b> promoções ativas</span></div><div class="panel-title" style="margin-top:16px;"><h2>Categorias do Catálogo</h2></div>${catCards}<div class="panel-title" style="margin-top:24px;"><h2>Todos os Produtos</h2></div><div id="catalogTable" class="tablewrap"><table class="table"><thead><tr><th>Produto</th><th>SKU</th><th>Categoria</th><th>Subcategoria</th><th>Preço</th><th>Promoção</th><th>Ações</th></tr></thead><tbody>${p.items.map(x=>catalogRow(x)).join('')}</tbody></table></div><div class="panel category-panel" style="margin-top:24px"><div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div><h3>Estrutura do catálogo</h3><span class="badge">Editável pela Torre</span></div><div class="actions" style="display:flex;gap:8px"><button class="btn" onclick="newCategory()">+ Categoria</button><button class="btn" onclick="newSubcategory()">+ Subcategoria</button></div></div><div class="category-tree">${cats.map(cat=>{const subs=c.subcategorias.filter(s=>s.categoria_id===cat.id);return `<div class="category-node" style="display:flex;flex-direction:column;gap:10px;align-items:stretch"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap"><div><strong style="font-size:15px">${esc(cat.nome)}</strong><small>${esc(cat.descricao||'Sem descrição')}</small></div><div class="category-actions" style="display:flex;gap:6px"><button class="btn" style="padding:4px 8px;font-size:12px" onclick="editCategory(parseJsonArg('${jsonArg(cat)}'))">✏ Editar</button><button class="btn" style="padding:4px 8px;font-size:12px;color:#b42318" onclick="deleteCategory('${cat.id}',parseJsonArg('${jsonArg(cat.nome)}'))">🗑 Excluir</button><button class="btn primary" style="padding:4px 8px;font-size:12px" onclick="newSubcategory('${cat.id}')">+ Subcategoria</button></div></div><div style="display:flex;flex-wrap:wrap;gap:8px;padding-top:8px;border-top:1px solid #1e2c40"><span class="muted" style="font-size:11px;align-self:center;text-transform:uppercase;letter-spacing:0.5px">Subcategorias:</span>${subs.length?subs.map(s=>`<span class="badge" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:#f1f5f9;border:1px solid #cbd5e1;color:#000000;font-size:12px"><span>${esc(s.nome)}</span><button type="button" title="Editar subcategoria" style="background:none;border:none;color:#94a3b8;cursor:pointer;padding:0 2px;font-size:12px" onmouseover="this.style.color='#f97316'" onmouseout="this.style.color='#94a3b8'" onclick="editSubcategory(parseJsonArg('${jsonArg(s)}'))">✏</button><button type="button" title="Excluir subcategoria" style="background:none;border:none;color:#f87171;cursor:pointer;padding:0 2px;font-size:12px" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#f87171'" onclick="deleteSubcategory('${s.id}',parseJsonArg('${jsonArg(s.nome)}'),'${cat.id}')">✕</button></span>`).join(''):'<span class="muted" style="font-size:12px">Sem subdivisões</span>'}</div></div>`}).join('')}</div></div>`}
+function adminSubcategorias(catId){const v=$('#view');window.adminCurrentCatId=catId;window.adminCurrentSubId='';const cat=window.adminCategories.categorias.find(c=>c.id===catId);const subs=window.adminCategories.subcategorias.filter(s=>s.categoria_id===catId);const p=window.adminProducts;const catItems=(p.items||[]).filter(x=>x.categoria_id===catId);v.innerHTML=`${renderAdminCatalogToolbar()}<div class="mobile-nav" style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><button class="btn" onclick="renderAdminCatalog(document.getElementById('view'))">← Voltar a Todas as Categorias</button><div style="display:flex;gap:6px">${cat?`<button class="btn" onclick="editCategory(parseJsonArg('${jsonArg(cat)}'))">✏ Editar Categoria</button><button class="btn" style="color:#b42318" onclick="deleteCategory('${cat.id}',parseJsonArg('${jsonArg(cat.nome)}'))">🗑 Excluir Categoria</button>`:''}<button class="btn primary" onclick="newSubcategory('${catId}')">+ Nova Subcategoria</button></div></div><div class="panel-title"><h2>Categoria: ${esc(cat?.nome||'')}</h2><span class="badge">${catItems.length} produtos cadastrados</span></div><div class="grid" style="margin-top:14px;margin-bottom:24px;"><div class="card" style="cursor:pointer;border-left:4px solid #f97316" onclick="adminProdutosSub('','Todos os Produtos (${catItems.length})','${catId}')"><h3>Todos os Produtos</h3><p class="muted">Exibir todos os ${catItems.length} produtos desta categoria</p></div>${subs.length?subs.map(s=>{const count=(p.items||[]).filter(x=>x.subcategoria_id===s.id).length;return `<div class="card" style="cursor:pointer;position:relative" onclick="adminProdutosSub('${s.id}','${esc(s.nome).replace(/'/g,"\\'").replace(/"/g,"&quot;")}','${catId}')"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><h3 style="margin:0">${esc(s.nome)}</h3><div style="display:flex;gap:4px;flex-shrink:0" onclick="event.stopPropagation()"><button class="btn" style="padding:4px 8px;font-size:12px" title="Editar subcategoria" onclick="editSubcategory(parseJsonArg('${jsonArg(s)}'))">✏</button><button class="btn" style="padding:4px 8px;font-size:12px;color:#b42318" title="Excluir subcategoria" onclick="deleteSubcategory('${s.id}',parseJsonArg('${jsonArg(s.nome)}'),'${catId}')">🗑</button></div></div><p class="muted" style="margin-top:8px">${count} produtos</p></div>`}).join(''):'<p class="muted">Nenhuma subcategoria encontrada.</p>'}</div><div class="panel-title" style="margin-top:20px"><h2>Produtos em ${esc(cat?.nome||'')}</h2></div><div id="catalogTable" class="tablewrap"><table class="table"><thead><tr><th>Produto</th><th>SKU</th><th>Categoria</th><th>Subcategoria</th><th>Preço</th><th>Promoção</th><th>Ações</th></tr></thead><tbody>${catItems.map(x=>catalogRow(x)).join('')}</tbody></table></div>`;const cf=$('#catFilter');if(cf){cf.value=catId;onAdminCatFilterChange(catId)}}
+function adminProdutosSub(subId,subName,catId){const v=$('#view');window.adminCurrentSubId=subId;window.adminCurrentCatId=catId;const p=window.adminProducts;const sub=subId?(window.adminCategories?.subcategorias||[]).find(s=>s.id===subId):null;const items=(p.items||[]).filter(x=>{if(catId&&x.categoria_id!==catId)return false;if(subId&&x.subcategoria_id!==subId)return false;return true});v.innerHTML=`${renderAdminCatalogToolbar()}<div class="mobile-nav" style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="display:flex;gap:8px"><button class="btn" onclick="adminSubcategorias('${catId||''}')">← Subcategorias</button><button class="btn" onclick="renderAdminCatalog(document.getElementById('view'))">🏠 Catálogo Geral</button></div>${sub?`<div style="display:flex;gap:6px"><button class="btn" onclick="editSubcategory(parseJsonArg('${jsonArg(sub)}'))">✏ Editar Subcategoria</button><button class="btn" style="color:#b42318" onclick="deleteSubcategory('${sub.id}',parseJsonArg('${jsonArg(sub.nome)}'),'${catId}')">🗑 Excluir Subcategoria</button></div>`:''}</div><div class="panel-title"><h2>${esc(subName)}</h2><span class="badge">${items.length} produtos</span></div><div class="form" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;"><div class="field"><label>Menor preço</label><input type="number" step="0.01" id="adminSubMin" class="search" placeholder="R$ 0,00" oninput="catalogFilter()"></div><div class="field"><label>Maior preço</label><input type="number" step="0.01" id="adminSubMax" class="search" placeholder="Sem limite" oninput="catalogFilter()"></div></div><div id="catalogTable" class="tablewrap"><table class="table"><thead><tr><th>Produto</th><th>SKU</th><th>Categoria</th><th>Subcategoria</th><th>Preço</th><th>Promoção</th><th>Ações</th></tr></thead><tbody>${items.map(x=>catalogRow(x)).join('')}</tbody></table></div>`;const cf=$('#catFilter');if(cf){cf.value=catId||'';onAdminCatFilterChange(catId||'');if(subId&&$('#subFilter'))$('#subFilter').value=subId}catalogFilter()}
 function catalogRow(x){return `<tr data-product="${x.id}" data-cat="${x.categoria_id||''}" data-sub="${x.subcategoria_id||''}" data-price="${x.promocao_preco!=null?Number(x.promocao_preco):Number(x.preco_base)}"><td><div class="catalog-product-cell">${x.foto_url?`<img class="catalog-mini-photo" src="${esc(x.foto_url)}" alt="" onerror="this.onerror=null;this.replaceWith(Object.assign(document.createElement('div'),{className:'catalog-mini-photo placeholder',textContent:'XV'}))">`:'<div class="catalog-mini-photo placeholder">XV</div>'}<div><strong>${esc(x.nome)}</strong>${Number(x.esgotado)?' <span class="badge" style="background:#fde2e2;color:#b42318;border-color:#f5b5b5">ESGOTADO</span>':''}<br><small>${esc([x.marca,x.sabor,x.tamanho].filter(Boolean).join(' · '))}</small></div></div></td><td>${esc(x.sku)}</td><td>${esc(x.categoria_nome||'-')}</td><td>${esc(x.subcategoria_nome||'-')}</td><td>${brl(x.preco_base)}</td><td>${x.promocao_preco!=null?`<strong class="orange">${brl(x.promocao_preco)}</strong>`:'—'}</td><td><button class="btn" onclick="editProduct(parseJsonArg('${jsonArg(x)}'))">Editar</button> <button class="btn" onclick="manageProductImages(parseJsonArg('${jsonArg(x)}'))">Fotos</button> <button class="btn" onclick="managePromotion(parseJsonArg('${jsonArg(x)}'))">Promoção</button> <button class="btn" onclick="productSuppliersModal('${x.id}',parseJsonArg('${jsonArg(x.nome)}'))">🏢 Fornecedores</button> <button class="btn" onclick="toggleSoldOut('${x.id}',${Number(x.esgotado)?0:1})">${Number(x.esgotado)?'✔ Disponível':'⊘ Esgotado'}</button> <button class="btn" style="color:#b42318" onclick="deleteProduct('${x.id}',parseJsonArg('${jsonArg(x.nome)}'))">🗑 Excluir</button></td></tr>`}
 async function toggleSoldOut(id,flag){
   const row=document.querySelector(`tr[data-product="${id}"]`);
@@ -513,14 +513,19 @@ function productFormHtml(x={}){const cats=window.catalogCategories||[],subs=wind
 function newProduct(){modal('Novo produto',productFormHtml());$('#productCat').onchange=()=>filterSubOptions($('#productCat').value);filterSubOptions('');$('#productForm').onsubmit=async e=>{e.preventDefault();try{const x=await api('/api/products',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});closeModal();toast('Produto criado. Estoque inicial permanece zero até lançamento no módulo Estoque.');show('products')}catch(x){toast(x.message)}}}
 function filterSubOptions(cat){document.querySelectorAll('#productSub option[data-cat]').forEach(o=>o.hidden=!!cat&&o.dataset.cat!==cat);if($('#productSub')?.selectedOptions[0]?.hidden)$('#productSub').value=''}
 function editProduct(x){modal('Editar produto',productFormHtml(x));$('#productCat').onchange=()=>filterSubOptions($('#productCat').value);filterSubOptions(x.categoria_id||'');$('#productForm').onsubmit=async e=>{e.preventDefault();try{await api('/api/products/'+x.id,{method:'PUT',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});closeModal();toast('Produto atualizado sem alterar o estoque');show('products')}catch(z){toast(z.message)}}}
-function manageProductImages(x){modal('Fotos do produto',`<div class="photo-manager"><div class="photo-upload"><label class="btn primary photo-picker">+ Adicionar foto <input id="productPhotoInput" type="file" accept="image/png,image/jpeg,image/webp" hidden></label><span class="muted">Até 8 MB por imagem. As fotos ficam no armazenamento do ERP; não é necessário URL.</span></div><div id="productPhotos" class="photo-grid">Carregando…</div></div>`);loadProductImages(x.id);$('#productPhotoInput').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;if(f.size>8*1024*1024)return toast('A imagem excede 8 MB');const r=new FileReader();r.onload=async()=>{try{await api('/api/products/'+x.id+'/images',{method:'POST',body:JSON.stringify({data_url:r.result})});toast('Foto armazenada');loadProductImages(x.id)}catch(z){toast(z.message)}};r.readAsDataURL(f)}}
-async function loadProductImages(id){try{const x=await api('/api/products/'+id+'/images');$('#productPhotos').innerHTML=x.items.length?x.items.map(i=>`<div class="photo-item"><img src="${i.url}" alt=""><div><span class="badge">${i.principal?'Principal':'Foto'}</span><button class="btn danger" onclick="deleteProductImage('${i.id}',${id?`'${id}'`:'null'})">Excluir</button></div></div>`).join(''):'<div class="empty-state">Nenhuma foto cadastrada.</div>'}catch(e){$('#productPhotos').textContent=e.message}}
+function manageProductImages(x){modal('Fotos do produto — '+esc(x.nome),`<div class="photo-manager"><div class="photo-upload" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px"><label class="btn primary photo-picker" style="cursor:pointer">+ Adicionar e Enquadrar Foto <input id="productPhotoInput" type="file" accept="image/png,image/jpeg,image/webp" hidden></label><span class="muted" style="font-size:12px">Mecanismo visual para mover, centralizar e ver exatamente a exibição no catálogo e loja.</span></div><div id="productPhotos" class="photo-grid">Carregando…</div></div>`,'780px');loadProductImages(x.id);$('#productPhotoInput').onchange=e=>{const f=e.target.files?.[0];if(!f)return;if(f.size>8*1024*1024)return toast('A imagem excede 8 MB');const r=new FileReader();r.onload=()=>{openImagePositionerModal(r.result,async(croppedDataUrl)=>{try{await api('/api/products/'+x.id+'/images',{method:'POST',body:JSON.stringify({data_url:croppedDataUrl})});toast('Foto centralizada e salva com sucesso!');loadProductImages(x.id);const [newP]=await Promise.all([api('/api/products?limit=100000')]);window.adminProducts=newP}catch(z){toast(z.message,true)}})};r.readAsDataURL(f)}}
+function openImagePositionerModal(dataUrl,onSaveCallback,aspectMode='square'){const isCover=aspectMode==='cover_banner';const positionerModal=document.createElement('div');positionerModal.id='imagePositionerModal';positionerModal.style='position:fixed;inset:0;background:rgba(0,0,0,0.88);display:grid;place-items:center;z-index:110';positionerModal.innerHTML=`<div class="panel" style="width:min(820px,96vw);max-height:94vh;overflow-y:auto;background:#0b1422;border:1px solid #23344a;box-shadow:0 24px 60px rgba(0,0,0,0.6)"><div class="top" style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1e2c3f;padding-bottom:10px;margin-bottom:14px"><div><h2 style="margin:0;font-size:1.25rem;color:#fff">📐 Enquadrar e Centralizar ${isCover?'Foto de Capa da Loja':'Foto'}</h2><p class="muted" style="margin:4px 0 0;font-size:12px">Arraste a foto com o mouse ou toque para mover. Ajuste o zoom para o tamanho e posição perfeitos.</p></div><button class="btn" id="closePositionerBtn" style="padding:4px 10px;font-size:18px">×</button></div><div class="photo-crop-workspace"><div class="photo-cropper-viewport" id="cropperViewport" style="${isCover?'max-width:680px;height:240px;aspect-ratio:16/9;':'max-width:420px;height:300px;'}"><img id="cropperImage" src="${dataUrl}" alt="Ajuste"><div class="photo-cropper-grid-overlay"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div></div><div class="photo-cropper-controls"><label>🔍 Zoom: <input type="range" id="cropZoom" min="0.5" max="3.0" step="0.05" value="1.0" style="width:140px"><span id="zoomVal" style="color:#fd5e02;font-weight:bold;min-width:35px">100%</span></label><button type="button" class="btn" id="btnCenterCrop" style="font-size:12px;padding:6px 12px">🎯 Centralizar Foto</button><button type="button" class="btn" id="btnFitCrop" style="font-size:12px;padding:6px 12px">⛶ Ajustar às Bordas</button></div><div><strong style="display:block;font-size:13px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;text-align:center">Como ela será exibida nos locais do sistema:</strong><div class="photo-preview-group">${isCover?`<div class="photo-preview-item" style="width:100%"><div style="width:100%;max-width:540px;height:160px;border-radius:12px;background:#021d60;border:2px solid var(--xv-brand-orange,#fd5e02);overflow:hidden;position:relative;display:flex;align-items:flex-end;box-shadow:0 8px 24px rgba(2,29,96,0.3)"><canvas id="previewCanvasCover" width="540" height="160" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></canvas><div style="position:relative;z-index:2;padding:12px;color:#fff;pointer-events:none;background:linear-gradient(90deg,rgba(2,29,96,0.9),rgba(2,29,96,0.3),transparent);width:100%"><strong style="font-size:16px;display:block">Catálogo Xiquim Vargas</strong><span style="font-size:11px;opacity:0.9">Card de Capa da Loja Online</span></div></div><span>Card Oficial da Loja Online</span></div>`:`<div class="photo-preview-item"><div class="photo-preview-box-store"><canvas id="previewCanvasStore" width="140" height="140"></canvas></div><span>Card da Loja Online & PDV</span></div><div class="photo-preview-item"><div class="photo-preview-box-mini"><canvas id="previewCanvasMini" width="48" height="48"></canvas></div><span>Tabelas & Miniaturas</span></div>`}</div></div><div class="actions" style="justify-content:flex-end;margin-top:14px;border-top:1px solid #1e2c3f;padding-top:14px"><button type="button" class="btn" id="cancelPositionerBtn">Cancelar</button><button type="button" class="btn primary" id="confirmPositionerBtn" style="padding:10px 20px;font-weight:800">✓ Confirmar e Usar Esta Posição</button></div></div></div>`;document.body.appendChild(positionerModal);const vp=positionerModal.querySelector('#cropperViewport');const img=positionerModal.querySelector('#cropperImage');const zoomInput=positionerModal.querySelector('#cropZoom');const zoomVal=positionerModal.querySelector('#zoomVal');const cvsCover=positionerModal.querySelector('#previewCanvasCover');const cvsStore=positionerModal.querySelector('#previewCanvasStore');const cvsMini=positionerModal.querySelector('#previewCanvasMini');let scale=1.0;let posX=0;let posY=0;let isDragging=false;let startX=0;let startY=0;let initialImgW=0;let initialImgH=0;function updateTransform(){img.style.transform=`translate(${posX}px, ${posY}px) scale(${scale})`;zoomVal.textContent=Math.round(scale*100)+'%';renderLivePreviews()}function renderLivePreviews(){if(!initialImgW||!initialImgH)return;const vpRect=vp.getBoundingClientRect();const vpW=vpRect.width||(isCover?680:420);const vpH=vpRect.height||(isCover?240:300);const targets=isCover?[cvsCover]:[cvsStore,cvsMini];targets.forEach(cvs=>{if(!cvs)return;const ctx=cvs.getContext('2d');ctx.clearRect(0,0,cvs.width,cvs.height);ctx.fillStyle=isCover?'#021d60':'#ffffff';ctx.fillRect(0,0,cvs.width,cvs.height);const ratio=cvs.width/vpW;ctx.save();ctx.translate(cvs.width/2,cvs.height/2);ctx.translate(posX*ratio,posY*ratio);ctx.scale(scale*ratio,scale*ratio);ctx.drawImage(img,-initialImgW/2,-initialImgH/2,initialImgW,initialImgH);ctx.restore()})}img.onload=()=>{const vpRect=vp.getBoundingClientRect();const vpW=vpRect.width||(isCover?680:420);const vpH=vpRect.height||(isCover?240:300);initialImgW=img.naturalWidth;initialImgH=img.naturalHeight;img.style.width=initialImgW+'px';img.style.height=initialImgH+'px';scale=isCover?Math.max(vpW/initialImgW,vpH/initialImgH):Math.min((vpW*0.9)/(initialImgW||1),(vpH*0.9)/(initialImgH||1),1.0);zoomInput.value=scale;posX=0;posY=0;updateTransform()};if(img.complete)img.onload();vp.addEventListener('mousedown',e=>{isDragging=true;startX=e.clientX-posX;startY=e.clientY-posY});window.addEventListener('mousemove',e=>{if(!isDragging)return;posX=e.clientX-startX;posY=e.clientY-startY;updateTransform()});window.addEventListener('mouseup',()=>{isDragging=false});vp.addEventListener('touchstart',e=>{if(e.touches.length===1){isDragging=true;startX=e.touches[0].clientX-posX;startY=e.touches[0].clientY-posY}},{passive:true});window.addEventListener('touchmove',e=>{if(!isDragging||e.touches.length!==1)return;posX=e.touches[0].clientX-startX;posY=e.touches[0].clientY-startY;updateTransform()},{passive:true});window.addEventListener('touchend',()=>{isDragging=false});zoomInput.oninput=()=>{scale=parseFloat(zoomInput.value);updateTransform()};positionerModal.querySelector('#btnCenterCrop').onclick=()=>{posX=0;posY=0;updateTransform()};positionerModal.querySelector('#btnFitCrop').onclick=()=>{const vpRect=vp.getBoundingClientRect();const vpW=vpRect.width||(isCover?680:420);const vpH=vpRect.height||(isCover?240:300);scale=isCover?Math.max(vpW/initialImgW,vpH/initialImgH):Math.min((vpW*0.9)/(initialImgW||1),(vpH*0.9)/(initialImgH||1),1.0);zoomInput.value=scale;posX=0;posY=0;updateTransform()};const closeMe=()=>positionerModal.remove();positionerModal.querySelector('#closePositionerBtn').onclick=closeMe;positionerModal.querySelector('#cancelPositionerBtn').onclick=closeMe;positionerModal.querySelector('#confirmPositionerBtn').onclick=()=>{const outCanvas=document.createElement('canvas');const outW=isCover?1280:600;const outH=isCover?480:600;outCanvas.width=outW;outCanvas.height=outH;const ctx=outCanvas.getContext('2d');ctx.fillStyle=isCover?'#021d60':'#ffffff';ctx.fillRect(0,0,outW,outH);const vpRect=vp.getBoundingClientRect();const vpW=vpRect.width||(isCover?680:420);const ratio=outW/vpW;ctx.save();ctx.translate(outW/2,outH/2);ctx.translate(posX*ratio,posY*ratio);ctx.scale(scale*ratio,scale*ratio);ctx.drawImage(img,-initialImgW/2,-initialImgH/2,initialImgW,initialImgH);ctx.restore();const resultDataUrl=outCanvas.toDataURL('image/jpeg',0.92);closeMe();onSaveCallback(resultDataUrl)}}
+async function loadProductImages(id){try{const x=await api('/api/products/'+id+'/images');$('#productPhotos').innerHTML=x.items.length?x.items.map(i=>`<div class="photo-item" style="display:flex;justify-content:space-between;align-items:center;background:#0d1624;padding:12px;border:1px solid #203248;border-radius:10px;margin-bottom:8px"><div style="display:flex;align-items:center;gap:12px"><img src="${i.url}" alt="" style="width:58px;height:58px;object-fit:contain;background:#fff;border-radius:8px;border:1px solid #cbd5e1"><div><span class="badge" style="background:${i.principal?'rgba(253,94,2,0.18)':'rgba(255,255,255,0.08)'};color:${i.principal?'#fd5e02':'#cbd5e1'}">${i.principal?'Principal':'Foto'}</span></div></div><div class="actions" style="display:flex;gap:6px"><button type="button" class="btn" style="font-size:12px;padding:6px 10px" onclick="repositionProductImage('${i.url}', '${id}')">📐 Ajustar / Mover</button><button class="btn danger" style="font-size:12px;padding:6px 10px" onclick="deleteProductImage('${i.id}',${id?`'${id}'`:'null'})">Excluir</button></div></div>`).join(''):'<div class="empty-state">Nenhuma foto cadastrada.</div>'}catch(e){$('#productPhotos').textContent=e.message}}
+function repositionProductImage(imageUrl, productId){openImagePositionerModal(imageUrl, async(croppedDataUrl)=>{try{await api('/api/products/'+productId+'/images',{method:'POST',body:JSON.stringify({data_url:croppedDataUrl})});toast('Novo enquadramento salvo com sucesso!');loadProductImages(productId);const [newP]=await Promise.all([api('/api/products?limit=100000')]);window.adminProducts=newP}catch(z){toast(z.message,true)}})}
 async function deleteProductImage(imageId,productId){if(!confirm('Excluir esta foto?'))return;try{await api('/api/product-images/'+imageId,{method:'DELETE'});toast('Foto excluída');loadProductImages(productId);show('products')}catch(e){toast(e.message)}}
 function managePromotion(x){modal('Promoção — '+esc(x.nome),`<form id="promoForm" class="form"><div class="field"><label>Nome da promoção</label><input name="nome" value="${esc(x.promocao_nome||'Oferta especial')}" required></div><div class="field"><label>Preço promocional</label><input name="preco_promocional" type="number" min="0" step="0.01" required value="${x.promocao_preco!=null?Number(x.promocao_preco):''}"></div><div class="field"><label>Início</label><input name="inicio" type="datetime-local"></div><div class="field"><label>Término</label><input name="termino" type="datetime-local"></div><div class="actions"><button class="btn primary">Publicar promoção</button></div></form><div class="panel"><p class="muted">A promoção altera o preço exibido/comercializado no catálogo e loja, sem alterar estoque.</p></div>`);$('#promoForm').onsubmit=async e=>{e.preventDefault();try{await api('/api/products/'+x.id+'/promotions',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});closeModal();toast('Promoção publicada');show('products')}catch(z){toast(z.message)}}}
 function exportCatalogPdf(){downloadAuthFile('/api/admin/export/catalog.pdf','xiquim-vargas-catalogo.pdf')}
 function newCategory(){modal('Nova categoria',`<form id="categoryForm" class="form"><div class="field"><label>Nome</label><input name="nome" required maxlength="120"></div><div class="field"><label>Slug (opcional)</label><input name="slug"></div><div class="field" style="grid-column:1/-1"><label>Descrição</label><textarea name="descricao"></textarea></div><div class="actions"><button class="btn primary">Criar categoria</button></div></form>`);$('#categoryForm').onsubmit=async e=>{e.preventDefault();try{await api('/api/categories',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});closeModal();toast('Categoria criada');show('products')}catch(x){toast(x.message)}}}
-function editCategory(x){modal('Editar categoria',`<form id="categoryForm" class="form"><div class="field"><label>Nome</label><input name="nome" value="${esc(x.nome)}" required></div><div class="field"><label>Slug</label><input name="slug" value="${esc(x.slug)}"></div><div class="field"><label>Ordem</label><input name="ordem" type="number" value="${x.ordem||0}"></div><div class="field"><label>Status</label><select name="ativo"><option value="1" ${x.ativo?'selected':''}>Ativa</option><option value="0" ${!x.ativo?'selected':''}>Inativa</option></select></div><div class="field" style="grid-column:1/-1"><label>Descrição</label><textarea name="descricao">${esc(x.descricao||'')}</textarea></div><div class="actions"><button class="btn primary">Salvar categoria</button></div></form>`);$('#categoryForm').onsubmit=async e=>{e.preventDefault();try{await api('/api/categories/'+x.id,{method:'PUT',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});closeModal();toast('Categoria atualizada');show('products')}catch(z){toast(z.message)}}}
-function newSubcategory(){const cats=window.catalogCategories||[];modal('Nova subcategoria',`<form id="subForm" class="form"><div class="field"><label>Categoria</label><select name="categoria_id" required>${cats.map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join('')}</select></div><div class="field"><label>Nome</label><input name="nome" required maxlength="120"></div><div class="field"><label>Slug (opcional)</label><input name="slug"></div><div class="actions"><button class="btn primary">Criar subcategoria</button></div></form>`);$('#subForm').onsubmit=async e=>{e.preventDefault();try{await api('/api/subcategories',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});closeModal();toast('Subcategoria criada');show('products')}catch(x){toast(x.message)}}}
+function editCategory(x){modal('Editar categoria',`<form id="categoryForm" class="form"><div class="field"><label>Nome</label><input name="nome" value="${esc(x.nome)}" required></div><div class="field"><label>Slug</label><input name="slug" value="${esc(x.slug)}"></div><div class="field"><label>Ordem</label><input name="ordem" type="number" value="${x.ordem||0}"></div><div class="field"><label>Status</label><select name="ativo"><option value="1" ${x.ativo?'selected':''}>Ativa</option><option value="0" ${!x.ativo?'selected':''}>Inativa</option></select></div><div class="field" style="grid-column:1/-1"><label>Descrição</label><textarea name="descricao">${esc(x.descricao||'')}</textarea></div><div class="actions" style="grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;margin-top:14px"><button type="button" class="btn" style="color:#b42318;border-color:#f5b5b5" onclick="deleteCategory('${x.id}',parseJsonArg('${jsonArg(x.nome)}'))">🗑 Excluir categoria</button><div style="display:flex;gap:8px"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar categoria</button></div></div></form>`);$('#categoryForm').onsubmit=async e=>{e.preventDefault();try{await api('/api/categories/'+x.id,{method:'PUT',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});closeModal();toast('Categoria atualizada');show('products')}catch(z){toast(z.message)}}}
+async function deleteCategory(id,nome){const p=window.adminProducts?.items||[];const subs=(window.adminCategories?.subcategorias||[]).filter(s=>s.categoria_id===id);const prodCount=p.filter(x=>x.categoria_id===id).length;let msg=`Excluir a categoria "${nome}"?`;if(prodCount>0||subs.length>0){msg+=`\n\n- ${prodCount} produto(s) vinculado(s) ficarão "Sem categoria".`;if(subs.length>0)msg+=`\n- ${subs.length} subcategoria(s) associada(s) também serão excluídas.`}msg+=`\n\nO histórico de pedidos e estoque é preservado. Deseja continuar?`;if(!confirm(msg))return;try{await api('/api/categories/'+id,{method:'DELETE'});closeModal();toast(`Categoria "${nome}" excluída com sucesso`);show('products')}catch(e){toast(e.message,true)}}
+async function deleteSubcategory(id,nome,catId){const p=window.adminProducts?.items||[];const prodCount=p.filter(x=>x.subcategoria_id===id).length;let msg=`Excluir a subcategoria "${nome}"?`;if(prodCount>0){msg+=`\n\n- ${prodCount} produto(s) vinculado(s) ficarão sem subcategoria (permanecem na categoria principal).`}msg+=`\n\nO histórico de pedidos e estoque é preservado. Deseja continuar?`;if(!confirm(msg))return;try{await api('/api/subcategories/'+id,{method:'DELETE'});closeModal();toast(`Subcategoria "${nome}" excluída com sucesso`);const cId=catId||window.adminCurrentCatId;if(cId){const [newP,newC]=await Promise.all([api('/api/products?limit=100000'),api('/api/categories')]);window.adminProducts=newP;window.adminCategories=newC;window.catalogCategories=newC.categorias;window.catalogSubcategories=newC.subcategorias;adminSubcategorias(cId)}else{show('products')}}catch(e){toast(e.message,true)}}
+function newSubcategory(defaultCatId){const cats=window.catalogCategories||window.adminCategories?.categorias||[];modal('Nova subcategoria',`<form id="subForm" class="form"><div class="field"><label>Categoria vinculada</label><select name="categoria_id" required><option value="">Selecione a categoria...</option>${cats.map(c=>`<option value="${c.id}" ${c.id===defaultCatId?'selected':''}>${esc(c.nome)}</option>`).join('')}</select></div><div class="field"><label>Nome da subcategoria</label><input name="nome" required maxlength="120" placeholder="Ex: Latas, Long Neck, Garrafas..."></div><div class="field"><label>Slug (opcional)</label><input name="slug" placeholder="ex: latas"></div><div class="field"><label>Ordem de exibição</label><input name="ordem" type="number" value="0"></div><div class="actions" style="grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px;margin-top:10px"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary">Criar subcategoria</button></div></form>`);$('#subForm').onsubmit=async e=>{e.preventDefault();try{const b=Object.fromEntries(new FormData(e.currentTarget));b.ordem=Number(b.ordem||0);await api('/api/subcategories',{method:'POST',body:JSON.stringify(b)});closeModal();toast('Subcategoria criada com sucesso');if(defaultCatId){const [newP,newC]=await Promise.all([api('/api/products?limit=100000'),api('/api/categories')]);window.adminProducts=newP;window.adminCategories=newC;window.catalogCategories=newC.categorias;window.catalogSubcategories=newC.subcategorias;adminSubcategorias(defaultCatId)}else{show('products')}}catch(x){toast(x.message,true)}}}
+function editSubcategory(s){const cats=window.catalogCategories||window.adminCategories?.categorias||[];modal('Editar subcategoria',`<form id="editSubForm" class="form"><div class="field"><label>Categoria vinculada</label><select name="categoria_id" required>${cats.map(c=>`<option value="${c.id}" ${c.id===s.categoria_id?'selected':''}>${esc(c.nome)}</option>`).join('')}</select></div><div class="field"><label>Nome da subcategoria</label><input name="nome" value="${esc(s.nome)}" required maxlength="120"></div><div class="field"><label>Slug</label><input name="slug" value="${esc(s.slug||'')}"></div><div class="field"><label>Ordem de exibição</label><input name="ordem" type="number" value="${s.ordem||0}"></div><div class="field"><label>Status</label><select name="ativo"><option value="1" ${s.ativo?'selected':''}>Ativa</option><option value="0" ${!s.ativo?'selected':''}>Inativa</option></select></div><div class="actions" style="grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;margin-top:14px"><button type="button" class="btn" style="color:#b42318;border-color:#f5b5b5" onclick="deleteSubcategory('${s.id}',parseJsonArg('${jsonArg(s.nome)}'),'${s.categoria_id}')">🗑 Excluir subcategoria</button><div style="display:flex;gap:8px"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar subcategoria</button></div></div></form>`);$('#editSubForm').onsubmit=async e=>{e.preventDefault();try{const b=Object.fromEntries(new FormData(e.currentTarget));b.ordem=Number(b.ordem||0);b.ativo=Number(b.ativo||1);await api('/api/subcategories/'+s.id,{method:'PUT',body:JSON.stringify(b)});closeModal();toast('Subcategoria atualizada com sucesso');if(window.adminCurrentCatId){const [newP,newC]=await Promise.all([api('/api/products?limit=100000'),api('/api/categories')]);window.adminProducts=newP;window.adminCategories=newC;window.catalogCategories=newC.categorias;window.catalogSubcategories=newC.subcategorias;adminSubcategorias(window.adminCurrentCatId)}else{show('products')}}catch(z){toast(z.message,true)}}}
 async function stock(v){const x=await api('/api/stock?limit=100000');v.innerHTML=`<div class="panel"><div class="panel-title"><div><h3>Estoque Inteligente</h3><p class="muted">Módulo independente do catálogo. Alterações aqui não alteram nome, preço, categoria ou fotos.</p></div><div class="actions"><input id="stockSearch" class="search" style="max-width:360px" placeholder="Pesquisar estoque" oninput="stockFilter(this)"><button class="btn primary" onclick="exportStockPdf()">⇩ PDF do estoque</button></div></div><div class="stock-kpis"><span><b>${x.total}</b> itens</span><span><b>${x.items.filter(i=>i.status==='CRITICO').length}</b> críticos</span><span><b>${x.items.reduce((a,i)=>a+Number(i.quantidade_reservada),0)}</b> reservados</span></div></div><div id="stockTable" class="tablewrap"><table class="table"><thead><tr><th>Produto</th><th>SKU</th><th>Descrição</th><th>Disponível</th><th>Reservado</th><th>Mínimo</th><th>Status</th><th>Ações</th></tr></thead><tbody>${x.items.map(stockRow).join('')}</tbody></table></div>`}
 function stockRow(x){return `<tr data-stock-text="${esc((x.nome+' '+x.sku+' '+(x.descricao||'')).toLowerCase())}"><td><div class="catalog-product-cell">${x.foto_url?`<img class="catalog-mini-photo" src="${esc(x.foto_url)}" alt="" onerror="this.onerror=null;this.replaceWith(Object.assign(document.createElement('div'),{className:'catalog-mini-photo placeholder',textContent:'XV'}))">`:'<div class="catalog-mini-photo placeholder">XV</div>'}<div><strong>${esc(x.nome)}</strong><br><small>${esc([x.marca,x.sabor,x.tamanho].filter(Boolean).join(' · '))}</small></div></div></td><td>${esc(x.sku)}</td><td>${esc(x.descricao||'-')}</td><td><strong>${x.quantidade_disponivel}</strong></td><td>${x.quantidade_reservada}</td><td>${x.estoque_minimo}</td><td><span class="badge status-${String(x.status).toLowerCase()}">${esc(x.status)}</span></td><td><button class="btn" onclick="adjustStock('${x.id}')">Movimentar</button> <button class="btn" onclick="stockHistory('${x.id}')">Histórico</button></td></tr>`}
 function stockFilter(i){const q=i.value.toLowerCase();document.querySelectorAll('#stockTable tbody tr').forEach(r=>r.style.display=r.dataset.stockText.includes(q)?'':'none')}
@@ -641,27 +646,27 @@ window.renderClientsUI=function(){
           <div class="v">${s.total_clientes || 0}</div>
           <div style="font-size:11px;color:#64748b;margin-top:4px;">${s.taxa_saude_carteira || 0}% de saúde da base</div>
         </div>
-        <div class="card kpi" style="border-top:4px solid #10b981;">
+        <div class="card kpi" style="border-top:4px solid #021D60;">
           <div style="font-size:13px;color:#8193a9;margin-bottom:4px;">🟢 Recorrentes Ativos (≤15d)</div>
           <div class="v" style="color:#10b981;">${s.ativos || 0}</div>
           <div style="font-size:11px;color:#10b981;margin-top:4px;">Comprando no ciclo ideal</div>
         </div>
-        <div class="card kpi" style="border-top:4px solid #f59e0b;">
+        <div class="card kpi" style="border-top:4px solid #021D60;">
           <div style="font-size:13px;color:#8193a9;margin-bottom:4px;">⚠️ Em Risco / Churn (16–45d)</div>
           <div class="v" style="color:#f59e0b;">${s.em_risco || 0}</div>
           <div style="font-size:11px;color:#d97706;margin-top:4px;">Atenção: ciclo de recompra atrasado</div>
         </div>
-        <div class="card kpi" style="border-top:4px solid #ef4444;">
+        <div class="card kpi" style="border-top:4px solid #021D60;">
           <div style="font-size:13px;color:#8193a9;margin-bottom:4px;">🔴 Inativos / Dormientes (>45d)</div>
           <div class="v" style="color:#ef4444;">${s.inativos || 0}</div>
           <div style="font-size:11px;color:#ef4444;margin-top:4px;">Requerem reativação urgente</div>
         </div>
-        <div class="card kpi" style="border-top:4px solid #8b5cf6;">
+        <div class="card kpi" style="border-top:4px solid #021D60;">
           <div style="font-size:13px;color:#8193a9;margin-bottom:4px;">⭐ Clientes VIPs</div>
           <div class="v" style="color:#8b5cf6;">${s.vips || 0}</div>
           <div style="font-size:11px;color:#8b5cf6;margin-top:4px;">Alto faturamento e frequência</div>
         </div>
-        <div class="card kpi" style="border-top:4px solid var(--xv-orange);">
+        <div class="card kpi" style="border-top:4px solid #021D60;">
           <div style="font-size:13px;color:#8193a9;margin-bottom:4px;">💰 Ticket Médio Geral</div>
           <div class="v" style="font-size:22px;">${brl(s.ticket_medio || 0)}</div>
           <div style="font-size:11px;color:#64748b;margin-top:4px;">Média por pedido concluído</div>
@@ -1416,8 +1421,18 @@ async function storeSettings(v){
           <textarea name="store.hero" rows="3">${esc(vals['store.hero']||'Encontre produtos, condições e reposição para o seu negócio.')}</textarea>
         </div>
         <div class="field" style="grid-column:1/-1">
+          <label>Subtítulo da página "Sobre Nós"</label>
+          <textarea name="store.about_subtitle" rows="2">${esc(vals['store.about_subtitle']||'Tradição, agilidade e compromisso no fornecimento de bebidas, doces e alimentos para o comércio e varejo de Governador Valadares e região.')}</textarea>
+        </div>
+        <div class="field" style="grid-column:1/-1">
           <label>Foto de capa da loja</label>
-          <input id="storeCoverInput" type="file" accept="image/png,image/jpeg,image/webp">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
+            <label class="btn primary photo-picker" style="cursor:pointer">
+              📷 Escolher e Ajustar Foto de Capa
+              <input id="storeCoverInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+            </label>
+            ${vals['store.cover']?`<button type="button" class="btn" style="padding:10px 14px" onclick="repositionStoreCover('${esc(vals['store.cover'])}')">📐 Mover e Centralizar Capa Atual</button>`:''}
+          </div>
           <div id="storeCoverPreview" class="store-cover-preview">
             ${vals['store.cover']?`<img src="${esc(vals['store.cover'])}" alt="Capa atual">`:'<span class="muted">Nenhuma capa cadastrada.</span>'}
           </div>
@@ -1459,18 +1474,40 @@ async function storeSettings(v){
 
   renderAdminAboutCardsList();
 
-  $('#storeCoverInput').onchange = async e => {
+  window.repositionStoreCover = function(coverUrl) {
+    if(!coverUrl) return;
+    openImagePositionerModal(coverUrl, async (croppedDataUrl) => {
+      try {
+        const out = await api('/api/store-cover', { method: 'POST', body: JSON.stringify({ data_url: croppedDataUrl }) });
+        $('#storeCoverPreview').innerHTML = `<img src="${esc(out.url)}" alt="Capa atual">`;
+        toast('Foto de capa ajustada e salva com sucesso!');
+        show('store');
+      } catch(z) { toast(z.message, true); }
+    }, 'cover_banner');
+  };
+
+  $('#storeCoverInput').onchange = e => {
     const f = e.target.files?.[0];
     if(!f) return;
     if(f.size > 8*1024*1024) return toast('A imagem excede 8 MB');
     const r = new FileReader();
-    r.onload = async() => {
+    r.onload = () => {
+      openImagePositionerModal(r.result, async (croppedDataUrl) => {
+        try {
+          const out = await api('/api/store-cover', { method: 'POST', body: JSON.stringify({ data_url: croppedDataUrl }) });
+          $('#storeCoverPreview').innerHTML = `<img src="${esc(out.url)}" alt="Capa atual">`;
+          toast('Foto de capa ajustada e salva com sucesso!');
+          show('store');
+        } catch(z) { toast(z.message, true); }
+      }, 'cover_banner');
+    };
+    /*
       try {
         const out = await api('/api/store-cover', { method: 'POST', body: JSON.stringify({ data_url: r.result }) });
         $('#storeCoverPreview').innerHTML = `<img src="${esc(out.url)}" alt="Capa atual">`;
         toast('Foto de capa atualizada');
       } catch(z) { toast(z.message, true); }
-    };
+    */
     r.readAsDataURL(f);
   };
 
@@ -1492,7 +1529,7 @@ function renderAdminAboutCardsList(){
     return;
   }
   container.innerHTML = cards.map((c, idx) => `
-    <div class="card" style="display:flex;flex-direction:column;gap:12px;position:relative;background:#0d1827;border:1px solid #23344d;border-radius:12px;padding:14px">
+    <div class="card" style="display:flex;flex-direction:column;gap:12px;position:relative;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span class="badge" style="background:rgba(253,94,2,0.18);color:#fd5e02">Card #${idx+1}</span>
         <div style="display:flex;gap:6px">
@@ -1501,7 +1538,7 @@ function renderAdminAboutCardsList(){
           <button type="button" class="btn danger" style="padding:4px 8px;font-size:12px" title="Excluir card" onclick="adminDeleteAboutCard(${idx})">🗑</button>
         </div>
       </div>
-      <div style="width:100%;height:180px;background:#070f1a;border-radius:8px;overflow:hidden;border:1px solid #1a2a3f;display:flex;align-items:center;justify-content:center;position:relative">
+      <div style="width:100%;height:180px;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;position:relative">
         ${c.image ? `<img src="${esc(c.image)}" alt="" style="width:100%;height:100%;object-fit:contain">` : `<span class="muted" style="font-size:12px">Sem imagem</span>`}
         <label style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.75);color:#fff;padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid rgba(255,255,255,0.25)">
           📷 Trocar Foto
@@ -1670,10 +1707,10 @@ function renderPriceTableGroupCard(id,name,data,groupKey){
   if(groupKey==='web'){
     const count=data.groupsSummary?.web||0;
     return `
-      <div class="card" style="background:#081326;border:1px solid #3b82f6;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 8px 24px rgba(59,130,246,0.18)">
+      <div class="card" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 4px 14px rgba(59,130,246,0.08)">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
           <div>
-            <div style="font-size:16px;font-weight:800;color:#93c5fd;display:flex;align-items:center;gap:8px">
+            <div style="font-size:16px;font-weight:800;color:#1d4ed8;display:flex;align-items:center;gap:8px">
               <span>🌐</span> Canal Loja Online (Web)
               <span class="badge" style="background:rgba(59,130,246,0.2);color:#93c5fd">${count} vinculado(s)</span>
             </div>
@@ -1705,10 +1742,10 @@ function renderPriceTableGroupCard(id,name,data,groupKey){
   if(groupKey==='balcao'){
     const count=data.groupsSummary?.balcao||0;
     return `
-      <div class="card" style="background:#1a1006;border:1px solid #fd5e02;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 8px 24px rgba(253,94,2,0.18)">
+      <div class="card" style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 4px 14px rgba(253,94,2,0.08)">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
           <div>
-            <div style="font-size:16px;font-weight:800;color:#fdba74;display:flex;align-items:center;gap:8px">
+            <div style="font-size:16px;font-weight:800;color:#c2410c;display:flex;align-items:center;gap:8px">
               <span>🏪</span> Canal Balcão (Frente de Loja / PDV)
               <span class="badge" style="background:rgba(253,94,2,0.2);color:#fdba74">${count>0?'Vinculado':'Não vinculado'}</span>
             </div>
@@ -1740,10 +1777,10 @@ function renderPriceTableGroupCard(id,name,data,groupKey){
   if(groupKey==='vendedor'){
     const sellerClients=data.clients.filter(c=>c.canal_tipo==='VENDEDOR');
     return `
-      <div class="card" style="background:#06170e;border:1px solid #22c55e;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 8px 24px rgba(34,197,94,0.18)">
+      <div class="card" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 4px 14px rgba(34,197,94,0.08)">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px">
           <div>
-            <div style="font-size:16px;font-weight:800;color:#86efac;display:flex;align-items:center;gap:8px">
+            <div style="font-size:16px;font-weight:800;color:#15803d;display:flex;align-items:center;gap:8px">
               <span>👥</span> Canal Vendedores
               <span class="badge" style="background:rgba(34,197,94,0.2);color:#86efac">${sellerClients.length} cliente(s)</span>
             </div>
@@ -1780,7 +1817,7 @@ function renderPriceTableGroupCard(id,name,data,groupKey){
                 ${sellerClients.map(c=>`
                   <tr data-client-row="${c.id}">
                     <td>
-                      <div style="font-weight:700;color:#fff">${esc(c.razao_social)}</div>
+                      <div style="font-weight:700;color:#000000">${esc(c.razao_social)}</div>
                       ${c.nome_fantasia?`<div class="muted" style="font-size:11px">${esc(c.nome_fantasia)}</div>`:''}
                     </td>
                     <td>
@@ -1813,10 +1850,10 @@ function renderPriceTableGroupCard(id,name,data,groupKey){
   if(groupKey==='geral'||groupKey==='direto'){
     const directClients=data.clients.filter(c=>c.canal_tipo==='GERAL');
     return `
-      <div class="card" style="background:#0e1624;border:1px solid #94a3b8;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 8px 24px rgba(148,163,184,0.18)">
+      <div class="card" style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 4px 14px rgba(148,163,184,0.08)">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px">
           <div>
-            <div style="font-size:16px;font-weight:800;color:#cbd5e1;display:flex;align-items:center;gap:8px">
+            <div style="font-size:16px;font-weight:800;color:#334155;display:flex;align-items:center;gap:8px">
               <span>🏢</span> Canal Clientes Diretos / Gerais
               <span class="badge" style="background:rgba(148,163,184,0.2);color:#cbd5e1">${directClients.length} cliente(s)</span>
             </div>
@@ -1853,7 +1890,7 @@ function renderPriceTableGroupCard(id,name,data,groupKey){
                 ${directClients.map(c=>`
                   <tr data-client-row="${c.id}">
                     <td>
-                      <div style="font-weight:700;color:#fff">${esc(c.razao_social)}</div>
+                      <div style="font-weight:700;color:#000000">${esc(c.razao_social)}</div>
                       ${c.nome_fantasia?`<div class="muted" style="font-size:11px">${esc(c.nome_fantasia)}</div>`:''}
                     </td>
                     <td>
@@ -1893,9 +1930,9 @@ function renderPriceTableDashboard(id,name,data){
   if(loader)loader.style.display='none';
   body.style.display='block';
   body.innerHTML=`
-    <div style="background:#091422;border:1px solid #1e2f47;border-radius:12px;padding:14px 18px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px 18px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
       <div>
-        <div style="font-size:18px;font-weight:800;color:#fff;display:flex;align-items:center;gap:8px">
+        <div style="font-size:18px;font-weight:800;color:#000;display:flex;align-items:center;gap:8px">
           <span>🏷️</span> ${esc(name)}
           <span class="badge ${data.table.ativo?'ok':''}">${data.table.ativo?'Ativa':'Inativa'}</span>
         </div>
@@ -1912,7 +1949,7 @@ function renderPriceTableDashboard(id,name,data){
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:14px">
       <div class="card" style="padding:12px 14px">
         <small class="muted" style="font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">Vínculos Ativos</small>
-        <h2 style="margin:4px 0 2px;font-size:24px;color:#fff">${data.kpis.totalClients}</h2>
+        <h2 style="margin:4px 0 2px;font-size:24px;color:#000">${data.kpis.totalClients}</h2>
         <span class="muted" style="font-size:11px">Clientes cadastrados na tabela</span>
       </div>
       <div class="card" style="padding:12px 14px">
@@ -1937,7 +1974,7 @@ function renderPriceTableDashboard(id,name,data){
       </div>
       <div class="card" style="padding:12px 14px">
         <small class="muted" style="font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">Pedidos Concluídos</small>
-        <h2 style="margin:4px 0 2px;font-size:24px;color:#fff">${data.kpis.totalPedidos}</h2>
+        <h2 style="margin:4px 0 2px;font-size:24px;color:#000">${data.kpis.totalPedidos}</h2>
         <span class="muted" style="font-size:11px">Pedidos emitidos sob a tabela</span>
       </div>
       <div class="card" style="padding:12px 14px">
@@ -1951,7 +1988,7 @@ function renderPriceTableDashboard(id,name,data){
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">
       <div>
-        <h3 style="margin:0;font-size:16px;color:#fff">Lista Geral de Clientes da Tabela (<span id="ptdCount">${data.clients.length}</span>)</h3>
+        <h3 style="margin:0;font-size:16px;color:#000">Lista Geral de Clientes da Tabela (<span id="ptdCount">${data.clients.length}</span>)</h3>
         <p class="muted" style="margin:2px 0 0;font-size:12px">Clique em "Excluir" em qualquer cliente para removê-lo desta tabela.</p>
       </div>
       ${data.clients.length>0?`<div style="min-width:240px"><input type="text" class="search" placeholder="🔍 Filtrar por nome, doc ou canal..." style="padding:8px 12px;font-size:12px" oninput="filterPriceTableClients(this.value)"></div>`:''}
@@ -1971,7 +2008,7 @@ function renderPriceTableDashboard(id,name,data){
           ${data.clients.map(c=>`
             <tr data-client-row="${c.id}" data-search="${esc((c.razao_social+' '+(c.nome_fantasia||'')+' '+(c.cnpj_cpf||'')+' '+c.grupo_canal+' '+(c.web_usuario_nome||'')+' '+(c.web_usuario_email||'')).toLowerCase())}">
               <td>
-                <div style="font-weight:700;color:#fff">${esc(c.razao_social)}</div>
+                <div style="font-weight:700;color:#000000">${esc(c.razao_social)}</div>
                 ${c.nome_fantasia?`<div class="muted" style="font-size:11px">${esc(c.nome_fantasia)}</div>`:''}
                 ${c.web_usuario_nome?`<div style="font-size:11px;color:#60a5fa">👤 Usuário: ${esc(c.web_usuario_nome)} (${esc(c.web_usuario_email||'')})</div>`:''}
               </td>
@@ -2176,24 +2213,8 @@ async function logistics(v){
     return html;
   };
 
-  window.renderModalityDashboard=function(grupoKey, vendedorFiltro=''){
-    window._currentLogisticsGrupoKey=grupoKey;
-    window._currentLogisticsSellerFilter=vendedorFiltro;
-    const mw = document.getElementById('logisticsMainWrapper');
-    if(mw) mw.style.display = 'none';
-    if(document.getElementById('logisticsMain')) document.getElementById('logisticsMain').style.display='none';
-    if(document.getElementById('returnedOrdersDashboard')) document.getElementById('returnedOrdersDashboard').style.display='none';
-    if(document.getElementById('logisticsDashboard')) document.getElementById('logisticsDashboard').style.display='none';
-    if(document.getElementById('sellerRoutesDashboard')) document.getElementById('sellerRoutesDashboard').style.display='none';
-    if(document.getElementById('deliveryRoutesDashboard')) document.getElementById('deliveryRoutesDashboard').style.display='none';
-    const modDb=document.getElementById('logisticsModalityDashboard');
-    if(modDb) {
-      modDb.style.display='block';
-      const t = document.getElementById('title');
-      if(t) t.textContent = 'Logística · Separação';
-      document.getElementById('logisticsModalityContent').innerHTML=renderLogisticsModality(grupoKey, vendedorFiltro);
-      window.scrollTo({top:0, behavior:'smooth'});
-    }
+  window.renderModalityDashboard=function(grupoKey='TODOS', vendedorFiltro=''){
+    openDeliveryRoutesDashboard('expedicao', grupoKey, vendedorFiltro);
   };
 
   window.openReturnedOrdersDashboard = function(){
@@ -2687,12 +2708,23 @@ async function logistics(v){
   v.innerHTML=`
   <div id="logisticsMainWrapper">
     <div class="panel" id="logisticsMain" style="margin-bottom:14px">
-      <div class="panel-title"><div><h3>Separação e Roteirização</h3></div><button class="btn" onclick="show('logistics')">↻ Atualizar</button></div>
+      <div class="panel-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px">
+        <div>
+          <h3 style="margin:0">Separação e Roteirização</h3>
+          <p class="muted" style="margin:4px 0 0">Criação de rotas de entrega, expedição e cronograma semanal de motoristas.</p>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap">
+          <button class="btn" style="background:linear-gradient(135deg,#021d60,#082b78); border:1px solid #1e3a8a; color:#fff; font-weight:700" onclick="openDeliveryRoutesDashboard('cronograma')">
+            📅 Ver / Configurar Cronograma Semanal
+          </button>
+          <button class="btn" onclick="show('logistics')">↻ Atualizar</button>
+        </div>
+      </div>
       <div class="grid">
-        <div class="card" style="cursor:pointer;border-top:4px solid #10b981" onclick="renderModalityDashboard('TODOS')"><h3>Todos os pedidos</h3><p class="muted">Todos os pedidos agrupados por bairro.</p></div>
-        <div class="card" style="cursor:pointer;border-top:4px solid #f59e0b" onclick="renderModalityDashboard('VENDEDOR')"><h3>Pedidos de vendedores</h3><p class="muted">Pedidos externos subdivididos por bairro.</p></div>
-        <div class="card" style="cursor:pointer;border-top:4px solid #3b82f6" onclick="renderModalityDashboard('WEB')"><h3>Pedidos web</h3><p class="muted">Pedidos da Loja Online subdivididos por bairro.</p></div>
-        <div class="card" style="cursor:pointer;border-top:4px solid #8b5cf6" onclick="renderModalityDashboard('BALCAO')"><h3>Pedidos balcão — entrega</h3><p class="muted">Pedidos locais para entrega.</p></div>
+        <div class="card" style="cursor:pointer;border-top:4px solid #1e3a8a" onclick="openDeliveryRoutesDashboard('expedicao', 'TODOS')"><h3 style="margin:0">Todos os pedidos</h3><p class="muted" style="margin-top:6px">Todos os pedidos agrupados por bairro para expedição.</p></div>
+        <div class="card" style="cursor:pointer;border-top:4px solid #f59e0b" onclick="openDeliveryRoutesDashboard('expedicao', 'VENDEDOR')"><h3 style="margin:0">Pedidos de vendedores</h3><p class="muted" style="margin-top:6px">Pedidos externos subdivididos por bairro.</p></div>
+        <div class="card" style="cursor:pointer;border-top:4px solid #3b82f6" onclick="openDeliveryRoutesDashboard('expedicao', 'WEB')"><h3 style="margin:0">Pedidos web</h3><p class="muted" style="margin-top:6px">Pedidos da Loja Online subdivididos por bairro.</p></div>
+        <div class="card" style="cursor:pointer;border-top:4px solid #8b5cf6" onclick="openDeliveryRoutesDashboard('expedicao', 'BALCAO')"><h3 style="margin:0">Pedidos balcão — entrega</h3><p class="muted" style="margin-top:6px">Pedidos locais marcados para entrega.</p></div>
         <div class="card" style="cursor:pointer;border-top:4px solid #3b82f6;position:relative" onclick="openLogisticsInRoute()">
           <div style="display:flex;align-items:center;justify-content:space-between">
             <h3 style="margin:0">🚚 Pedidos em rota</h3>
@@ -2708,13 +2740,6 @@ async function logistics(v){
           <p class="muted" style="margin-top:6px">Histórico de paradas não concluídas e motivos de retorno.</p>
         </div>
       </div>
-    </div>
-
-    <div style="text-align:center; margin:16px 0 24px; display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
-      <button class="btn" style="border:1px solid #fd5e02; background:rgba(253,94,2,0.1); color:#fd5e02; font-weight:700" onclick="openSellerRoutesDashboard()">👔 Criar Rota de Vendedor (Tela Cheia) →</button>
-      <button class="btn" style="border:1px solid #10b981; background:rgba(16,185,129,0.1); color:#10b981; font-weight:700" onclick="openDeliveryRoutesDashboard()">🚚 Criar Rotas de Entrega (Tela Cheia) →</button>
-      <button class="btn" onclick="openLogisticsInRoute()">🚚 Ver pedidos em rota → <span id="ordersInRouteCountBadge" class="badge" style="margin-left:6px;background:${(o.em_rota||[]).length?'#3b82f6':'var(--border)'};color:#fff">${(o.em_rota||[]).length}</span></button>
-      <button class="btn" onclick="openReturnedOrdersDashboard()">↩ Ver pedidos que retornaram → <span id="returnedOrdersCountBadge" class="badge" style="margin-left:6px;background:${returnedOrders.length?'#ef4444':'var(--border)'};color:#fff">${returnedOrders.length}</span></button>
     </div>
 
     <div class="panel" style="margin-bottom:16px">
@@ -2739,34 +2764,8 @@ async function logistics(v){
      </div>
     </div>
 
-    <div class="panel">
-      <div class="panel-title">
-        <div>
-          <h3>Rotas e bairros</h3>
-          <p class="muted">Configure o nome da rota e os bairros. O dia da semana é definido separadamente quando necessário.</p>
-        </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn" onclick="openSellerRoutesDashboard()">Abrir Painel de Vendedores</button>
-          <button class="btn primary" onclick="newRouteConfig()">+ Criar rota</button>
-        </div>
-      </div>
-      <div class="tablewrap"><table class="table"><thead><tr><th>Rota</th><th>Bairros</th><th></th></tr></thead><tbody>${u.routes.map(x=>`<tr><td>${esc(x.nome)}</td><td>${x.bairros.map(b=>esc(b.bairro)).join(' · ')}</td><td><button class="btn" onclick="editRouteConfig(parseJsonArg('${jsonArg(x)}'))">Editar</button></td></tr>`).join('')||'<tr><td colspan="3">Nenhuma rota configurada.</td></tr>'}</tbody></table></div>
-    </div>
+    <div id="logisticsSellerRoutesInline" style="margin-top:20px"></div>
 
-    <div class="panel">
-      <div class="panel-title">
-        <div>
-          <h3>Designação de rota do vendedor</h3>
-          <p class="muted">Designação rápida de vendedores para rotas cadastradas.</p>
-        </div>
-        <button class="btn" onclick="openSellerRoutesDashboard()">Abrir Painel Completo</button>
-      </div>
-      <div class="form"><div class="field"><label>Vendedor</label><select id="assignSeller">${sellers.map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join('')}</select></div><div class="field"><label>Dia</label><select id="assignDay">${['Segunda','Terça','Quarta','Quinta','Sexta','Sábado'].map((x,i)=>`<option value="${i+1}">${x}</option>`).join('')}</select></div><div class="field"><label>Rota</label><select id="assignRoute">${u.routes.map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join('')}</select></div><div class="actions"><button class="btn primary" onclick="assignSellerRoute()">Designar rota</button></div></div>
-      <div class="tablewrap" style="margin-top:15px"><table class="table"><thead><tr><th>Vendedor</th><th>Rota</th><th>Dia</th><th>Ações</th></tr></thead><tbody>${(u.assignments||[]).map(a=>`<tr><td>${esc(a.vendedor_nome)}</td><td>${esc(a.rota_nome)}</td><td>${['Segunda','Terça','Quarta','Quinta','Sexta','Sábado'][a.dia_semana-1]}</td><td class="actions"><button class="btn danger" onclick="removeRouteAssignment('${a.vendedor_id}',${a.dia_semana})">Remover</button></td></tr>`).join('')||'<tr><td colspan="4">Nenhuma designação configurada.</td></tr>'}</tbody></table></div>
-    </div>
-
-    <div class="panel-title" style="margin-top:20px"><div><h3>Histórico de Rotas</h3><p class="muted">Acompanhe as rotas de entrega já criadas e seus status.</p></div></div>
-    <div class="tablewrap"><table class="table"><thead><tr><th>Data</th><th>Motorista</th><th>Status</th><th>Pedidos</th><th>Distância / Tempo</th></tr></thead><tbody>${r.items.map(x=>{let ids=[];try{ids=JSON.parse(x.sequencia_json)}catch{}const meta=x.distance_km!=null?`${x.distance_km} km ${x.estimated_minutes?`· ~${x.estimated_minutes} min`:''}`:'-';return `<tr><td>${x.data}</td><td>${esc(x.motorista_nome||'-')}</td><td>${esc(x.status)}</td><td>${ids.length}</td><td><small class="muted">${meta}</small></td></tr>`}).join('')||'<tr><td colspan="5" class="empty-state">Nenhuma rota gerada ainda.</td></tr>'}</tbody></table></div>
   </div>
 
   <div id="logisticsModalityDashboard" class="panel" style="display:none; padding-bottom:80px; position:relative; z-index:40;">
@@ -2792,6 +2791,7 @@ async function logistics(v){
   <div id="returnedOrdersDashboard" style="display:none; width:100%;">
     <div id="returnedOrdersDashboardContainer"></div>
   </div>`;
+  renderSellerRoutesDashboardContent();
 }
 function newRouteConfig(){routeConfigModal()}
 
@@ -2827,7 +2827,9 @@ window.closeSellerRoutesDashboard = function(){
 };
 
 window.renderSellerRoutesDashboardContent = async function(){
-  const container = document.getElementById('sellerRoutesDashboardContainer');
+  const fullDb = document.getElementById('sellerRoutesDashboard');
+  const isInline = !(fullDb && fullDb.style.display === 'block');
+  const container = isInline ? document.getElementById('logisticsSellerRoutesInline') : document.getElementById('sellerRoutesDashboardContainer');
   if(!container) return;
   container.innerHTML = '<div class="panel">Carregando rotas de vendedores...</div>';
   try {
@@ -2844,7 +2846,7 @@ window.renderSellerRoutesDashboardContent = async function(){
       <div class="panel" style="margin-bottom:18px;border-left:4px solid #fd5e02">
         <div class="panel-title" style="margin-bottom:0;flex-wrap:wrap;gap:14px">
           <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-            <button class="btn" onclick="closeSellerRoutesDashboard()" style="display:inline-flex;align-items:center;gap:6px">
+            <button class="btn" onclick="closeSellerRoutesDashboard()" style="display:${isInline?'none':'inline-flex'};align-items:center;gap:6px">
               ← Voltar para Logística
             </button>
             <div>
@@ -2923,14 +2925,21 @@ window.renderSellerRoutesDashboardContent = async function(){
           </div>
         </div>
         <div class="tablewrap">
-          <table class="table">
+          <table class="table" style="width:100%;table-layout:fixed;min-width:760px">
+            <colgroup>
+              <col style="width:20%">
+              <col style="width:16%">
+              <col style="width:22%">
+              <col style="width:30%">
+              <col style="width:12%">
+            </colgroup>
             <thead>
               <tr>
-                <th>Vendedor</th>
-                <th>Dia da Semana</th>
-                <th>Rota Comercial</th>
-                <th>Bairros Abrangidos</th>
-                <th>Ações</th>
+                <th style="white-space:nowrap">Vendedor</th>
+                <th style="white-space:nowrap">Dia da Semana</th>
+                <th style="white-space:nowrap">Rota Comercial</th>
+                <th style="white-space:normal">Bairros Abrangidos</th>
+                <th style="text-align:right;width:110px">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -2940,10 +2949,10 @@ window.renderSellerRoutesDashboardContent = async function(){
                 return `<tr>
                   <td><strong>👤 ${esc(a.vendedor_nome)}</strong></td>
                   <td><span class="badge" style="background:rgba(253,94,2,0.15);color:#fd5e02;font-weight:700">📅 ${diasSemana[a.dia_semana-1]}</span></td>
-                  <td><strong>${esc(a.rota_nome)}</strong></td>
-                  <td style="max-width:320px;word-break:break-word"><small class="muted">${esc(bList)}</small></td>
-                  <td class="actions">
-                    <button class="btn danger" style="padding:4px 8px;font-size:12px" onclick="removeRouteAssignmentFromDash('${a.vendedor_id}',${a.dia_semana})">Remover</button>
+                  <td style="white-space:nowrap;vertical-align:middle;overflow:hidden;text-overflow:ellipsis;padding:12px"><strong>${esc(a.rota_nome)}</strong></td>
+                  <td style="white-space:normal!important;vertical-align:middle;line-height:1.4;padding:12px"><small class="muted" style="line-height:1.4;display:block;word-break:break-word">${esc(bList)}</small></td>
+                  <td style="text-align:right;white-space:nowrap;vertical-align:middle;padding:12px">
+                    <button class="btn danger" style="padding:6px 14px;font-size:12px;font-weight:700;margin:0;display:inline-block;white-space:nowrap" onclick="removeRouteAssignmentFromDash('${a.vendedor_id}',${a.dia_semana})">Remover</button>
                   </td>
                 </tr>`;
               }).join('') || '<tr><td colspan="5" class="empty-state">Nenhuma designação de rota configurada para vendedores.</td></tr>'}
@@ -2961,13 +2970,19 @@ window.renderSellerRoutesDashboardContent = async function(){
           <button class="btn primary" onclick="newRouteConfig()">+ Nova Rota</button>
         </div>
         <div class="tablewrap">
-          <table class="table">
+          <table class="table" style="width:100%;table-layout:fixed;min-width:760px">
+            <colgroup>
+              <col style="width:25%">
+              <col style="width:15%">
+              <col style="width:48%">
+              <col style="width:12%">
+            </colgroup>
             <thead>
               <tr>
                 <th>Nome da Rota</th>
                 <th>Qtd. Bairros</th>
                 <th>Bairros Cadastrados</th>
-                <th>Ações</th>
+                <th style="text-align:right;width:110px">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -2975,9 +2990,9 @@ window.renderSellerRoutesDashboardContent = async function(){
                 <tr>
                   <td><strong>${esc(x.nome)}</strong></td>
                   <td><span class="badge">${(x.bairros||[]).length}</span></td>
-                  <td style="max-width:380px;word-break:break-word">${(x.bairros||[]).map(b => esc(b.bairro)).join(' · ') || '<span class="muted">Sem bairros</span>'}</td>
-                  <td class="actions">
-                    <button class="btn" onclick="editRouteConfig(parseJsonArg('${jsonArg(x)}'))">Editar</button>
+                  <td style="white-space:normal!important;vertical-align:middle;line-height:1.4;padding:12px">${(x.bairros||[]).map(b => esc(b.bairro)).join(' · ') || '<span class="muted">Sem bairros</span>'}</td>
+                  <td style="text-align:right;white-space:nowrap;vertical-align:middle;padding:12px">
+                    <button class="btn" style="padding:6px 14px;font-size:12px;font-weight:700;margin:0;display:inline-block;white-space:nowrap" onclick="editRouteConfig(parseJsonArg('${jsonArg(x)}'))">Editar</button>
                   </td>
                 </tr>
               `).join('') || '<tr><td colspan="4" class="empty-state">Nenhuma rota cadastrada.</td></tr>'}
@@ -3019,7 +3034,11 @@ window.removeRouteAssignmentFromDash = async function(vid, dia){
   }
 };
 
-window.openDeliveryRoutesDashboard = async function(){
+window.openDeliveryRoutesDashboard = async function(tab = 'expedicao', grupoKey = 'TODOS', vendedorFiltro = ''){
+  window._deliveryActiveTab = tab || 'expedicao';
+  if(grupoKey) window._currentLogisticsGrupoKey = grupoKey;
+  if(vendedorFiltro !== undefined) window._currentLogisticsSellerFilter = vendedorFiltro;
+
   const mw = document.getElementById('logisticsMainWrapper');
   if(mw) mw.style.display = 'none';
   if(document.getElementById('logisticsMain')) document.getElementById('logisticsMain').style.display = 'none';
@@ -3031,7 +3050,7 @@ window.openDeliveryRoutesDashboard = async function(){
   if(dDb) {
     dDb.style.display = 'block';
     const t = document.getElementById('title');
-    if(t) t.textContent = 'Logística · Rotas de Entrega';
+    if(t) t.textContent = 'Logística · Rotas de Entrega (Tela Cheia)';
     window.scrollTo({top:0, behavior:'smooth'});
     await renderDeliveryRoutesDashboardContent();
   }
@@ -3048,24 +3067,150 @@ window.closeDeliveryRoutesDashboard = function(){
   window.scrollTo({top:0, behavior:'smooth'});
 };
 
+window.switchDeliveryTab = function(tab){
+  window._deliveryActiveTab = tab;
+  renderDeliveryRoutesDashboardContent();
+};
+
+window.switchDeliveryGrupo = function(grupoKey, vendedorFiltro=''){
+  window._currentLogisticsGrupoKey = grupoKey;
+  window._currentLogisticsSellerFilter = vendedorFiltro;
+  renderDeliveryRoutesDashboardContent();
+};
+
+window.updateDelivSelectionCounter = function(){
+  const checked = [...document.querySelectorAll('.routeOrder:checked')];
+  const countSpan = document.getElementById('delivSelectedCount');
+  const btnRoute = document.getElementById('btnDelivMakeRoute');
+  const btnList = document.getElementById('btnDelivMakeList');
+  let sum = 0;
+  checked.forEach(cb => {
+    sum += Number(cb.getAttribute('data-total') || 0);
+  });
+  if(countSpan){
+    countSpan.innerHTML = '<strong>' + checked.length + '</strong> pedido(s) selecionado(s) · <span class="orange" style="font-weight:700">' + brl(sum) + '</span>';
+  }
+  if(btnRoute) btnRoute.disabled = checked.length === 0;
+  if(btnList) btnList.disabled = checked.length === 0;
+};
+
+window.filterDelivOrdersTable = function(){
+  const q = (document.getElementById('delivQuickSearch')?.value || '').trim().toLowerCase();
+  const neighborhoodCards = document.querySelectorAll('#delivNeighborhoodsList .logistics-neighborhood');
+  neighborhoodCards.forEach(card => {
+    const orders = card.querySelectorAll('.logistics-order');
+    let visibleCount = 0;
+    orders.forEach(order => {
+      const text = order.textContent.toLowerCase();
+      const match = !q || text.includes(q);
+      order.style.display = match ? 'flex' : 'none';
+      if(match) visibleCount++;
+    });
+    card.style.display = (visibleCount > 0 || !q) ? 'block' : 'none';
+  });
+};
+
+window.downloadDeliveryOrdersPdf = function(){
+  const ids = [...document.querySelectorAll('.routeOrder:checked')].map(x => x.value);
+  if(!ids.length) return toast('Selecione os pedidos para imprimir em PDF.');
+  downloadAuthPost('/api/logistics/loading-list/orders-pdf', { pedido_ids: ids }, 'Pedidos_Carregamento.pdf');
+};
+
+window.refreshDeliveryRoutesSilently = async function(){
+  const checked = document.querySelectorAll('.routeOrder:checked');
+  if(checked.length > 0 && window._deliveryActiveTab === 'expedicao') return;
+  if(typeof window.renderDeliveryRoutesDashboardContent === 'function'){
+    await window.renderDeliveryRoutesDashboardContent();
+  }
+};
+
 window.renderDeliveryRoutesDashboardContent = async function(){
   const container = document.getElementById('deliveryRoutesDashboardContainer');
   if(!container) return;
-  container.innerHTML = '<div class="panel">Carregando cronograma de rotas de entrega...</div>';
-  try {
-    const [delivRes, usersReq] = await Promise.all([
-      api('/api/logistics/delivery-routes-config'),
-      api('/api/users')
-    ]);
-    const schedule = delivRes.schedule || [];
-    window._currentDeliverySchedule = JSON.parse(JSON.stringify(schedule));
-    const drivers = usersReq.items.filter(x => x.role === 'driver' && x.ativo === 1);
-    window._currentDeliveryDrivers = drivers;
 
-    const totalBairros = schedule.reduce((acc, s) => acc + (s.bairros || []).length, 0);
+  const activeTab = window._deliveryActiveTab || 'expedicao';
+  const activeGrupo = window._currentLogisticsGrupoKey || 'TODOS';
+  const sellerFilter = window._currentLogisticsSellerFilter || '';
+
+  if(!container.innerHTML || container.innerHTML.includes('Carregando')) {
+    container.innerHTML = '<div class="panel">Carregando Central de Rotas de Entrega...</div>';
+  }
+
+  try {
+    const [delivRes, usersReq, groupedReq, routesReq, sett] = await Promise.all([
+      api('/api/logistics/delivery-routes-config').catch(() => ({ schedule: [] })),
+      api('/api/users').catch(() => ({ items: [] })),
+      api('/api/logistics/grouped-orders').catch(() => ({ grupos: [], em_rota: [] })),
+      api('/api/logistics/routes').catch(() => ({ items: [] })),
+      api('/api/settings').catch(() => ({ items: [] }))
+    ]);
+
+    const dbSchedule = delivRes.items || delivRes.schedule || [];
+    if (!window._currentDeliverySchedule || (!window._currentDeliverySchedule.length && dbSchedule.length)) {
+      window._currentDeliverySchedule = JSON.parse(JSON.stringify(dbSchedule));
+    }
+    const schedule = window._currentDeliverySchedule || [];
+    const allUsers = usersReq.items || [];
+    const drivers = allUsers.filter(x => x.role === 'driver' && x.ativo === 1);
+    window._currentDeliveryDrivers = drivers;
+    const routesList = routesReq.items || [];
+    window._deliveryRoutesList = routesList;
+    const busyDriverIds = routesList.filter(r => r.status !== 'CONCLUIDA').map(r => r.motorista_id);
+    const availableDrivers = drivers.filter(d => !busyDriverIds.includes(d.id));
+
+    const sMap = Object.fromEntries((sett.items || []).map(x => [x.chave, x.valor]));
+    const depotLat = sMap['deposito_latitude'] || sMap['depot.latitude'] || '';
+    const depotLng = sMap['deposito_longitude'] || sMap['depot.longitude'] || '';
+
+    const groups = groupedReq.grupos || [];
+    window._logisticsGroups = groups;
+
+    // Build unified subgroups for TODOS
+    const subgruposMap = new Map();
+    let totalSeparacao = 0;
+    let totalValorSeparacao = 0;
+    for(const grp of groups) {
+      for(const sg of grp.subgrupos) {
+        totalSeparacao += sg.pedidos.length;
+        totalValorSeparacao += sg.pedidos.reduce((acc, p) => acc + Number(p.total || 0), 0);
+        if(!subgruposMap.has(sg.bairro)) {
+          subgruposMap.set(sg.bairro, { bairro: sg.bairro, pedidos: [] });
+        }
+        subgruposMap.get(sg.bairro).pedidos.push(...sg.pedidos);
+      }
+    }
+    const todosGrupo = {
+      grupo: 'TODOS',
+      titulo: 'Todos os pedidos',
+      subgrupos: Array.from(subgruposMap.values()).sort((a, b) => a.bairro.localeCompare(b.bairro))
+    };
+
+    const countByGroup = {
+      TODOS: totalSeparacao,
+      VENDEDOR: (groups.find(x => x.grupo === 'VENDEDOR')?.subgrupos || []).reduce((acc, s) => acc + s.pedidos.length, 0),
+      WEB: (groups.find(x => x.grupo === 'WEB')?.subgrupos || []).reduce((acc, s) => acc + s.pedidos.length, 0),
+      BALCAO: (groups.find(x => x.grupo === 'BALCAO')?.subgrupos || []).reduce((acc, s) => acc + s.pedidos.length, 0)
+    };
+
+    const totalBairrosCronograma = schedule.reduce((acc, s) => acc + (s.bairros || []).length, 0);
+    const allKnownBairros = [...new Set(groups.flatMap(g => (g.subgrupos || []).map(sg => sg.bairro)).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+
+    // Current displayed group
+    let currentGroupObj = activeGrupo === 'TODOS' ? todosGrupo : groups.find(x => x.grupo === activeGrupo);
+    if(!currentGroupObj) currentGroupObj = todosGrupo;
+
+    // Operators list for filter dropdown if VENDEDOR or BALCAO
+    const operatorsSet = new Set();
+    for(const sg of currentGroupObj.subgrupos || []) {
+      for(const p of sg.pedidos || []) {
+        if(p.operador_nome) operatorsSet.add(p.operador_nome);
+      }
+    }
+    const operatorsArr = Array.from(operatorsSet).sort();
 
     container.innerHTML = `
-      <div class="panel" style="margin-bottom:18px;border-left:4px solid #10b981">
+      <!-- Top Banner -->
+      <div class="panel" style="margin-bottom:18px;border-left:4px solid #1e3a8a">
         <div class="panel-title" style="margin-bottom:0;flex-wrap:wrap;gap:14px">
           <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
             <button class="btn" onclick="closeDeliveryRoutesDashboard()" style="display:inline-flex;align-items:center;gap:6px">
@@ -3073,92 +3218,507 @@ window.renderDeliveryRoutesDashboardContent = async function(){
             </button>
             <div>
               <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-                <h2 style="margin:0;font-size:22px;letter-spacing:-0.5px">🚚 Modalidade 2: Rotas de Entrega</h2>
-                <span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3);font-size:12px;font-weight:700">
-                  Logística Física & Entregas
-                </span>
+                <h2 style="margin:0;font-size:22px;letter-spacing:-0.5px">🚚 Central Única de Rotas de Entrega & Expedição</h2>
+                
               </div>
               <p class="muted" style="margin-top:4px;font-size:13px">
-                ℹ️ <strong>Finalidade desta modalidade:</strong> Serve para <strong>estabelecer quais bairros serão atendidos naquela rota naquele dia da semana e designar os motoristas daquela rota</strong>.
-                Esta configuração orienta automaticamente a previsão de entrega calculada no checkout e na área de pedidos dos clientes da loja online!
+                Ambiente exclusivo para criação de viagens de entrega, roteirização automática mais curta (OSRM/Google Maps), lista de carregamento, alocação de motoristas e cronograma semanal.
               </p>
             </div>
           </div>
           <div class="actions" style="display:flex;gap:8px">
-            <button class="btn" onclick="renderDeliveryRoutesDashboardContent()">↻ Recarregar</button>
-            <button class="btn primary" style="background:#10b981;border-color:#10b981" onclick="saveDeliveryRoutesSchedule()">💾 Salvar Cronograma de Entregas</button>
+            <button class="btn" onclick="window._currentDeliverySchedule = null; renderDeliveryRoutesDashboardContent()">↻ Atualizar Dados</button>
           </div>
         </div>
       </div>
 
-      <div class="grid" style="margin-bottom:18px">
-        <div class="card" style="border-top:3px solid #10b981">
-          <small class="muted">Dias com Rotas Configuradas</small>
-          <h2 style="color:#10b981;margin:4px 0">${schedule.length}</h2>
-          <small class="muted">Dias da semana ativos</small>
-        </div>
-        <div class="card" style="border-top:3px solid #3b82f6">
-          <small class="muted">Bairros Mapeados para Entrega</small>
-          <h2 style="color:#3b82f6;margin:4px 0">${totalBairros}</h2>
-          <small class="muted">Regiões atendidas</small>
-        </div>
-        <div class="card" style="border-top:3px solid #8b5cf6">
-          <small class="muted">Motoristas Ativos no Sistema</small>
-          <h2 style="color:#8b5cf6;margin:4px 0">${drivers.length}</h2>
-          <small class="muted">Entregadores disponíveis</small>
-        </div>
+      <!-- Navigation Tabs -->
+      <div style="display:flex; gap:10px; margin-bottom:18px; flex-wrap:wrap; border-bottom:1px solid var(--border); padding-bottom:12px">
+        <button class="btn ${activeTab === 'expedicao' ? 'primary' : ''}" style="font-size:13px; font-weight:700; ${activeTab === 'expedicao' ? 'background:#082b78;border-color:#1e3a8a;color:#fff' : ''}" onclick="switchDeliveryTab('expedicao')">
+          📦 1. Criar Rota & Expedição (${totalSeparacao} pedidos)
+        </button>
+        <button class="btn ${activeTab === 'cronograma' ? 'primary' : ''}" style="font-size:13px; font-weight:700; ${activeTab === 'cronograma' ? 'background:#082b78;border-color:#1e3a8a;color:#fff' : ''}" onclick="switchDeliveryTab('cronograma')">
+          📅 2. Cronograma Semanal & Motoristas (${schedule.length} dias)
+        </button>
+        <button class="btn ${activeTab === 'historico' ? 'primary' : ''}" style="font-size:13px; font-weight:700; ${activeTab === 'historico' ? 'background:#082b78;border-color:#1e3a8a;color:#fff' : ''}" onclick="switchDeliveryTab('historico')">
+          📋 3. Histórico de Rotas (${routesList.length})
+        </button>
       </div>
 
-      <div class="panel">
-        <div class="panel-title" style="margin-bottom:12px">
-          <div>
-            <h3>📅 Cronograma Semanal de Entregas por Bairros e Motoristas</h3>
-            <p class="muted">Edite os bairros atendidos em cada dia da semana (separados por vírgula ou nova linha) e selecione o motorista responsável por cada rota de entrega.</p>
+      ${activeTab === 'expedicao' ? `
+        <!-- KPI Cards -->
+        <div class="grid" style="margin-bottom:18px">
+          <div class="card" style="border-top:3px solid #1e3a8a">
+            <small class="muted">Pedidos em Separação</small>
+            <h2 style="color:#60a5fa;margin:4px 0">${totalSeparacao}</h2>
+            <small class="muted">${brl(totalValorSeparacao)} prontos para rota</small>
+          </div>
+          <div class="card" style="border-top:3px solid #3b82f6">
+            <small class="muted">Bairros c/ Entregas</small>
+            <h2 style="color:#3b82f6;margin:4px 0">${subgruposMap.size}</h2>
+            <small class="muted">Regiões com pedidos</small>
+          </div>
+          <div class="card" style="border-top:3px solid #8b5cf6">
+            <small class="muted">Motoristas Disponíveis</small>
+            <h2 style="color:#8b5cf6;margin:4px 0">${availableDrivers.length} <span style="font-size:15px;color:var(--muted)">/ ${drivers.length} ativos</span></h2>
+            <small class="muted">${busyDriverIds.length} em rota no momento</small>
+          </div>
+          <div class="card" style="border-top:3px solid #f59e0b">
+            <small class="muted">Ponto de Partida</small>
+            <h3 style="margin:6px 0;font-size:15px;color:${depotLat && depotLng ? '#10b981' : '#f59e0b'}">
+              ${depotLat && depotLng ? '✓ Depósito Mapeado' : '⚠ Sem coordenadas'}
+            </h3>
+            <small class="muted">${depotLat ? `${Number(depotLat).toFixed(4)}, ${Number(depotLng).toFixed(4)}` : 'Clique abaixo para salvar'}</small>
           </div>
         </div>
 
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:16px;">
-          ${schedule.map((item, index) => {
-            const bairrosText = (item.bairros || []).join(', ');
-            return `
-              <div class="card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.03); display:flex; flex-direction:column; justify-content:space-between">
-                <div>
-                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
-                    <strong style="font-size:16px; color:#10b981">📅 ${esc(item.dia_nome || item.dia)}</strong>
-                    <span class="badge" style="background:#10b981;color:#fff">${(item.bairros||[]).length} bairros</span>
-                  </div>
+        <!-- Channels Selector & Operators Filter -->
+        <div class="panel" style="margin-bottom:16px">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
+            <div style="display:flex; gap:8px; flex-wrap:wrap">
+              <button class="btn ${activeGrupo === 'TODOS' ? 'primary' : ''}" style="font-size:12px" onclick="switchDeliveryGrupo('TODOS')">
+                🛒 Todos os Pedidos (${countByGroup.TODOS})
+              </button>
+              <button class="btn ${activeGrupo === 'VENDEDOR' ? 'primary' : ''}" style="font-size:12px" onclick="switchDeliveryGrupo('VENDEDOR')">
+                👔 Vendedores (${countByGroup.VENDEDOR})
+              </button>
+              <button class="btn ${activeGrupo === 'WEB' ? 'primary' : ''}" style="font-size:12px" onclick="switchDeliveryGrupo('WEB')">
+                🌐 Loja Online (${countByGroup.WEB})
+              </button>
+              <button class="btn ${activeGrupo === 'BALCAO' ? 'primary' : ''}" style="font-size:12px" onclick="switchDeliveryGrupo('BALCAO')">
+                🏪 Balcão Entrega (${countByGroup.BALCAO})
+              </button>
+            </div>
+            ${(activeGrupo === 'VENDEDOR' || activeGrupo === 'BALCAO') && operatorsArr.length ? `
+              <div style="display:flex; align-items:center; gap:8px">
+                <label style="font-size:12px; font-weight:700">Filtrar Usuário:</label>
+                <select id="delivSellerFilter" class="field-input" style="width:auto;margin:0;padding:6px 12px;font-size:12px" onchange="switchDeliveryGrupo('${activeGrupo}', this.value)">
+                  <option value="">Todos os usuários</option>
+                  ${operatorsArr.map(nome => `<option value="${esc(nome)}" ${sellerFilter === nome ? 'selected' : ''}>${esc(nome)}</option>`).join('')}
+                </select>
+              </div>
+            ` : ''}
+          </div>
+        </div>
 
-                  <div class="field" style="margin-bottom:12px">
-                    <label style="font-size:12px; font-weight:700">🚚 Motorista Responsável pela Rota</label>
-                    <select id="deliv_driver_${index}" class="field-input" style="width:100%" onchange="updateDeliveryDriverInSchedule(${index}, this.value)">
-                      <option value="">-- Selecione ou Deixe sem motorista fixo --</option>
-                      ${drivers.map(d => `<option value="${d.id}" ${item.motorista_id === d.id ? 'selected' : ''}>👤 ${esc(d.nome)} (${esc(d.email)})</option>`).join('')}
-                    </select>
-                  </div>
+        <!-- Sticky Action Toolbar -->
+        <div class="panel" style="margin-bottom:16px; position:sticky; top:10px; z-index:30; background:var(--xv-panel,#101d2e); border:1px solid #1e3a8a; box-shadow:0 8px 24px rgba(0,0,0,0.35); padding:12px 18px">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
+            <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap">
+              <input id="delivQuickSearch" class="field-input search" style="margin:0; width:260px; min-width:200px; padding:7px 12px; font-size:13px" placeholder="🔍 Filtrar pedido, cliente ou bairro..." oninput="filterDelivOrdersTable()">
+              <span id="delivSelectedCount" style="font-size:13px">
+                <strong>0</strong> pedidos selecionados · <span class="orange">R$ 0,00</span>
+              </span>
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap">
+              <button id="btnDelivMakeList" class="btn" onclick="generateLoadingList()">
+                📋 Gerar Lista de Carregamento
+              </button>
+              <button class="btn" onclick="downloadDeliveryOrdersPdf()">
+                🖨️ Imprimir Pedidos em PDF
+              </button>
+              <button id="btnDelivMakeRoute" class="btn primary" style="background:#10b981; border-color:#10b981; font-weight:800; font-size:13px" onclick="makeRouteModal()">
+                🚚 Gerar Rota & Designar Motorista →
+              </button>
+            </div>
+          </div>
+        </div>
 
-                  <div class="field">
-                    <label style="font-size:12px; font-weight:700">📍 Bairros Atendidos (separados por vírgula ou linha)</label>
-                    <textarea id="deliv_bairros_${index}" rows="4" class="field-input" style="width:100%; font-size:13px; line-height:1.5" placeholder="Ex: Centro, Vila Isa, JK..." onchange="updateDeliveryBairrosInSchedule(${index}, this.value)">${esc(bairrosText)}</textarea>
+        <!-- Neighborhoods and Orders List -->
+        <div id="delivNeighborhoodsList">
+          ${(() => {
+            const sgs = currentGroupObj.subgrupos || [];
+            let hasAny = false;
+            const html = sgs.map(sg => {
+              let pList = sg.pedidos || [];
+              if((activeGrupo === 'VENDEDOR' || activeGrupo === 'BALCAO') && sellerFilter) {
+                pList = pList.filter(p => p.operador_nome === sellerFilter);
+              }
+              if(!pList.length) return '';
+              hasAny = true;
+              const sgTotal = pList.reduce((acc, p) => acc + Number(p.total || 0), 0);
+              return `
+                <div class="card logistics-neighborhood" style="margin-bottom:16px; border-left:4px solid #10b981">
+                  <div class="panel-title" style="margin-bottom:10px; flex-wrap:wrap; gap:8px">
+                    <div style="display:flex; align-items:center; gap:10px">
+                      <strong style="color:#10b981; font-size:15px">📍 ${esc(sg.bairro)}</strong>
+                      <span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981;font-weight:700">
+                        ${pList.length} ${pList.length === 1 ? 'pedido' : 'pedidos'} · ${brl(sgTotal)}
+                      </span>
+                    </div>
+                    <label style="cursor:pointer;font-size:12px;display:flex;align-items:center;gap:6px;font-weight:600">
+                      <input type="checkbox" onchange="const cb=this.closest('.logistics-neighborhood').querySelectorAll('.routeOrder'); cb.forEach(c => c.checked = this.checked); updateDelivSelectionCounter()">
+                      Selecionar todos deste bairro
+                    </label>
+                  </div>
+                  <div class="actions" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:10px">
+                    ${pList.map(p => `
+                      <label class="card logistics-order" style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; padding:10px; background:rgba(255,255,255,0.02); border:1px solid var(--border)">
+                        <input type="checkbox" class="load-order routeOrder" value="${p.id}" data-total="${p.total || 0}" onchange="updateDelivSelectionCounter()" style="margin-top:3px">
+                        <div style="flex:1; font-size:12px; line-height:1.4">
+                          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px">
+                            <strong style="font-size:13px; color:var(--text)">${esc(p.numero)}</strong>
+                            <strong class="orange" style="font-size:12px">${brl(p.total)}</strong>
+                          </div>
+                          <div style="font-weight:700; color:var(--text)">${esc(p.nome_fantasia || p.razao_social)}</div>
+                          <div class="muted" style="font-size:11px; margin-top:2px">
+                            📍 ${esc(p.endereco || sg.bairro)}
+                          </div>
+                          <div class="muted" style="font-size:11px; margin-top:2px">
+                            👤 ${esc(p.operador_nome || 'N/A')}${activeGrupo === 'TODOS' ? ` · ${esc(p.origem)}` : ''}
+                          </div>
+                        </div>
+                      </label>
+                    `).join('')}
                   </div>
                 </div>
+              `;
+            }).join('');
 
-                <div style="margin-top:10px; font-size:11px; color:var(--muted)">
-                  ${item.motorista_nome ? `Motorista atual: <strong>${esc(item.motorista_nome)}</strong>` : 'Nenhum motorista designado no momento'}
+            return hasAny ? html : '<div class="empty-state">Nenhum pedido em separação para este filtro ou canal.</div>';
+          })()}
+        </div>
+
+        <!-- Central Depot Configuration Panel -->
+        <div class="panel" style="margin-top:24px">
+          <div class="panel-title">
+            <div>
+              <h3>📍 Ponto de Partida e Roteirização Inteligente (OpenStreetMap)</h3>
+              <p class="muted">A rota mais curta pelas ruas reais é calculada automaticamente via <strong>OpenStreetMap (OSRM)</strong>, 100% gratuito e sem necessidade de chave de API.</p>
+            </div>
+          </div>
+          <div class="form">
+            <div class="field">
+              <label>Latitude do Depósito</label>
+              <input id="depotLatInput" placeholder="Ex: -23.550520" value="${esc(depotLat)}">
+            </div>
+            <div class="field">
+              <label>Longitude do Depósito</label>
+              <input id="depotLngInput" placeholder="Ex: -46.633308" value="${esc(depotLng)}">
+            </div>
+            <div class="actions">
+              <button class="btn primary" onclick="saveDepotCoordinates()">Salvar Coordenadas</button>
+            </div>
+          </div>
+        </div>
+      ` : ''}
+
+      ${activeTab === 'cronograma' ? `
+        <!-- Weekly Delivery Schedule -->
+        <div class="grid" style="margin-bottom:18px">
+          <div class="card" style="border-top:3px solid #1e3a8a">
+            <small class="muted">Dias com Rotas Configuradas</small>
+            <h2 style="color:#60a5fa;margin:4px 0">${schedule.length}</h2>
+            <small class="muted">Dias da semana ativos</small>
+          </div>
+          <div class="card" style="border-top:3px solid #3b82f6">
+            <small class="muted">Bairros Mapeados para Entrega</small>
+            <h2 style="color:#3b82f6;margin:4px 0">${totalBairrosCronograma}</h2>
+            <small class="muted">Regiões atendidas</small>
+          </div>
+          <div class="card" style="border-top:3px solid #8b5cf6">
+            <small class="muted">Motoristas Ativos no Sistema</small>
+            <h2 style="color:#8b5cf6;margin:4px 0">${drivers.length}</h2>
+            <small class="muted">Entregadores cadastrados</small>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title" style="margin-bottom:14px; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between">
+            <div>
+              <h3 style="margin:0">📅 Cronograma Semanal de Entregas por Bairros e Motoristas</h3>
+              <p class="muted" style="margin-top:4px; max-width:850px">
+                Defina quais bairros são atendidos em cada dia da semana e selecione o motorista responsável por cada rota de entrega. Esta configuração orienta automaticamente a <strong>previsão de entrega calculada no checkout e na loja virtual</strong>!
+              </p>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap">
+              <button class="btn" style="border:1px solid #1e3a8a; background:rgba(8,43,120,0.25); color:#60a5fa; font-weight:700" onclick="initDefaultDeliverySchedule()">
+                ⚡ Inicializar Semana Padrão (Seg a Sáb)
+              </button>
+              <button class="btn primary" style="background:#3b82f6; border-color:#3b82f6; font-weight:700" onclick="addDeliveryDayModal()">
+                + Adicionar Dia / Rota
+              </button>
+              <button class="btn primary" style="background:linear-gradient(135deg,#021d60,#082b78); border:1px solid #1e3a8a; color:#fff; font-weight:700" onclick="saveDeliveryRoutesSchedule()">
+                💾 Salvar Cronograma Completo
+              </button>
+            </div>
+          </div>
+
+          ${schedule.length === 0 ? `
+            <div class="card" style="text-align:center; padding:36px; border:2px dashed var(--border); background:rgba(255,255,255,0.01); border-radius:10px">
+              <div style="font-size:42px; margin-bottom:12px">🚚📅</div>
+              <h3 style="margin:0 0 6px">Nenhum dia ou cronograma semanal configurado ainda</h3>
+              <p class="muted" style="max-width:540px; margin:0 auto 18px; font-size:13px">
+                Crie as rotas de entrega por dia da semana para definir os bairros atendidos e designar os motoristas responsáveis.
+              </p>
+              <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap">
+                <button class="btn primary" style="background:linear-gradient(135deg,#021d60,#082b78); border:1px solid #1e3a8a; color:#fff; font-size:14px; padding:10px 20px; font-weight:700" onclick="initDefaultDeliverySchedule()">
+                  ⚡ Criar Cronograma Semanal Padrão (Segunda a Sábado)
+                </button>
+                <button class="btn" style="font-size:14px; padding:10px 20px; font-weight:700" onclick="addDeliveryDayModal()">
+                  + Adicionar Dia Personalizado
+                </button>
+              </div>
+            </div>
+          ` : `
+            <!-- Known Neighborhoods Quick Selection Chips -->
+            ${allKnownBairros.length ? `
+              <div style="margin-bottom:18px; padding:12px 14px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:8px">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
+                  <span style="font-size:12px; font-weight:700; color:#60a5fa">💡 Bairros com clientes cadastrados:</span>
+                  <span class="muted" style="font-size:11px">Clique em qualquer bairro abaixo para adicioná-lo à rota selecionada no momento.</span>
+                </div>
+                <div style="display:flex; gap:6px; flex-wrap:wrap">
+                  ${allKnownBairros.map(b => `
+                    <span class="badge" style="cursor:pointer; background:rgba(8,43,120,0.35); color:#93c5fd; border:1px solid rgba(30,58,138,0.6); font-size:11px; padding:3px 8px" onclick="appendBairroToActiveDay('${esc(b)}')">
+                      + ${esc(b)}
+                    </span>
+                  `).join('')}
                 </div>
               </div>
-            `;
-          }).join('')}
-        </div>
+            ` : ''}
 
-        <div class="actions" style="margin-top:20px; text-align:right">
-          <button class="btn primary" style="background:#10b981;border-color:#10b981; font-size:14px; padding:10px 20px" onclick="saveDeliveryRoutesSchedule()">
-            💾 Salvar Cronograma Completo de Entregas
-          </button>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:16px;">
+              ${schedule.map((item, index) => {
+                const bairrosText = (item.bairros || []).join(', ');
+                return `
+                  <div class="card" style="border-top:4px solid #1e3a8a; background:rgba(8,43,120,0.08); display:flex; flex-direction:column; justify-content:space-between">
+                    <div>
+                      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
+                        <div style="display:flex; align-items:center; gap:8px">
+                          <strong style="font-size:16px; color:#021D60">📅 ${esc(item.dia_nome || ('Dia ' + item.dia))}</strong>
+                          <span class="badge" style="background:#eff6ff; color:#1e3a8a; border:1px solid #bfdbfe">${(item.bairros||[]).length} bairros</span>
+                        </div>
+                        <button class="btn" style="padding:2px 8px; font-size:11px; color:#ef4444; border-color:#ef4444" onclick="removeDeliveryDay(${index})">
+                          ✕ Remover
+                        </button>
+                      </div>
+
+                      <div class="field" style="margin-bottom:12px">
+                        <label style="font-size:12px; font-weight:700">🚚 Motorista Responsável pela Rota</label>
+                        <select id="deliv_driver_${index}" class="field-input" style="width:100%" onchange="updateDeliveryDriverInSchedule(${index}, this.value)">
+                          <option value="">-- Selecione ou Deixe sem motorista fixo --</option>
+                          ${drivers.map(d => `<option value="${d.id}" ${item.motorista_id === d.id ? 'selected' : ''}>👤 ${esc(d.nome)} (${esc(d.email)})</option>`).join('')}
+                        </select>
+                      </div>
+
+                      <div class="field">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px">
+                          <label style="font-size:12px; font-weight:700">📍 Bairros Atendidos (separados por vírgula ou linha)</label>
+                          <small style="font-size:11px; color:var(--muted)">Clique na caixa e use as sugestões acima</small>
+                        </div>
+                        <textarea id="deliv_bairros_${index}" rows="4" class="field-input" style="width:100%; font-size:13px; line-height:1.5" placeholder="Ex: Centro, Vila Isa, JK..." onfocus="window._lastFocusedDayIndex = ${index}" onchange="updateDeliveryBairrosInSchedule(${index}, this.value)">${esc(bairrosText)}</textarea>
+                      </div>
+                    </div>
+
+                    <div style="margin-top:10px; font-size:11px; color:var(--muted); display:flex; justify-content:space-between; align-items:center">
+                      <div>
+                        ${item.motorista_nome ? `Motorista atual: <strong>${esc(item.motorista_nome)}</strong>` : 'Nenhum motorista designado no momento'}
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+
+            <div class="actions" style="margin-top:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
+              <button class="btn" onclick="addDeliveryDayModal()">
+                + Adicionar Outro Dia ao Cronograma
+              </button>
+              <button class="btn primary" style="background:linear-gradient(135deg,#021d60,#082b78); border:1px solid #1e3a8a; color:#fff; font-size:14px; padding:10px 20px; font-weight:700" onclick="saveDeliveryRoutesSchedule()">
+                💾 Salvar Cronograma Completo de Entregas
+              </button>
+            </div>
+          `}
         </div>
-      </div>
+      ` : ''}
+
+      ${activeTab === 'historico' ? `
+        <!-- Created Routes History Table -->
+        <div class="panel">
+          <div class="panel-title">
+            <div>
+              <h3>📋 Histórico de Rotas Criadas</h3>
+              <p class="muted">Acompanhe as viagens de entrega geradas, motoristas designados, paradas e status de entrega.</p>
+            </div>
+            <button class="btn" onclick="renderDeliveryRoutesDashboardContent()">↻ Atualizar</button>
+          </div>
+          <div class="tablewrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Motorista Designado</th>
+                  <th>Status</th>
+                  <th>Paradas / Pedidos</th>
+                  <th>Distância / Tempo</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${routesList.map(x => {
+                  let ids = [];
+                  try { ids = JSON.parse(x.sequencia_json || '[]'); } catch {}
+                  const meta = x.distance_km != null ? `${x.distance_km} km ${x.estimated_minutes ? `· ~${x.estimated_minutes} min` : ''}` : '-';
+                  return `
+                    <tr>
+                      <td>${esc(x.data)}</td>
+                      <td><strong>👤 ${esc(x.motorista_nome || 'Sem motorista')}</strong></td>
+                      <td>
+                        <span class="badge" style="${x.status === 'CONCLUIDA' ? 'background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3)' : 'background:rgba(59,130,246,0.15);color:#3b82f6;border:1px solid rgba(59,130,246,0.3)'}">
+                          ${esc(x.status)}
+                        </span>
+                      </td>
+                      <td>${ids.length} parada(s)</td>
+                      <td><small class="muted">${meta}</small></td>
+                    </tr>
+                  `;
+                }).join('') || '<tr><td colspan="5" class="empty-state">Nenhuma rota gerada ainda.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ` : ''}
     `;
+
+    updateDelivSelectionCounter();
   } catch(e) {
-    container.innerHTML = `<div class="panel"><p class="muted">Erro ao carregar dados: ${esc(e.message)}</p></div>`;
+    container.innerHTML = '<div class="panel"><p class="muted">Erro ao carregar dados: ' + esc(e.message) + '</p></div>';
+  }
+};
+
+window.initDefaultDeliverySchedule = async function(){
+  window._currentDeliverySchedule = [
+    { dia: 1, dia_nome: 'Segunda-feira', motorista_id: null, motorista_nome: null, bairros: [] },
+    { dia: 2, dia_nome: 'Terça-feira', motorista_id: null, motorista_nome: null, bairros: [] },
+    { dia: 3, dia_nome: 'Quarta-feira', motorista_id: null, motorista_nome: null, bairros: [] },
+    { dia: 4, dia_nome: 'Quinta-feira', motorista_id: null, motorista_nome: null, bairros: [] },
+    { dia: 5, dia_nome: 'Sexta-feira', motorista_id: null, motorista_nome: null, bairros: [] },
+    { dia: 6, dia_nome: 'Sábado', motorista_id: null, motorista_nome: null, bairros: [] }
+  ];
+  window._deliveryActiveTab = 'cronograma';
+  try {
+    await api('/api/logistics/delivery-routes-config', {
+      method: 'POST',
+      body: JSON.stringify({
+        items: window._currentDeliverySchedule,
+        schedule: window._currentDeliverySchedule
+      })
+    });
+    Realtime.emit('delivery_routes_changed');
+    toast('Semana padrão (Segunda a Sábado) criada e salva com sucesso!');
+  } catch(e) {
+    toast('Semana padrão criada.');
+  }
+  await renderDeliveryRoutesDashboardContent();
+};
+
+window.addDeliveryDayModal = function(){
+  const days = [
+    { id: 1, nome: 'Segunda-feira' },
+    { id: 2, nome: 'Terça-feira' },
+    { id: 3, nome: 'Quarta-feira' },
+    { id: 4, nome: 'Quinta-feira' },
+    { id: 5, nome: 'Sexta-feira' },
+    { id: 6, nome: 'Sábado' },
+    { id: 7, nome: 'Domingo' }
+  ];
+  const drivers = window._currentDeliveryDrivers || [];
+  modal('Adicionar Dia ao Cronograma de Entregas', `
+    <form id="addDeliveryDayForm" class="form">
+      <div class="field">
+        <label>Dia da Semana</label>
+        <select name="dia" required>
+          ${days.map(d => `<option value="${d.id}" data-nome="${d.nome}">${d.nome}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>Motorista Responsável (opcional)</label>
+        <select name="motorista_id">
+          <option value="">-- Sem motorista fixo no momento --</option>
+          ${drivers.map(d => `<option value="${d.id}">👤 ${esc(d.nome)} (${esc(d.email)})</option>`).join('')}
+        </select>
+      </div>
+      <div class="field" style="grid-column:1/-1">
+        <label>Bairros Atendidos (separados por vírgula ou linha)</label>
+        <textarea name="bairros" rows="4" placeholder="Ex: Centro, Vila Isa, JK..."></textarea>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn" onclick="closeModal()">Cancelar</button>
+        <button class="btn primary">Adicionar Dia</button>
+      </div>
+    </form>
+  `);
+  $('#addDeliveryDayForm').onsubmit = async e => {
+    e.preventDefault();
+    const selDay = e.currentTarget.querySelector('select[name="dia"]');
+    const diaNum = Number(selDay.value);
+    const diaNome = selDay.selectedOptions[0]?.getAttribute('data-nome') || 'Dia ' + diaNum;
+    const driverId = e.currentTarget.querySelector('select[name="motorista_id"]').value || null;
+    const drv = drivers.find(d => d.id === driverId);
+    const bairrosText = e.currentTarget.querySelector('textarea[name="bairros"]').value || '';
+    const bairros = bairrosText.split(/\n|,/).map(x => x.trim()).filter(Boolean);
+
+    if(!window._currentDeliverySchedule) window._currentDeliverySchedule = [];
+    window._currentDeliverySchedule.push({
+      dia: diaNum,
+      dia_nome: diaNome,
+      motorista_id: driverId,
+      motorista_nome: drv ? drv.nome : null,
+      bairros
+    });
+    window._deliveryActiveTab = 'cronograma';
+    try {
+      await api('/api/logistics/delivery-routes-config', {
+        method: 'POST',
+        body: JSON.stringify({
+          items: window._currentDeliverySchedule,
+          schedule: window._currentDeliverySchedule
+        })
+      });
+      Realtime.emit('delivery_routes_changed');
+    } catch(err) {}
+    closeModal();
+    toast(`Dia ${diaNome} adicionado ao cronograma!`);
+    await renderDeliveryRoutesDashboardContent();
+  };
+};
+
+window.removeDeliveryDay = async function(index){
+  if(!window._currentDeliverySchedule || !window._currentDeliverySchedule[index]) return;
+  const dayName = window._currentDeliverySchedule[index].dia_nome || 'este dia';
+  if(!confirm(`Remover ${dayName} do cronograma de entregas?`)) return;
+  window._currentDeliverySchedule.splice(index, 1);
+  try {
+    await api('/api/logistics/delivery-routes-config', {
+      method: 'POST',
+      body: JSON.stringify({
+        items: window._currentDeliverySchedule,
+        schedule: window._currentDeliverySchedule
+      })
+    });
+    Realtime.emit('delivery_routes_changed');
+  } catch(err) {}
+  toast(`${dayName} removido do cronograma.`);
+  await renderDeliveryRoutesDashboardContent();
+};
+
+window.appendBairroToActiveDay = function(bairroName){
+  if(!window._currentDeliverySchedule || !window._currentDeliverySchedule.length) {
+    return toast('Adicione ou inicialize um dia no cronograma primeiro.');
+  }
+  const dayIndex = window._lastFocusedDayIndex != null ? window._lastFocusedDayIndex : 0;
+  const item = window._currentDeliverySchedule[dayIndex];
+  if(!item) return;
+  const txtArea = document.getElementById('deliv_bairros_' + dayIndex);
+  const current = (txtArea?.value || item.bairros?.join(', ') || '').trim();
+  const arr = current ? current.split(/\n|,/).map(x => x.trim()).filter(Boolean) : [];
+  if(!arr.includes(bairroName)){
+    arr.push(bairroName);
+    if(txtArea) txtArea.value = arr.join(', ');
+    item.bairros = arr;
+    toast(`Bairro "${bairroName}" adicionado à rota de ${item.dia_nome || ('Dia ' + item.dia)}!`);
+  } else {
+    toast(`Bairro "${bairroName}" já está na rota de ${item.dia_nome || ('Dia ' + item.dia)}.`);
   }
 };
 
@@ -3177,7 +3737,6 @@ window.updateDeliveryBairrosInSchedule = function(index, text){
 
 window.saveDeliveryRoutesSchedule = async function(){
   if(!window._currentDeliverySchedule) return;
-  // Read current values from textareas and selects
   window._currentDeliverySchedule.forEach((item, index) => {
     const drvSelect = document.getElementById('deliv_driver_' + index);
     if(drvSelect) {
@@ -3196,7 +3755,10 @@ window.saveDeliveryRoutesSchedule = async function(){
     toast('Salvando cronograma de rotas de entrega...');
     await api('/api/logistics/delivery-routes-config', {
       method: 'POST',
-      body: JSON.stringify({ schedule: window._currentDeliverySchedule })
+      body: JSON.stringify({
+        items: window._currentDeliverySchedule,
+        schedule: window._currentDeliverySchedule
+      })
     });
     toast('Cronograma de rotas de entrega salvo com sucesso!');
     Realtime.emit('delivery_routes_changed');
@@ -3226,7 +3788,7 @@ async function assignSellerRoute(){try{await api('/api/logistics/route-assignmen
 async function removeRouteAssignment(vid, dia){if(!confirm('Remover designação de rota deste vendedor neste dia?'))return;try{await api('/api/logistics/route-assignments/'+vid+'/'+dia,{method:'DELETE'});toast('Designação removida');show('logistics')}catch(e){toast(e.message)}}
 async function generateLoadingList(){
  const ids=[...document.querySelectorAll('.load-order:checked')].map(x=>x.value);
- if(!ids.length)return toast('Selecione os pedidos agrupados por bairro.');
+ if(!ids.length)return toast('Selecione os pedidos para gerar a lista de carregamento.');
  const seller = window._currentLogisticsSellerFilter || '';
  try{
   const x=await api('/api/logistics/loading-list',{method:'POST',body:JSON.stringify({pedido_ids:ids,vendedor:seller})});
@@ -3244,26 +3806,26 @@ async function makeRouteModal(){
     
     // Fetch active routes to filter out drivers already in a route
     const routesReq = await api('/api/logistics/routes');
-    // A driver is busy if they have a route that is not CONCLUIDA. Actually routes api returns all active routes
     const busyDrivers = routesReq.items.filter(r => r.status !== 'CONCLUIDA').map(r => r.motorista_id);
     
     const availableDrivers = allDrivers.filter(d => !busyDrivers.includes(d.id));
     
-    modal('Gerar Rota Logística', `<form id="generateRouteForm" class="form">
-      <div class="field"><label>Motorista (disponível)</label>
+    modal('🚚 Gerar Rota & Designar Motorista', `<form id="generateRouteForm" class="form">
+      <div class="field"><label>Motorista Responsável (disponível)</label>
       <select name="motorista_id" required>
-        ${availableDrivers.map(d=>'<option value="'+d.id+'">'+esc(d.nome)+'</option>').join('')}
+        ${availableDrivers.length ? availableDrivers.map(d=>'<option value="'+d.id+'">👤 '+esc(d.nome)+' ('+esc(d.email)+')</option>').join('') : '<option value="" disabled selected>Nenhum motorista disponível no momento</option>'}
       </select></div>
       <div class="field" style="grid-column:1/-1">
-        <p>Você selecionou <strong>${ids.length}</strong> pedidos para esta rota.</p>
+        <p>Você selecionou <strong>${ids.length}</strong> pedido(s) para esta rota de entrega.</p>
+        <p class="muted" style="font-size:12px;margin-top:4px">O itinerário e a sequência de paradas serão calculados automaticamente pela malha viária real (OpenStreetMap OSRM).</p>
       </div>
-      <div class="actions"><button class="btn primary">Confirmar e Gerar</button></div>
+      <div class="actions"><button class="btn primary" ${!availableDrivers.length ? 'disabled' : ''}>Confirmar e Iniciar Rota</button></div>
     </form>`);
     
     $('#generateRouteForm').onsubmit=async e=>{
       e.preventDefault();
       closeModal();
-      toast('Gerando rota logística...');
+      toast('Gerando rota logística e calculando itinerário...');
       try{
         await api('/api/logistics/routes',{method:'POST',body:JSON.stringify({
           motorista_id: new FormData(e.currentTarget).get('motorista_id'),
@@ -3272,7 +3834,12 @@ async function makeRouteModal(){
         toast('Rota gerada com sucesso!');
         Realtime.emit('routes_changed',{ids});
         Realtime.emit('orders_changed',{ids,status:'ROTA'});
-        refreshCurrentViewSilently('routes_changed');
+        if(document.getElementById('deliveryRoutesDashboard')?.style.display === 'block'){
+          window._deliveryActiveTab = 'historico';
+          await renderDeliveryRoutesDashboardContent();
+        } else {
+          refreshCurrentViewSilently('routes_changed');
+        }
       } catch(ex){ toast(ex.message,true) }
     };
   }
@@ -3292,7 +3859,7 @@ async function ai(v){
           
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <span class="badge" style="background:${status.configured ? '#10b981' : '#f59e0b'};color:#07101a;font-weight:700">
+          <span class="badge" style="background:${status.configured ? '#021d60' : '#f59e0b'};color:${status.configured ? '#ffffff' : '#07101a'};font-weight:700">
             ${status.configured ? '✓ Groq Conectado' : '⚠ Chave Groq Pendente'}
           </span>
           <span class="badge" style="background:#0284c7;color:#fff">
@@ -3308,13 +3875,13 @@ async function ai(v){
             Para ativar as análises inteligentes do modelo <code>${esc(status.model)}</code>, insira sua chave da API do Groq abaixo (ou declare <code>GROQ_API_KEY</code> no arquivo <code>.env</code>):
           </p>
           <div style="display:flex;gap:8px">
-            <input id="quickGroqKey" type="password" placeholder="gsk_..." style="flex:1;max-width:400px;background:#091227;color:white;border:1px solid var(--border);border-radius:6px;padding:8px 12px">
+            <input id="quickGroqKey" type="password" placeholder="gsk_..." style="flex:1;max-width:400px;background:#ffffff;color:#000000;border:1px solid #cbd5e1;border-radius:6px;padding:8px 12px">
             <button class="btn primary" onclick="saveGroqKey()">Salvar Chave</button>
           </div>
         </div>
       ` : `
         <div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);padding:10px 14px;border-radius:8px">
-          <span style="font-size:13px;color:#34d399">API Groq configurada e pronta para consultas com leitura em todo o banco de dados.</span>
+          <span style="font-size:13px;color:#021d60;font-weight:700">API Groq configurada e pronta para consultas com leitura em todo o banco de dados.</span>
           <button class="btn" style="font-size:12px;padding:4px 10px" onclick="changeGroqKeyModal()">Alterar chave</button>
         </div>
       `}
@@ -3329,7 +3896,7 @@ async function ai(v){
         </div>
       </div>
 
-      <textarea id="aimsg" style="width:100%;height:100px;background:#091227;color:white;border:1px solid var(--border);border-radius:8px;padding:10px;font-family:inherit;font-size:14px" placeholder="Faça uma pergunta sobre qualquer dado do ERP (ex: Quais os produtos mais vendidos da categoria Bebidas?)..."></textarea>
+      <textarea id="aimsg" style="width:100%;height:100px;background:#ffffff;color:#000000;border:1px solid #cbd5e1;border-radius:8px;padding:10px;font-family:inherit;font-size:14px" placeholder="Faça uma pergunta sobre qualquer dado do ERP (ex: Quais os produtos mais vendidos da categoria Bebidas?)..."></textarea>
       
       <div style="margin-top:12px;display:flex;align-items:center;gap:12px">
         <button id="aiSubmitBtn" class="btn primary" onclick="askAI()">Consultar IA Administrativa</button>
@@ -3338,7 +3905,7 @@ async function ai(v){
 
       <div id="airespWrap" style="margin-top:20px;display:none">
         <h4 style="margin-bottom:8px">Resposta:</h4>
-        <pre id="airesp" style="background:#07101a;border:1px solid var(--border);border-radius:8px;padding:16px;white-space:pre-wrap;word-break:break-word;font-size:14px;line-height:1.6;color:#e2e8f0"></pre>
+        <pre id="airesp" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;white-space:pre-wrap;word-break:break-word;font-size:14px;line-height:1.6;color:#000000"></pre>
         <div id="aiQueriesWrap" style="margin-top:10px"></div>
       </div>
     </div>
@@ -3415,8 +3982,8 @@ async function askAI(){
             </summary>
             <div style="margin-top:8px">
               ${x.queries.map(q => `
-                <div style="margin-bottom:6px;font-family:monospace;font-size:12px;background:#050b14;padding:6px;border-radius:4px;border:1px solid rgba(255,255,255,0.08)">
-                  <span style="color:#38bdf8">${esc(q.sql)}</span>
+                <div style="margin-bottom:6px;font-family:monospace;font-size:12px;background:#f8fafc;padding:6px;border-radius:4px;border:1px solid #e2e8f0">
+                  <span style="color:#0369a1;font-weight:600">${esc(q.sql)}</span>
                   <span class="muted" style="margin-left:8px">(${q.count !== undefined ? q.count + ' linha(s)' : esc(q.error||'')})</span>
                 </div>
               `).join('')}
@@ -3531,7 +4098,7 @@ function renderSuppliersTable(list){
       <tbody>
         ${list.map(f=>`
           <tr data-supplier="${f.id}">
-            <td><strong style="color:#fff;font-size:14px">${esc(f.nome)}</strong></td>
+            <td><strong style="color:#000000;font-size:14px;font-weight:800">${esc(f.nome)}</strong></td>
             <td>${esc(f.nome_fantasia || f.razao_social || '—')}</td>
             <td>${esc(f.cnpj_cpf || '—')}</td>
             <td>${esc([f.contato_nome, f.telefone_whatsapp].filter(Boolean).join(' · ') || '—')}</td>
@@ -4104,7 +4671,7 @@ function addPoItemRow(){
   const prods = window._currentPoSupplierProducts || [];
   const row = document.createElement('div');
   row.className = 'po-item-row form';
-  row.style = 'grid-template-columns: 2fr 1fr 1fr auto; align-items:flex-end; background:#07101a; padding:10px; border-radius:8px; border:1px solid #1e2c40';
+  row.style = 'grid-template-columns: 2fr 1fr 1fr auto; align-items:flex-end; background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0';
 
   row.innerHTML = `
     <div class="field">
@@ -4160,7 +4727,7 @@ async function receivePurchaseOrderModal(cid){
     const itens = res.itens || [];
 
     modal(`Recebimento na Doca — ${esc(c.numero)}`, `
-      <div style="background:#0a1422;border:1px solid #1f2f45;border-radius:10px;padding:14px;margin-bottom:16px">
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:16px">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
           <div>
             <h3 style="margin:0">${esc(c.fornecedor_nome)}</h3>
@@ -4192,16 +4759,16 @@ async function receivePurchaseOrderModal(cid){
             <span class="muted" style="font-size:12px">Conferência com leitor óptico USB ou manual:</span>
           </div>
 
-          <div class="pdv-barcode-tools" style="background:#0a1422;border:1px solid #24344b;margin-bottom:12px">
+          <div class="pdv-barcode-tools" style="background:#f8fafc;border:1px solid #e2e8f0;margin-bottom:12px">
             <div class="pdv-barcode-row">
               <button type="button" id="inboundBarcodeButton" class="btn" onclick="toggleInboundBarcode()">▣ Ler código de barras</button>
               <div class="field">
-                <label style="color:#8193a9;font-size:12px">Quantidade por bipe</label>
-                <input id="inboundBarcodeQty" class="field-input" type="number" min="1" max="99999" step="1" value="1" inputmode="numeric" style="padding:7px;height:36px">
+                <label style="color:#000;font-size:12px;font-weight:700">Quantidade por bipe</label>
+                <input id="inboundBarcodeQty" class="field-input" type="number" min="1" max="99999" step="1" value="1" inputmode="numeric" style="padding:7px;height:36px;background:#fff;color:#000;border:1px solid #cbd5e1">
               </div>
             </div>
-            <div id="inboundBarcodeStatus" class="muted" style="font-size:12px;margin-top:6px">Leitor opcional. Conecte leitor físico USB/Bluetooth para bipagem contínua.</div>
-            <input id="barcodeReceiveInput" class="pdv-barcode-input" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="Clique em Ler código de barras para bipagem contínua" onkeydown="onBarcodeReceiveKey(event, '${cid}')">
+            <div id="inboundBarcodeStatus" class="muted" style="font-size:12px;margin-top:6px;color:#000">Leitor opcional. Conecte leitor físico USB/Bluetooth para bipagem contínua.</div>
+            <input id="barcodeReceiveInput" class="pdv-barcode-input" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="Clique em Ler código de barras para bipagem contínua" onkeydown="onBarcodeReceiveKey(event, '${cid}')" style="background:#fff;color:#000;border:1px solid #cbd5e1">
           </div>
 
           <div class="tablewrap" style="max-height:360px">

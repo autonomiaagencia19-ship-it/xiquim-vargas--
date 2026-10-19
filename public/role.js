@@ -232,7 +232,7 @@ function storeAuthMode(mode){const box=$('#storeAuthBox');if(mode==='login'){box
 function storeRegister(){const box=$('#storeAuthBox')||$('#registerBox');if(!box)return;box.innerHTML=`<form id="storeRegisterForm" class="form" style="margin-top:18px"><div class="field"><label>Nome</label><input name="nome" required></div><div class="field"><label>E-mail</label><input name="email" type="email" autocomplete="email" required></div><div class="field"><label>Telefone</label><input name="telefone" type="tel" autocomplete="tel" maxlength="40" required></div><div class="field"><label>Endereço</label><input name="endereco" autocomplete="street-address" maxlength="240" required></div><div class="field"><label>Bairro</label><input name="bairro" maxlength="120" required></div><div class="field"><label>Criar senha</label><div style="display:flex;gap:6px"><input id="regPassword" name="password" type="password" minlength="8" required style="flex:1"><button type="button" class="btn" onclick="const x=$('#regPassword');x.type=x.type==='password'?'text':'password'">👁</button></div></div><button class="btn primary" style="width:100%">Criar cadastro</button></form>`;$('#storeRegisterForm').onsubmit=async e=>{e.preventDefault();try{const x=await api('/api/store/register',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});token=x.token;localStorage.setItem('xv_token',token);location.reload()}catch(err){alert(err.message)}}}
 async function doLogin(e){e.preventDefault();const form=e.currentTarget;if(!(form instanceof HTMLFormElement))return alert('Não foi possível identificar o formulário de login. Atualize a página e tente novamente.');const submit=form.querySelector('button[type=submit]');if(submit){submit.disabled=true;submit.textContent='Entrando…'}try{const data=Object.fromEntries(new FormData(form));const x=await api('/api/auth/login',{method:'POST',body:JSON.stringify(data)});token=x.token;me=x.user;localStorage.setItem('xv_token',token);localStorage.setItem('xv_user',JSON.stringify(x.user||{}));location.reload()}catch(err){alert(err.message);if(submit){submit.disabled=false;submit.textContent='Entrar na operação'}}}
 async function initRole(){if(!token)return loginPage();const cachedMe=localStorage.getItem('xv_user');if(cachedMe){try{me=JSON.parse(cachedMe)}catch{}}try{const m=await api('/api/me');me=m.user;localStorage.setItem('xv_user',JSON.stringify(me));Realtime.init((type,payload)=>roleRealtimeRefresh(type,payload));await renderRole()}catch(err){if((!navigator.onLine||err.name==='TypeError'||err.message?.includes('fetch')||err.message?.includes('NetworkError')||err.message?.includes('Failed to fetch'))&&me){console.warn('Operando offline com sessão em cache');await renderRole();return}if(err.message?.includes('401')||err.message?.includes('Token')||err.message?.includes('jwt')){localStorage.removeItem('xv_token');localStorage.removeItem('xv_user');return loginPage()}if(me){await renderRole()}else{loginPage()}}}
-function mobileHeader(title,subtitle,logo='/assets/institucional/01_Logo_Xiquim_Vargas_HD.png',dark=false){const isOff=typeof navigator.onLine==='boolean'&&!navigator.onLine;return `<header class="mobile-header"><div class="mobile-header-row"><img class="xv-logo" src="${logo}" alt="Xiquim Vargas"><div style="margin-left:auto;display:flex;align-items:center;gap:8px"><span id="roleOfflineIndicator" style="display:${isOff?'inline-flex':'none'};background:#e11d48;color:#fff;font-weight:700;font-size:11px;padding:3px 8px;border-radius:12px">OFFLINE</span><button class="btn" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:#fff" onclick="logout()">⇥</button></div></div><div style="margin-top:8px"><strong style="font-size:21px">${title}</strong><div class="mobile-user">${subtitle}</div></div></header>`}
+function mobileHeader(title,subtitle,logo='/assets/institucional/01_Logo_Xiquim_Vargas_HD.png',dark=false){const isOff=typeof navigator.onLine==='boolean'&&!navigator.onLine;return `<header class="mobile-header"><div class="mobile-header-row"><img class="xv-logo" src="${logo}" alt="Xiquim Vargas"><div style="margin-left:auto;display:flex;align-items:center;gap:8px"><span id="roleOfflineIndicator" style="display:${isOff?'inline-flex':'none'};background:#e11d48;color:#fff;font-weight:700;font-size:11px;padding:3px 8px;border-radius:12px">OFFLINE</span><button class="btn" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:#fff" onclick="logout()">⇥</button></div></div><div style="margin-top:8px"><strong style="font-size:21px">${title}</strong><div class="mobile-user" style="color:#FD5E02!important;font-weight:700">${subtitle}</div></div></header>`}
 function bottom(active){return `<nav class="bottom-nav"><button class="${active==='home'?'active':''}" onclick="roleHome()"><span class="ico">⌂</span>Início</button><button class="${active==='clients'?'active':''}" onclick="seller()"><span class="ico">♙</span>Clientes</button><button class="${active==='orders'?'active':''}" onclick="sellerOrders()"><span class="ico">▣</span>Pedidos</button><button><span class="ico">☰</span>Mais</button></nav>`}
 async function renderRole(){const role=document.body.dataset.role;const expected={'Vendedor Externo':'seller','Frente de Loja / PDV':'cashier','Loja Online':'web_client','Motorista':'driver'}[role];if(expected&&me.role!==expected){localStorage.removeItem('xv_token');alert('Esta interface não corresponde ao seu perfil de acesso.');return loginPage()}
 if(role==='Vendedor Externo')return seller();if(role==='Frente de Loja / PDV')return pdv();if(role==='Loja Online')return loja();return driver()}
@@ -458,32 +458,32 @@ function renderSellerClientsUI() {
 
     content.innerHTML = `
       <div class="grid" style="margin-bottom:16px;">
-        <div class="mobile-card kpi" style="border-top:4px solid var(--xv-brand-navy,#061a4f);">
+        <div class="mobile-card kpi" style="border-top:4px solid #021D60;">
           <div style="font-size:13px;color:#8193a9;margin-bottom:4px;">👥 Carteira de Clientes</div>
           <div class="v">${s.total_clientes || 0}</div>
           <div style="font-size:11px;color:#64748b;margin-top:4px;">${s.taxa_saude_carteira || 0}% de saúde da base</div>
         </div>
-        <div class="mobile-card kpi" style="border-top:4px solid #10b981;">
+        <div class="mobile-card kpi" style="border-top:4px solid #021D60;">
           <div style="font-size:13px;color:#8193a9;margin-bottom:4px;">🟢 Recorrentes Ativos (≤15d)</div>
           <div class="v" style="color:#10b981;">${s.ativos || 0}</div>
           <div style="font-size:11px;color:#10b981;margin-top:4px;">Comprando no ciclo ideal</div>
         </div>
-        <div class="mobile-card kpi" style="border-top:4px solid #f59e0b;">
+        <div class="mobile-card kpi" style="border-top:4px solid #021D60;">
           <div style="font-size:13px;color:#8193a9;margin-bottom:4px;">⚠️ Em Risco / Churn (16–45d)</div>
           <div class="v" style="color:#f59e0b;">${s.em_risco || 0}</div>
           <div style="font-size:11px;color:#d97706;margin-top:4px;">Atenção: ciclo de recompra atrasado</div>
         </div>
-        <div class="mobile-card kpi" style="border-top:4px solid #ef4444;">
+        <div class="mobile-card kpi" style="border-top:4px solid #021D60;">
           <div style="font-size:13px;color:#8193a9;margin-bottom:4px;">🔴 Inativos / Dormientes (>45d)</div>
           <div class="v" style="color:#ef4444;">${s.inativos || 0}</div>
           <div style="font-size:11px;color:#ef4444;margin-top:4px;">Requerem reativação urgente</div>
         </div>
-        <div class="mobile-card kpi" style="border-top:4px solid #8b5cf6;">
+        <div class="mobile-card kpi" style="border-top:4px solid #021D60;">
           <div style="font-size:13px;color:#8193a9;margin-bottom:4px;">⭐ Clientes VIPs</div>
           <div class="v" style="color:#8b5cf6;">${s.vips || 0}</div>
           <div style="font-size:11px;color:#8b5cf6;margin-top:4px;">Alto faturamento e frequência</div>
         </div>
-        <div class="mobile-card kpi" style="border-top:4px solid var(--xv-brand-orange,#f45a08);">
+        <div class="mobile-card kpi" style="border-top:4px solid #021D60;">
           <div style="font-size:13px;color:#8193a9;margin-bottom:4px;">💰 Ticket Médio Geral</div>
           <div class="v" style="font-size:22px;">${money(s.ticket_medio || 0)}</div>
           <div style="font-size:11px;color:#64748b;margin-top:4px;">Média por pedido concluído</div>
@@ -662,7 +662,7 @@ function renderSellerOrderItems(){const h=$('#sellerOrderItems');if(!h)return;h.
 function filterSellerOrderCatalog(input){const q=(input.value||'').toLowerCase().trim();const items=(window.sellerOrderCatalog||[]).filter(p=>(p.nome+' '+(p.sku||'')+' '+(p.codigo_barras||'')).toLowerCase().includes(q));$('#sellerOrderCatalog').innerHTML=items.map(p=>`<div class="order-catalog-item"><span><strong>${esc(p.nome)}</strong><small>${esc(p.sku||'Sem SKU')} · ${money(p.preco_aplicado??p.preco_base)}</small></span><button type="button" class="btn" onclick="addSellerOrderItem('${p.id}')">Adicionar</button></div>`).join('')||'<span class="muted">Nenhum produto encontrado.</span>'}
 function addSellerOrderItem(id){const p=(window.sellerOrderCatalog||[]).find(x=>x.id===id);if(!p)return;if(window.sellerOrderItems.has(id))window.sellerOrderItems.get(id).quantidade+=1;else window.sellerOrderItems.set(id,{produto_id:id,quantidade:1,nome:p.nome});renderSellerOrderItems();filterSellerOrderCatalog($('#sellerOrderSearch'))}
 // Miniatura padronizada usada pelo Vendedor Externo e pela Loja Online (object-fit: contain, nunca corta a imagem).
-function productThumbHtml(p,label){const fb=esc(label||p.marca||'PRODUTO');return `<div class="product-thumb">${p.foto_url?`<img src="${esc(p.foto_url)}" alt="${esc(p.nome)}" loading="lazy" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='grid'"><span class="product-image-fallback" style="display:none">${fb}</span>`:`<span class="product-image-fallback" style="display:grid">${fb}</span>`}</div>`}
+function productThumbHtml(p,label){return `<div class="product-thumb">${p.foto_url?`<img src="${esc(p.foto_url)}" alt="${esc(p.nome)}" loading="lazy" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='grid'"><span class="product-image-fallback" style="display:none"></span>`:`<span class="product-image-fallback" style="display:grid"></span>`}</div>`}
 
 function sellerNewClient(){document.body.innerHTML=`<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Adicionar cliente',`${esc(me.nome)} · Vendedor externo`)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="seller()">← Voltar para clientes</button></div><form id="sellerClientForm" class="mobile-card form" style="margin-top:15px"><div class="field"><label>Nome fantasia</label><input name="nome_fantasia" required></div><div class="field"><label>Razão social (opcional)</label><input name="razao_social"></div><div class="field"><label>CNPJ/CPF</label><input name="cnpj_cpf"></div><div class="field"><label>Email</label><input name="email" type="email"></div><div class="field"><label>Telefone</label><input name="telefone"></div><div class="field"><label>Endereço</label><input name="endereco" required></div><div class="field"><label>Bairro</label><input name="bairro" required></div><div class="field"><label>Cidade</label><input name="cidade"></div><div class="field"><label>Estado</label><input name="estado"></div><div class="actions"><button class="btn" type="button" onclick="seller()">Cancelar</button><button class="btn primary">Salvar cliente</button></div></form></div></div>`;$('#sellerClientForm').onsubmit=async e=>{e.preventDefault();try{const x=await api('/api/clients',{method:'POST',headers:{'Idempotency-Key':'CLIENT-'+crypto.randomUUID()},body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});if(x.offline){alert('Cliente salvo no aparelho e será enviado quando a rede voltar.');return seller()}alert('Cliente cadastrado.');seller()}catch(err){alert(err.message)}}}
 async function sellerClientProfile(id){try{const x=await api('/api/clients/'+id+'/profile');document.body.innerHTML=`<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Perfil do cliente',`${esc(me.nome)} · ${esc(x.client.razao_social)}`)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="seller()">← Carteira</button><button class="btn primary" onclick="sellerNewOrder(parseJsonArg('${jsonArg(x.client)}'))">＋ Novo pedido</button><button class="btn" onclick="sellerRepeatClient('${id}')">↻ Repetir último pedido</button><button class="btn" onclick="crmInteractionsModal('${id}', parseJsonArg('${jsonArg(x.client.razao_social||x.client.nome_fantasia)}'))">📝 CRM</button>${x.client.telefone?`<button class="btn-crm-wpp" onclick="openCrmWhatsApp('${x.client.telefone}', parseJsonArg('${jsonArg(x.client.razao_social||x.client.nome_fantasia)}'), null, parseJsonArg('${jsonArg(JSON.stringify((x.topProdutos||[]).map(p=>p.nome)))}'))">📲 WhatsApp</button>`:''}</div><div class="grid"><div class="mobile-card"><small>Pedidos</small><h2>${x.summary?.pedidos||0}</h2></div><div class="mobile-card"><small>Faturado</small><h2>${money(x.summary?.faturado)}</h2></div><div class="mobile-card"><small>Em aberto</small><h2>${money(x.summary?.em_aberto)}</h2></div></div><div class="mobile-card"><h3>${esc(x.client.razao_social)}</h3><p class="muted">${esc(x.client.endereco||'')} · ${esc(x.client.bairro||'')} · ${esc(x.client.cidade||'')} ${x.client.telefone?'· Tel: '+esc(x.client.telefone):''}</p></div><div class="mobile-card"><h3>Mais comprados</h3>${x.topProdutos.map(p=>`<p><strong>${esc(p.nome)}</strong> — ${p.quantidade} un. (${money(p.faturamento)})</p>`).join('')||'<p class="muted">Sem histórico concluído.</p>'}</div><div class="mobile-card"><h3>Histórico de pedidos</h3>${x.orders.map(o=>`<p><strong>${esc(o.numero)}</strong> · <span class="badge status-${String(o.status).toLowerCase()}">${esc(o.status)}</span> · <strong>${money(o.total)}</strong> <button class="btn" onclick="downloadAuthFile('/api/orders/${o.id}/pdf','pedido-${o.numero}.pdf')">PDF</button></p>`).join('')||'<p class="muted">Nenhum pedido realizado.</p>'}</div></div>${bottom('clients')}</div>`}catch(e){alert(e.message)}}
@@ -965,7 +965,7 @@ async function lojaSobreNos(){
   $('#storeMain').innerHTML = `
     <div class="about-hero">
       <h1>🏢 Sobre a Distribuidora Xiquim Vargas</h1>
-      <p>Tradição, agilidade e compromisso no fornecimento de bebidas, doces e alimentos para o comércio e varejo de Governador Valadares e região.</p>
+      <p>${esc(window.storeCfg?.['store.about_subtitle'] || 'Tradição, agilidade e compromisso no fornecimento de bebidas, doces e alimentos para o comércio e varejo de Governador Valadares e região.')}</p>
     </div>
     <section class="store-main" style="padding-top:0">
       <div class="about-grid">
@@ -1022,11 +1022,11 @@ async function lojaPedidos(){
       </div>
       <p style="margin:6px 0">${new Date(o.created_at).toLocaleString('pt-BR')} · <strong>${money(o.total)}</strong></p>
       ${previsaoText ? `
-        <div style="margin:8px 0;background:#0f172a;border:1px solid #334155;border-radius:8px;padding:8px 12px;font-size:12px;display:flex;align-items:center;gap:8px">
+        <div style="margin:8px 0;background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #10b981;border-radius:8px;padding:8px 12px;font-size:12px;display:flex;align-items:center;gap:8px">
           <span style="font-size:16px">🚚📅</span>
           <div>
-            <strong style="color:#10b981">Previsão de Entrega:</strong>
-            <span style="color:#e2e8f0;margin-left:4px;font-weight:700">${esc(previsaoText)}</span>
+            <strong style="color:#047857">Previsão de Entrega:</strong>
+            <span style="color:#000000;margin-left:4px;font-weight:700">${esc(previsaoText)}</span>
           </div>
         </div>
       ` : ''}
@@ -1120,23 +1120,23 @@ async function submitLoja(){
   dlg.id = 'confirmDeliveryForecastModal';
   dlg.style = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);display:grid;place-items:center;z-index:10001;padding:14px;';
   dlg.innerHTML = `
-    <div class="panel" style="max-width:480px;width:100%;border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,0.5);border:1px solid #334155;background:#0f172a;color:#f8fafc">
+    <div class="panel" style="max-width:480px;width:100%;border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,0.18);border:1px solid #e2e8f0;background:#ffffff;color:#000000">
       <div style="font-size:36px;margin-bottom:8px;text-align:center">🚚📅</div>
-      <h3 style="margin:0 0 8px;font-size:19px;text-align:center;color:#fff">Previsão de Entrega do Seu Pedido</h3>
-      <div style="background:#1e293b;border-radius:10px;padding:14px;margin:14px 0;border-left:4px solid #f97316">
-        <div style="font-size:13px;color:#94a3b8">Endereço de Entrega:</div>
-        <div style="font-size:14px;font-weight:700;color:#fff;margin-top:2px">${esc(perfilCliente?.endereco||'Endereço cadastrado')}</div>
+      <h3 style="margin:0 0 8px;font-size:19px;text-align:center;color:#000000;font-weight:800">Previsão de Entrega do Seu Pedido</h3>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin:14px 0;border-left:4px solid #f97316">
+        <div style="font-size:13px;color:#000000;font-weight:700">Endereço de Entrega:</div>
+        <div style="font-size:14px;font-weight:700;color:#000000;margin-top:2px">${esc(perfilCliente?.endereco||'Endereço cadastrado')}</div>
         <div style="font-size:13px;color:#f97316;font-weight:700;margin-top:2px">📍 Bairro: ${esc(bairroCliente||'Não especificado')}</div>
-        <hr style="border:none;border-top:1px solid #334155;margin:10px 0">
-        <div style="font-size:13px;color:#94a3b8">Dia Previsto de Entrega:</div>
-        <div style="font-size:18px;font-weight:800;color:#10b981;margin-top:4px">📅 ${esc(previsao.dia)}</div>
-        <div style="font-size:12px;color:#cbd5e1;margin-top:2px">${esc(previsao.detalhe)}</div>
+        <hr style="border:none;border-top:1px solid #e2e8f0;margin:10px 0">
+        <div style="font-size:13px;color:#000000;font-weight:700">Dia Previsto de Entrega:</div>
+        <div style="font-size:18px;font-weight:800;color:#047857;margin-top:4px">📅 ${esc(previsao.dia)}</div>
+        <div style="font-size:12px;color:#000000;margin-top:2px">${esc(previsao.detalhe)}</div>
       </div>
-      <p style="font-size:13px;color:#94a3b8;line-height:1.4;margin-bottom:16px;text-align:center">
+      <p style="font-size:13px;color:#000000;line-height:1.4;margin-bottom:16px;text-align:center">
         Com base no cronograma oficial da sua região, seu pedido será entregue no dia indicado acima. Deseja confirmar?
       </p>
       <div style="display:flex;gap:10px;justify-content:flex-end">
-        <button class="btn" type="button" onclick="document.querySelector('#confirmDeliveryForecastModal')?.remove()">Revisar</button>
+        <button class="btn" type="button" style="background:#f1f5f9;border:1px solid #cbd5e1;color:#000000;font-weight:700" onclick="document.querySelector('#confirmDeliveryForecastModal')?.remove()">Revisar</button>
         <button class="btn primary" type="button" id="btnFinalConfirmOrder" style="background:#f97316;border-color:#f97316;font-weight:700">Confirmar e Finalizar</button>
       </div>
     </div>

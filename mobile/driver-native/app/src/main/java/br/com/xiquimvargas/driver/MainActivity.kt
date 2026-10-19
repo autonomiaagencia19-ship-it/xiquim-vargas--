@@ -275,7 +275,8 @@ class MainActivity : Activity() {
         box.addView(forceBtn)
 
         save.setOnClickListener {
-            val value = input.text.toString().trim().trimEnd('/')
+            val rawValue = input.text.toString().trim()
+            val value = Api.sanitizeUrl(rawValue)
             if (!isValidUrl(value)) {
                 Toast.makeText(this, "Informe uma URL válida do ERP (HTTPS ou rede local).", Toast.LENGTH_LONG).show()
                 return@setOnClickListener
@@ -310,7 +311,7 @@ class MainActivity : Activity() {
         }
 
         forceBtn.setOnClickListener {
-            val value = input.text.toString().trim().trimEnd('/')
+            val value = Api.sanitizeUrl(input.text.toString().trim())
             Api.setBaseUrl(this, value)
             launchWebView(value)
         }

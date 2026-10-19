@@ -27,8 +27,26 @@ object Api {
 
     fun getBaseUrl(): String = base ?: BuildConfig.API_BASE_URL.trimEnd('/')
 
+    fun sanitizeUrl(raw: String): String {
+        var clean = raw.trim().trimEnd('/')
+        val suffixes = listOf(
+            "/admin/admin.html", "/admin.html", "/admin",
+            "/vendedor/vendedor.html", "/vendedor.html", "/vendedor",
+            "/motorista/motorista.html", "/motorista.html", "/motorista",
+            "/pdv/pdv.html", "/pdv.html", "/pdv", "/caixa",
+            "/loja/loja.html", "/loja.html", "/loja"
+        )
+        for (suffix in suffixes) {
+            if (clean.endsWith(suffix, ignoreCase = true)) {
+                clean = clean.substring(0, clean.length - suffix.length).trimEnd('/')
+                break
+            }
+        }
+        return clean
+    }
+
     fun setBaseUrl(context: Context, url: String) {
-        val clean = url.trim().trimEnd('/')
+        val clean = sanitizeUrl(url)
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, clean).apply()
         base = clean
         isConfiguredByUser = true

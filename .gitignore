@@ -5,6 +5,9 @@ node_modules/
 
 # Dados temporarios e backups locais
 storage/backups/
+storage/backup*.db
+storage/*backup*
+*backup*.db
 storage/pdfs/
 storage/proofs/
 storage/exports/
@@ -29,4 +32,5 @@ storage/setup-token.txt
 *.apk
 mobile/apks/
 apks versao final/
-
+max_atendente_certificado/
+xiquim_imagens_renomeadas/

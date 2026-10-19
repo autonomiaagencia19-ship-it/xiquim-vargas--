@@ -47,4 +47,31 @@ describe('Logistics API', () => {
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/Nenhum pedido/);
   });
+
+  it('should save and retrieve weekly delivery routes schedule', async () => {
+    const testSchedule = [
+      { dia: 1, dia_nome: 'Segunda-feira', motorista_id: null, motorista_nome: null, bairros: ['Centro', 'JK'] },
+      { dia: 2, dia_nome: 'Terça-feira', motorista_id: null, motorista_nome: null, bairros: ['Vila Isa'] }
+    ];
+
+    const postRes = await request(server)
+      .post('/api/logistics/delivery-routes-config')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ items: testSchedule, schedule: testSchedule });
+
+    expect(postRes.status).toBe(200);
+    expect(postRes.body.ok).toBe(true);
+    expect(postRes.body.items).toHaveLength(2);
+
+    const getRes = await request(server)
+      .get('/api/logistics/delivery-routes-config')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.items).toBeDefined();
+    expect(getRes.body.schedule).toBeDefined();
+    expect(getRes.body.items).toHaveLength(2);
+    expect(getRes.body.items[0].dia_nome).toBe('Segunda-feira');
+    expect(getRes.body.items[0].bairros).toContain('Centro');
+  });
 });
