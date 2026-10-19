@@ -25,11 +25,14 @@ jobs:
         run: gradle --no-daemon --max-workers=1 -p mobile/pdv-native assembleDebug
       - name: Build tower
         run: gradle --no-daemon --max-workers=1 -p mobile/tower-native assembleDebug
+      - name: Collect and name APKs
+        run: |
+          mkdir -p dist-apks
+          cp mobile/seller-native/app/build/outputs/apk/debug/app-debug.apk dist-apks/XiquimVargas-Vendedor-1.8.3.apk
+          cp mobile/driver-native/app/build/outputs/apk/debug/app-debug.apk dist-apks/XiquimVargas-Motorista-1.8.3.apk
+          cp mobile/pdv-native/app/build/outputs/apk/debug/app-debug.apk dist-apks/XiquimVargas-PDV-1.8.3.apk
+          cp mobile/tower-native/app/build/outputs/apk/debug/app-debug.apk dist-apks/XiquimVargas-TorreControle-1.8.3.apk
       - uses: actions/upload-artifact@v4
         with:
           name: xiquim-vargas-1.8.3-debug-apks
-          path: |
-            mobile/seller-native/app/build/outputs/apk/debug/app-debug.apk
-            mobile/driver-native/app/build/outputs/apk/debug/app-debug.apk
-            mobile/pdv-native/app/build/outputs/apk/debug/app-debug.apk
-            mobile/tower-native/app/build/outputs/apk/debug/app-debug.apk
+          path: dist-apks/*.apk
