@@ -1,4 +1,4 @@
-const API='';
+const API = (typeof window !== 'undefined' && (window.location.protocol === 'file:' || !window.location.origin || window.location.origin === 'null')) ? 'https://xiquim-vargas-erp.onrender.com' : '';
 // Polyfill: crypto.randomUUID só existe em contexto seguro (HTTPS/localhost). Em http://192.168.x.x (rede local) ele não existe.
 (function(){const c=(typeof window!=='undefined'&&window.crypto)?window.crypto:(window.crypto={});if(typeof c.randomUUID!=='function'){c.randomUUID=function(){const b=new Uint8Array(16);if(typeof c.getRandomValues==='function'){c.getRandomValues(b)}else{for(let i=0;i<16;i++)b[i]=Math.floor(Math.random()*256)}b[6]=(b[6]&0x0f)|0x40;b[8]=(b[8]&0x3f)|0x80;const h=[...b].map(x=>x.toString(16).padStart(2,'0')).join('');return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`}}})();
 if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{})}

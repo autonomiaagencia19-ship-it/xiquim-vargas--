@@ -80,7 +80,7 @@ async function syncAdminOutbox(){
 }
 window.syncAdminOutbox=syncAdminOutbox;
 
-const API='';let token=localStorage.getItem('xv_token');let me=null;const $=s=>document.querySelector(s);
+const API = (typeof window !== 'undefined' && (window.location.protocol === 'file:' || !window.location.origin || window.location.origin === 'null')) ? 'https://xiquim-vargas-erp.onrender.com' : '';let token=localStorage.getItem('xv_token');let me=null;const $=s=>document.querySelector(s);
 function jsonArg(value){const bytes=new TextEncoder().encode(JSON.stringify(value));let binary='';for(const byte of bytes)binary+=String.fromCharCode(byte);return btoa(binary)}
 function parseJsonArg(encoded){return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(encoded),c=>c.charCodeAt(0))))}
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));

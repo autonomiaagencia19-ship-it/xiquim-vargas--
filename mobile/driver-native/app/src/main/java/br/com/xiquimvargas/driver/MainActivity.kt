@@ -458,12 +458,57 @@ class MainActivity : Activity() {
         return false
     }
 
+    private fun getMimeType(filePath: String): String {
+        val clean = filePath.substringBefore('?').lowercase()
+        return when {
+            clean.endsWith(".html") || clean.endsWith(".htm") -> "text/html"
+            clean.endsWith(".js") || clean.endsWith(".mjs") -> "application/javascript"
+            clean.endsWith(".css") -> "text/css"
+            clean.endsWith(".png") -> "image/png"
+            clean.endsWith(".jpg") || clean.endsWith(".jpeg") -> "image/jpeg"
+            clean.endsWith(".svg") -> "image/svg+xml"
+            clean.endsWith(".json") -> "application/json"
+            clean.endsWith(".ico") -> "image/x-icon"
+            clean.endsWith(".woff2") -> "font/woff2"
+            clean.endsWith(".woff") -> "font/woff"
+            clean.endsWith(".ttf") -> "font/ttf"
+            else -> "application/octet-stream"
+        }
+    }
+
+    private fun interceptAsset(uri: Uri): WebResourceResponse? {
+        val rawPath = uri.path ?: ""
+        val cleanPath = when {
+            rawPath == "/" || rawPath.isEmpty() -> targetPath
+            else -> rawPath
+        }
+
+        if (cleanPath.startsWith("/api/") || cleanPath.startsWith("/media/")) {
+            return null
+        }
+
+        val relativePath = "www" + if (cleanPath.startsWith("/")) cleanPath else "/$cleanPath"
+        return try {
+            val stream = assets.open(relativePath)
+            val mime = getMimeType(relativePath)
+            val headers = mapOf(
+                "Access-Control-Allow-Origin" to "*",
+                "Cache-Control" to "no-cache"
+            )
+            WebResourceResponse(mime, "UTF-8", 200, "OK", headers, stream)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     private fun launchWebView(baseUrl: String) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             try {
                 ServiceWorkerController.getInstance().setServiceWorkerClient(object : ServiceWorkerClient() {
-                    override fun shouldInterceptRequest(request: WebResourceRequest): WebResourceResponse? = null
+                    override fun shouldInterceptRequest(request: WebResourceRequest): WebResourceResponse? {
+                        return interceptAsset(request.url)
+                    }
                 })
             } catch (_: Exception) {}
         }
@@ -479,7 +524,7 @@ class MainActivity : Activity() {
                 mediaPlaybackRequiresUserGesture = false
                 javaScriptCanOpenWindowsAutomatically = true
                 setSupportMultipleWindows(true)
-                cacheMode = if (isOnline()) WebSettings.LOAD_DEFAULT else WebSettings.LOAD_CACHE_ELSE_NETWORK
+                cacheMode = WebSettings.LOAD_DEFAULT
             }
 
             try {
@@ -500,13 +545,28 @@ class MainActivity : Activity() {
                     return handleExternalUrl(Uri.parse(url))
                 }
 
+                override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
+                    val uri = request?.url ?: return null
+                    return interceptAsset(uri) ?: super.shouldInterceptRequest(view, request)
+                }
+
+                @Deprecated("Deprecated in Java")
+                override fun shouldInterceptRequest(view: WebView?, url: String?): WebResourceResponse? {
+                    if (url == null) return null
+                    return interceptAsset(Uri.parse(url)) ?: super.shouldInterceptRequest(view, url)
+                }
+
                 override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
                     super.onReceivedError(view, request, error)
                     if (request?.isForMainFrame == true) {
-                        val desc = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                            error?.description?.toString() ?: "Falha de conexão"
-                        } else "Falha de conexão"
-                        showOfflineScreen(view?.url ?: (baseUrl + targetPath), desc)
+                        try {
+                            view?.loadUrl("file:///android_asset/www$targetPath")
+                        } catch (_: Exception) {
+                            val desc = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                error?.description?.toString() ?: "Falha de conexão"
+                            } else "Falha de conexão"
+                            showOfflineScreen(view?.url ?: (baseUrl + targetPath), desc)
+                        }
                     }
                 }
 
@@ -514,7 +574,11 @@ class MainActivity : Activity() {
                     super.onReceivedHttpError(view, request, errorResponse)
                     val code = errorResponse?.statusCode ?: 200
                     if (request?.isForMainFrame == true && code >= 400) {
-                        showOfflineScreen(view?.url ?: (baseUrl + targetPath), "HTTP $code: Página não encontrada ou erro no servidor")
+                        try {
+                            view?.loadUrl("file:///android_asset/www$targetPath")
+                        } catch (_: Exception) {
+                            showOfflineScreen(view?.url ?: (baseUrl + targetPath), "HTTP $code: Página não encontrada ou erro no servidor")
+                        }
                     }
                 }
             }

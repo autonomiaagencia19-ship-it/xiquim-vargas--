@@ -16,16 +16,14 @@ object Api {
             isConfiguredByUser = true
         } else {
             val buildUrl = BuildConfig.API_BASE_URL.trimEnd('/')
-            base = buildUrl
-            isConfiguredByUser = !buildUrl.contains("10.0.2.2") &&
-                    !buildUrl.contains("localhost") &&
-                    !buildUrl.contains("127.0.0.1")
+            base = if (buildUrl.isNotBlank() && !buildUrl.contains("10.0.2.2")) buildUrl else "https://xiquim-vargas-erp.onrender.com"
+            isConfiguredByUser = true
         }
     }
 
-    fun isConfigured(): Boolean = isConfiguredByUser
+    fun isConfigured(): Boolean = true
 
-    fun getBaseUrl(): String = base ?: BuildConfig.API_BASE_URL.trimEnd('/')
+    fun getBaseUrl(): String = base ?: "https://xiquim-vargas-erp.onrender.com"
 
     fun sanitizeUrl(raw: String): String {
         var clean = raw.trim().trimEnd('/')
