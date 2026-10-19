@@ -1,77 +1,96 @@
 ================================================================================
 PACOTE DE ENTREGA — AUTONOMIA SYSTEMS ERP (XIQUIM VARGAS)
-Versão: 2.2.1  ·  Data de Homologação: Outubro de 2026
+Versão: 2.2.1 / 1.8.2 Delivery Hardened  ·  Data de Homologação: Outubro de 2026
 Classificação: Documento Oficial de Engenharia e Operações
+Ambiente Oficial de Produção: https://xiquim-vargas-erp.onrender.com
+Suíte Mobile Nativa: 4 APKs Android v1.8.3 (100% Offline / Ícone HD Oficial)
 ================================================================================
 
 Este pacote reúne a documentação técnica, operacional, de governança e arquitetural
 do ERP AutonomIA para a operação comercial e logística do Xiquim Vargas.
 
-Todos os documentos foram atualizados em nível executivo e de engenharia detalhada,
-espelhando com exatidão o estado vigente do sistema, incluindo:
+Todos os documentos foram completamente atualizados para espelhar com exatidão o
+estado vigente do sistema em produção:
+
+• 4 Aplicativos Nativos Android (v1.8.3 / Build 5) — 100% Offline:
+  - XiquimVargas-Vendedor-1.8.3.apk (Vendas externas, catálogo e clientes)
+  - XiquimVargas-Motorista-1.8.3.apk (Entregas, rotas, WhatsApp e comprovantes)
+  - XiquimVargas-PDV-1.8.3.apk (Ponto de venda e frente de caixa balcão)
+  - XiquimVargas-TorreControle-1.8.3.apk (Gestão central, expedição e estoques)
+  Disponíveis na pasta /dist-apks/ e compilados via Gradle 9.6.0 com Java 17 LTS.
+  Abertura instantânea (~0.05s) mesmo em Modo Avião via interceptação nativa de assets
+  embutidos (WebViewAssetLoader / shouldInterceptRequest), sem tela de bloqueio de rede.
+  URL fixa de produção embutida: https://xiquim-vargas-erp.onrender.com.
+  Ícone HD oficial institucional integrado: 01_Logo_Xiquim_Vargas_HD.png.
+
+• Catálogo Homologado e Banco Limpo de Inauguração:
+  Base oficial higienizada para início imediato da operação:
+  - 626 produtos ativos no catálogo comercial com fotos e categorias.
+  - Estoque configurado exatamente em 100.000 unidades por produto (62.600.000 un totais).
+  - Limpeza completa de pedidos de teste, rotas fictícias e movimentações temporárias.
+  - 118 operadores/usuários e o cliente padrão 'CLIENTE-BALCAO' preservados.
+  - Proteção de backups reforçada no .gitignore para isolamento absoluto de dados.
+
+• Identidade Visual e Interface do Vendedor:
+  Subtítulos e identificadores operacionais padronizados no tom Laranja Institucional
+  (#FD5E02) com fonte negrito 700 ("Beatriz Alvarenga · Vendas do mês", etc.).
+  Cache PWA dos painéis web atualizado para a versão 1.8.12.
+
+• Infraestrutura em Nuvem (Render PaaS):
+  Hospedado em https://xiquim-vargas-erp.onrender.com com disco persistente de 10GB
+  montado em /var/data (STORAGE_DIR=/var/data). Política de deploy preserva integralmente
+  os dados persistidos sem sobrescrita no bootstrap.
 
 • Sincronização em Tempo Real (SSE + BroadcastChannel):
-  Reatividade completa de interfaces sem recarregamento de página em todos os módulos
-  (Torre de Controle, PDV/Caixa, Vendedor Externo, Loja Online e Motorista).
+  Reatividade completa de interfaces sem recarregamento de página em todos os módulos.
 
-• Operação Logística e App do Motorista:
-  Comunicação direta com clientes de cada parada via WhatsApp pré-formatado e ligação
-  telefônica rápida, protocolo de insucesso de entrega com seleção de motivo padronizado,
-  observação de contingência, reversão automática de pedidos para a fila de separação
-  (desfazendo contadores e liberando itens para novo carregamento) e Painel de Pedidos
-  Retornados na Torre de Controle.
-
-• Gestão Comercial e Tabelas de Preço:
-  Governança de preços diferenciados por canal e tabelas exclusivas por cliente corporativo.
-
-• Gestão de Compras e Inbound:
-  Cadastro e qualificação de fornecedores, ordens de compra e conferência física em doca
-  com entrada automatizada no estoque.
-
-• Inteligência Comercial (CRM RFM):
-  Matriz de segmentação automática de clientes por Recência, Frequência e Valor Monetário.
-
-• Garantia de Qualidade e Homologação:
-  17 suítes completas de testes de integração e 73 testes funcionais com 100% de aprovação.
+• Logística e Operação do Motorista:
+  Comunicação direta com clientes via WhatsApp e ligação rápida, protocolo de insucesso
+  de entrega com reversão automática para separação e painel de pedidos retornados.
 
 --------------------------------------------------------------------------------
 ÍNDICE DE DOCUMENTOS DO PACOTE (PASTA xiquimvargasmanuais)
+Disponíveis em formato Microsoft Word (.docx) e Markdown (.md)
 --------------------------------------------------------------------------------
 
 00_LEIA-ME.txt
-   Índice, sumário executivo do pacote e notas de versão da release 2.2.1.
+   Índice, sumário executivo do pacote e notas de versão da release vigente.
 
-01_Manual_de_Operacoes_AutonomIA_ERP_2.2.1.docx
-   Guia operacional de uso diário cobrindo Torre de Controle, PDV, Vendedor Móvel,
-   Loja Online, Logística, Contato de Motoristas e Painel de Pedidos Retornados.
+01_Manual_de_Operacoes_AutonomIA_ERP_2.2.1.docx / .md
+   Guia operacional de uso diário: Torre de Controle, PDV Balcão, Vendedor Móvel,
+   Loja Online, Logística de Entregas e o uso dos 4 APKs Nativos 100% Offline.
 
-02_Runbook_Operacional_AutonomIA_ERP_2.2.1.docx
+02_Runbook_Operacional_AutonomIA_ERP_2.2.1.docx / .md
    Rotinas de abertura/fechamento de turno, separação, expedição de rotas, protocolo
-   de devoluções físicas, conferência de doca (inbound) e plano de contingência.
+   de devoluções físicas, contingência e distribuição dos 4 APKs da pasta /dist-apks/.
 
-03_Engineering_Handoff_AutonomIA_ERP_2.2.1.docx
-   Arquitetura de software, engine de SSE, modelo transacional SQLite WAL, apps Android
-   nativos com outbox offline-first e invariantes de segurança e concorrência.
+03_Engineering_Handoff_AutonomIA_ERP_2.2.1.docx / .md
+   Arquitetura de software, engine SSE, modelo transacional SQLite WAL, os 4 apps
+   Android nativos com interceptação local de assets e invariantes de segurança.
 
-04_Deploy_Render_Backup_AutonomIA_ERP_2.2.1.docx
-   Blueprint de publicação no Render PaaS, topologia de disco persistente (STORAGE_DIR),
-   variáveis de ambiente, streaming SSE e política de backup com checkpoint de WAL.
+04_Deploy_Render_Backup_AutonomIA_ERP_2.2.1.docx / .md
+   Blueprint de publicação no Render PaaS (https://xiquim-vargas-erp.onrender.com),
+   topologia do disco de 10GB em /var/data, preservação de dados e rotinas de backup.
 
-05_Catalogo_API_AutonomIA_ERP_2.2.1.docx
+05_Catalogo_API_AutonomIA_ERP_2.2.1.docx / .md
    Referência completa de endpoints REST, contratos de requisição/resposta, eventos SSE,
    rotas de insucesso logístico (/api/logistics/orders/:oid/fail) e doca de compras.
 
-06_Matriz_Acessos_Responsabilidades_AutonomIA_ERP_2.2.1.docx
+06_Matriz_Acessos_Responsabilidades_AutonomIA_ERP_2.2.1.docx / .md
    Perfis de usuário (Admin, Vendedor, Caixa, Motorista, Expedição, Cliente Web),
-   matriz granular de permissões e matriz RACI das operações corporativas.
+   mapeamento com os 4 APKs nativos dedicados e matriz RACI das operações.
 
-07_Relatorio_Validacao_Fluxos_AutonomIA_ERP_2.2.1.docx
-   Evidências de qualidade, homologação das 17 suítes de testes de integração (73 testes
-   aprovados), validação E2E dos fluxos omni-channel e certificação da release.
+07_Relatorio_Validacao_Fluxos_AutonomIA_ERP_2.2.1.docx / .md
+   Evidências de qualidade, homologação das suítes de testes automatizados, validação
+   dos 4 APKs (modo avião e offline) e certificação do banco limpo com 626 SKUs.
 
-08_Plano_Transicao_e_Aceite_AutonomIA_ERP_2.2.1.docx
-   Roteiro de migração, operação assistida (go-live), governança de suporte pós-entrega,
-   critérios formais de homologação e termo de aceite assinado pelas partes.
+08_Plano_Transicao_e_Aceite_AutonomIA_ERP_2.2.1.docx / .md
+   Roteiro de migração, operação assistida (go-live), homologação da esteira de APKs,
+   critérios formais de aceitação contratual e termo de aceite assinado.
+
+09_Raio_X_Engenharia_AutonomIA_ERP_2.2.1.docx / .md
+   Raio-X exaustivo de arquitetura: módulos, topologia de clientes, 32 tabelas, 106+
+   rotas REST, máquinas de estado, interceptação de assets offline e transações.
 
 --------------------------------------------------------------------------------
 AutonomIA Systems · Sistemas Inteligentes e Arquitetura Empresarial
