@@ -679,7 +679,7 @@ class MainActivity : Activity() {
                 return true
             }
             if (currentWebView != null) {
-                configScreen()
+                moveTaskToBack(true)
                 return true
             }
         }

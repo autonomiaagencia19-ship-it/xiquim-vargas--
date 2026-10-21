@@ -11,13 +11,17 @@ object Api {
     fun init(context: Context) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val saved = prefs.getString(KEY, null)?.trim()?.trimEnd('/')
-        if (!saved.isNullOrBlank()) {
+        if (!saved.isNullOrBlank() && !saved.contains("10.0.2.2") && !saved.contains("localhost") && !saved.contains("127.0.0.1")) {
             base = saved
             isConfiguredByUser = true
         } else {
             val buildUrl = BuildConfig.API_BASE_URL.trimEnd('/')
-            base = if (buildUrl.isNotBlank() && !buildUrl.contains("10.0.2.2")) buildUrl else "https://xiquim-vargas-erp.onrender.com"
+            val defaultUrl = if (buildUrl.isNotBlank() && !buildUrl.contains("10.0.2.2") && !buildUrl.contains("localhost") && !buildUrl.contains("127.0.0.1")) buildUrl else "https://xiquim-vargas-erp.onrender.com"
+            base = defaultUrl
             isConfiguredByUser = true
+            if (saved != null) {
+                prefs.edit().putString(KEY, defaultUrl).apply()
+            }
         }
     }
 

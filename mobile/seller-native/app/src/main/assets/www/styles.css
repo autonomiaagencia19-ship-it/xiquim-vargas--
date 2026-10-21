@@ -504,18 +504,238 @@ h1{font-size:32px!important}h2{font-size:28px!important}h3{font-size:22px!import
 
 
 /* =========================================
-   Mobile UI Fixes (Max-width 520px)
+   Seller Product Card Quantity Stepper
    ========================================= */
-@media (max-width: 520px) {
-  /* Fix squished PDV rows */
+.seller-card-qty-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+.seller-card-qty-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.seller-qty-stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f8fafc;
+  flex: 1;
+  height: 38px;
+}
+.seller-qty-stepper button {
+  width: 38px;
+  height: 100%;
+  border: 0;
+  background: #f1f5f9;
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background .15s;
+}
+.seller-qty-stepper button:hover {
+  background: #e2e8f0;
+}
+.seller-qty-stepper button:active {
+  background: #cbd5e1;
+}
+.seller-qty-stepper input {
+  flex: 1;
+  width: 100%;
+  min-width: 44px;
+  height: 100%;
+  border: 0;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+  background: transparent;
+  outline: none;
+  -moz-appearance: textfield;
+}
+.seller-qty-stepper input::-webkit-outer-spin-button,
+.seller-qty-stepper input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* =========================================
+   PDV / Caixa Order List & Controls
+   ========================================= */
+.pdv-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #26323f;
+  background: transparent;
+}
+.pdv-row-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+.pdv-row-title {
+  flex: 1;
+  min-width: 0;
+}
+.pdv-row-title strong {
+  display: block;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.3;
+}
+.pdv-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.pdv-row-totals {
+  display: flex;
+  align-items: baseline;
+  text-align: right;
+  min-width: 85px;
+  justify-content: flex-end;
+}
+.qty-control {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #334765;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0d1724;
+}
+.qty-control button {
+  width: 38px;
+  height: 36px;
+  background: #192638;
+  border: 0;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background .15s ease;
+}
+.qty-control button:active {
+  background: var(--xv-orange);
+}
+.qty-control span {
+  min-width: 40px;
+  text-align: center;
+  padding: 0 4px;
+  line-height: 36px;
+  font-weight: 800;
+  font-size: 15px;
+  color: #fff;
+  background: #0a121d;
+}
+.pdv-subtotal {
+  color: var(--xv-orange);
+  font-size: 16px;
+  font-weight: 900;
+}
+.pdv-btn-remove {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid #4a2529;
+  background: #2a1518;
+  color: #ff6b6b;
+  font-size: 14px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background .15s ease;
+}
+.pdv-btn-remove:hover {
+  background: #b42318;
+  color: #fff;
+}
+
+/* =========================================
+   Mobile UI Fixes (Max-width 768px & 520px)
+   ========================================= */
+@media (max-width: 768px) {
+  /* PDV Mobile: botões de aumentar/diminuir espaçosos e confortáveis para o dedo */
   .pdv-row {
-    grid-template-columns: 1fr auto !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    padding: 14px 12px !important;
+    background: #0c1521 !important;
+    border-radius: 12px !important;
+    border: 1px solid #23354b !important;
+    margin-bottom: 8px !important;
+  }
+  .pdv-row-header {
+    width: 100% !important;
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
     gap: 10px !important;
-    align-items: center;
   }
-  .pdv-row .num, .pdv-row .qty-control, .pdv-row .actions {
-    grid-column: auto;
+  .pdv-row-header .pdv-btn-remove {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 16px !important;
+    flex-shrink: 0 !important;
   }
+  .pdv-row-actions {
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    border-top: 1px solid #1a2737 !important;
+    padding-top: 10px !important;
+    margin-top: 2px !important;
+  }
+  .qty-control {
+    border-color: #3f5573 !important;
+    height: 44px !important;
+    border-radius: 10px !important;
+  }
+  .qty-control button {
+    width: 48px !important;
+    height: 44px !important;
+    font-size: 22px !important;
+    font-weight: 900 !important;
+    background: #1f334d !important;
+  }
+  .qty-control button:active {
+    background: var(--xv-orange) !important;
+  }
+  .qty-control span {
+    min-width: 50px !important;
+    line-height: 44px !important;
+    font-size: 17px !important;
+    font-weight: 900 !important;
+  }
+  .pdv-subtotal {
+    font-size: 18px !important;
+    font-weight: 900 !important;
+  }
+}
+@media (max-width: 520px) {
 
   /* Make tables readable */
   .tablewrap table {

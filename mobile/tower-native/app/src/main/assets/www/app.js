@@ -2771,8 +2771,9 @@ async function logistics(v){
   <div id="logisticsModalityDashboard" class="panel" style="display:none; padding-bottom:80px; position:relative; z-index:40;">
     <div id="logisticsModalityContent"></div>
     <div style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--xv-panel,#101d2e); padding:10px 20px; border-radius:30px; box-shadow:0 10px 25px rgba(0,0,0,0.35); z-index:999; display:flex; flex-wrap:wrap; justify-content:center; gap:10px; width:max-content; max-width:90vw; border:1px solid var(--border)">
-     <button class="btn primary" onclick="generateLoadingList()">Gerar lista</button>
-     <button class="btn" onclick="makeRouteModal()">Gerar rota</button>
+     <button class="btn" onclick="generateLoadingList()">📋 Gerar lista</button>
+     <button class="btn good" style="background:#059669; border-color:#059669; font-weight:700" onclick="completeOrdersWithoutDriver()">✓ Concluir sem motorista</button>
+     <button class="btn primary" onclick="makeRouteModal()">🚚 Gerar rota</button>
     </div>
   </div>
 
@@ -3092,6 +3093,8 @@ window.updateDelivSelectionCounter = function(){
   }
   if(btnRoute) btnRoute.disabled = checked.length === 0;
   if(btnList) btnList.disabled = checked.length === 0;
+  const btnComplete = document.getElementById('btnDelivCompleteDirect');
+  if(btnComplete) btnComplete.disabled = checked.length === 0;
 };
 
 window.filterDelivOrdersTable = function(){
@@ -3316,6 +3319,9 @@ window.renderDeliveryRoutesDashboardContent = async function(){
               </button>
               <button class="btn" onclick="downloadDeliveryOrdersPdf()">
                 🖨️ Imprimir Pedidos em PDF
+              </button>
+              <button id="btnDelivCompleteDirect" class="btn good" style="background:#059669; border-color:#059669; font-weight:800; font-size:13px; display:inline-flex; align-items:center; gap:6px" onclick="completeOrdersWithoutDriver()">
+                ✓ Concluir Pedidos (Sem Motorista)
               </button>
               <button id="btnDelivMakeRoute" class="btn primary" style="background:#10b981; border-color:#10b981; font-weight:800; font-size:13px" onclick="makeRouteModal()">
                 🚚 Gerar Rota & Designar Motorista →
@@ -3793,9 +3799,74 @@ async function generateLoadingList(){
  try{
   const x=await api('/api/logistics/loading-list',{method:'POST',body:JSON.stringify({pedido_ids:ids,vendedor:seller})});
   const sellerName = seller || x.vendedor || '';
-  modal('Lista de carregamento',`<div class="panel" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px"><div><strong>Produtos para carregamento</strong>${sellerName?`<div style="font-size:13px; color:var(--xv-primary,#fd5e02); margin-top:2px;">👤 <strong>Vendedor:</strong> ${esc(sellerName)}</div>`:''}</div><button class="btn primary" onclick="downloadAuthPost('/api/logistics/loading-list/pdf',{pedido_ids:parseJsonArg('${jsonArg(ids)}'),vendedor:parseJsonArg('${jsonArg(sellerName)}')},'Lista_Carregamento.pdf')">Gerar PDF</button></div> <div style="margin-top:10px;text-align:right"><button class="btn" onclick="downloadAuthPost('/api/logistics/loading-list/orders-pdf',{pedido_ids:parseJsonArg('${jsonArg(ids)}')},'Pedidos_Carregamento.pdf')">🖨️ Imprimir Pedidos em PDF</button></div><div class="tablewrap"><table class="table"><thead><tr><th style="width:140px">Quantidade</th><th>Descrição do Produto</th></tr></thead><tbody>${x.produtos.map(p=>`<tr><td style="width:140px;font-size:1.15em"><strong style="color:var(--xv-primary,#fd5e02)">${p.quantidade_total} un</strong></td><td style="font-size:1.05em;font-weight:750">${esc(p.produto_nome)}</td></tr>`).join('')}</tbody></table></div>`);
+  modal('Lista de carregamento',`<div class="panel" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px">
+    <div>
+      <strong>Produtos para carregamento</strong>
+      ${sellerName?`<div style="font-size:13px; color:var(--xv-primary,#fd5e02); margin-top:2px;">👤 <strong>Vendedor:</strong> ${esc(sellerName)}</div>`:''}
+      <div style="font-size:12px; color:var(--muted); margin-top:2px;">${ids.length} pedido(s) selecionado(s) · Total: ${x.total_produtos || 0} unidades</div>
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap">
+      <button class="btn primary" onclick="downloadAuthPost('/api/logistics/loading-list/pdf',{pedido_ids:parseJsonArg('${jsonArg(ids)}'),vendedor:parseJsonArg('${jsonArg(sellerName)}')},'Lista_Carregamento.pdf')">Gerar PDF</button>
+      <button class="btn" onclick="downloadAuthPost('/api/logistics/loading-list/orders-pdf',{pedido_ids:parseJsonArg('${jsonArg(ids)}')},'Pedidos_Carregamento.pdf')">🖨️ Imprimir Pedidos em PDF</button>
+    </div>
+  </div>
+  <div class="tablewrap"><table class="table"><thead><tr><th style="width:140px">Quantidade</th><th>Descrição do Produto</th></tr></thead><tbody>${x.produtos.map(p=>`<tr><td style="width:140px;font-size:1.15em"><strong style="color:var(--xv-primary,#fd5e02)">${p.quantidade_total} un</strong></td><td style="font-size:1.05em;font-weight:750">${esc(p.produto_nome)}</td></tr>`).join('')}</tbody></table></div>
+  <div class="panel" style="margin-top:16px; margin-bottom:0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; border-top:1px solid var(--border)">
+    <div style="font-size:13px; color:var(--muted)">
+      Finalização dos pedidos desta lista:
+    </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap">
+      <button class="btn good" style="background:#059669; border-color:#059669; font-weight:800; display:inline-flex; align-items:center; gap:6px" onclick="completeOrdersWithoutDriver(parseJsonArg('${jsonArg(ids)}'))">
+        ✓ Concluir Pedidos Sem Motorista
+      </button>
+      <button class="btn primary" style="background:#10b981; border-color:#10b981; font-weight:800; display:inline-flex; align-items:center; gap:6px" onclick="closeModal(); makeRouteModal()">
+        🚚 Prosseguir com Motorista →
+      </button>
+    </div>
+  </div>`);
  }catch(e){toast(e.message)}
 }
+
+window.completeOrdersWithoutDriver = async function(idsArg){
+  let ids = [];
+  if(Array.isArray(idsArg) && idsArg.length) {
+    ids = idsArg;
+  } else if(typeof idsArg === 'string' && idsArg.trim()) {
+    ids = idsArg.split(',').map(s=>s.trim()).filter(Boolean);
+  } else {
+    ids = [...document.querySelectorAll('.routeOrder:checked, .load-order:checked')].map(x=>x.value);
+    ids = [...new Set(ids)];
+  }
+  if(!ids.length) return toast('Selecione os pedidos que deseja concluir.');
+  
+  if(!confirm(`Deseja realmente CONCLUIR ${ids.length} pedido(s) selecionado(s) sem enviar ao motorista?\n\n• As mercadorias serão baixadas do estoque definitivamente.\n• Os pedidos passarão para o status CONCLUÍDO.\n• Nenhuma rota será criada para motoristas.`)){
+    return;
+  }
+  
+  try {
+    toast(`Concluindo ${ids.length} pedido(s)...`);
+    const res = await api('/api/logistics/orders/complete-direct', {
+      method: 'POST',
+      body: JSON.stringify({ pedido_ids: ids })
+    });
+    closeModal();
+    toast(`✓ ${res.concluidos || ids.length} pedido(s) concluído(s) com sucesso sem envio a motorista!`);
+    
+    Realtime.emit('orders_changed', { ids, status: 'CONCLUIDO' });
+    Realtime.emit('stock_changed');
+    Realtime.emit('dashboard_changed');
+    
+    if(document.getElementById('deliveryRoutesDashboard')?.style.display === 'block'){
+      await renderDeliveryRoutesDashboardContent();
+    } else if(document.getElementById('logisticsModalityDashboard')?.style.display === 'block'){
+      window.renderModalityDashboard(window._currentLogisticsGrupoKey||'TODOS', window._currentLogisticsSellerFilter||'');
+    } else {
+      show('logistics');
+    }
+  } catch(e) {
+    toast(e.message || 'Erro ao concluir pedidos', true);
+  }
+};
 async function makeRouteModal(){
     const ids=[...document.querySelectorAll('.routeOrder:checked')].map(x=>x.value);
     if(!ids.length)return toast('Selecione os pedidos para roteirizar.');
