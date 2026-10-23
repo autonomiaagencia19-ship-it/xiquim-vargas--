@@ -446,12 +446,24 @@ class MainActivity : Activity() {
             }
         }
 
-        if (path.endsWith(".pdf") || uri.getQueryParameter("format") == "pdf" || uri.getQueryParameter("export") == "pdf") {
+        val pathLower = path.lowercase()
+        val uriStr = uri.toString().lowercase()
+        if (pathLower.endsWith(".pdf") || pathLower.contains("/pdf") || uriStr.contains("/pdf") || uri.getQueryParameter("format") == "pdf" || uri.getQueryParameter("export") == "pdf") {
             try {
-                startActivity(Intent(Intent.ACTION_VIEW, uri))
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, "application/pdf")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(Intent.createChooser(intent, "Visualizar ou Imprimir PDF"))
                 return true
             } catch (_: Exception) {
-                return false
+                try {
+                    val browserIntent = Intent(Intent.ACTION_VIEW, uri)
+                    startActivity(browserIntent)
+                    return true
+                } catch (_: Exception) {
+                    return false
+                }
             }
         }
 
@@ -532,6 +544,11 @@ class MainActivity : Activity() {
                 cookieManager.setAcceptCookie(true)
                 cookieManager.setAcceptThirdPartyCookies(this, true)
             } catch (_: Exception) {}
+
+            addJavascriptInterface(AndroidAppBridge(), "AndroidApp")
+            setDownloadListener { url, _, _, _, _ ->
+                handleExternalUrl(Uri.parse(url))
+            }
 
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
@@ -684,5 +701,42 @@ class MainActivity : Activity() {
             }
         }
         return super.onKeyDown(keyCode, event)
+    }
+
+    inner class AndroidAppBridge {
+        @JavascriptInterface
+        fun openPdf(rawUrl: String, filename: String) {
+            runOnUiThread {
+                try {
+                    val uri = Uri.parse(rawUrl)
+                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(uri, "application/pdf")
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    startActivity(Intent.createChooser(intent, "Visualizar ou Imprimir PDF"))
+                } catch (e: Exception) {
+                    try {
+                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(rawUrl)))
+                    } catch (e2: Exception) {
+                        Toast.makeText(this@MainActivity, "Nenhum aplicativo de PDF encontrado.", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+
+        @JavascriptInterface
+        fun printWebPage() {
+            runOnUiThread {
+                try {
+                    val printManager = getSystemService(Context.PRINT_SERVICE) as? android.print.PrintManager
+                    val printAdapter = currentWebView?.createPrintDocumentAdapter("Cupom_Fiscal_Xiquim_Vargas")
+                    if (printManager != null && printAdapter != null) {
+                        printManager.print("Cupom_Fiscal_Xiquim_Vargas", printAdapter, android.print.PrintAttributes.Builder().build())
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(this@MainActivity, "Erro ao acionar impressora: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 }
