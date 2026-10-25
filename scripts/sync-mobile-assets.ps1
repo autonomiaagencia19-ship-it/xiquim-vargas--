@@ -22,6 +22,7 @@ foreach ($dest in $apps) {
     Copy-Item -Path "public\motorista.html" -Destination "$dest\motorista.html" -Force
     Copy-Item -Path "public\pdv.html" -Destination "$dest\pdv.html" -Force
     Copy-Item -Path "public\admin.html" -Destination "$dest\admin.html" -Force
+    Copy-Item -Path "public\loja.html" -Destination "$dest\loja.html" -Force
     
     # Copy assets folder (logos, brands)
     if (Test-Path "public\assets") {

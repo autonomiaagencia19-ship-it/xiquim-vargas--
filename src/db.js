@@ -134,6 +134,9 @@ if(!hasColumn('audit_logs','integrity_hash')) db.exec("ALTER TABLE audit_logs AD
 if(!hasColumn('tabela_preco_itens','quantidade_minima')) db.exec("ALTER TABLE tabela_preco_itens ADD COLUMN quantidade_minima INTEGER NOT NULL DEFAULT 1");
 for(const [table,column] of [['pedidos','pdf_path'],['comprovantes_entrega','arquivo_path'],['produto_imagens','arquivo_path']]){for(const row of all(`SELECT id,${column} value FROM ${table} WHERE ${column} IS NOT NULL`)){if(path.isAbsolute(String(row.value))){const relative=path.relative(STORAGE,String(row.value));if(relative&&relative!=='..'&&!relative.startsWith('..'+path.sep))run(`UPDATE ${table} SET ${column}=? WHERE id=?`,[relative.split(path.sep).join('/'),row.id])}}}
 if(!hasColumn('produtos','esgotado')) db.exec("ALTER TABLE produtos ADD COLUMN esgotado INTEGER NOT NULL DEFAULT 0");
+if(!hasColumn('produtos','preco_custo')) db.exec("ALTER TABLE produtos ADD COLUMN preco_custo REAL NOT NULL DEFAULT 0");
+if(!hasColumn('pedido_itens','custo_unitario_aplicado')) db.exec("ALTER TABLE pedido_itens ADD COLUMN custo_unitario_aplicado REAL NOT NULL DEFAULT 0");
+
 db.exec(`
 CREATE TABLE IF NOT EXISTS rotas_config(id TEXT PRIMARY KEY,nome TEXT NOT NULL,dia_semana INTEGER NOT NULL CHECK(dia_semana BETWEEN 1 AND 6),ativo INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS rota_bairros(id TEXT PRIMARY KEY,rota_config_id TEXT NOT NULL REFERENCES rotas_config(id) ON DELETE CASCADE,bairro TEXT NOT NULL,ordem INTEGER NOT NULL DEFAULT 1,UNIQUE(rota_config_id,bairro));
@@ -143,6 +146,21 @@ CREATE INDEX IF NOT EXISTS idx_rota_bairros_bairro ON rota_bairros(bairro);
 CREATE INDEX IF NOT EXISTS idx_vendedor_rotas_dia ON vendedor_rotas(vendedor_id,dia_semana);
 CREATE INDEX IF NOT EXISTS idx_clientes_bairro ON clientes(bairro);
 CREATE INDEX IF NOT EXISTS idx_pedidos_pagamento ON pedidos(pagamento_status,forma_pagamento);
+
+CREATE TABLE IF NOT EXISTS produto_custos_historico(
+  id TEXT PRIMARY KEY,
+  produto_id TEXT NOT NULL REFERENCES produtos(id) ON DELETE CASCADE,
+  custo REAL NOT NULL,
+  tipo_ajuste TEXT NOT NULL CHECK(tipo_ajuste IN ('COMPRA','AJUSTE_MANUAL','INVENTARIO','INICIAL')),
+  origem_id TEXT,
+  motivo TEXT,
+  data_inicio TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  data_fim TEXT,
+  usuario_id TEXT REFERENCES usuarios(id)
+);
+CREATE INDEX IF NOT EXISTS idx_prod_custos_prod ON produto_custos_historico(produto_id, data_inicio, data_fim);
+
+
 
 CREATE TABLE IF NOT EXISTS idempotency_keys(
   id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES usuarios(id), route TEXT NOT NULL,
