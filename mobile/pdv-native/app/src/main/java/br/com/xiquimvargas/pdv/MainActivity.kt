@@ -137,7 +137,7 @@ class MainActivity : Activity() {
                     readTimeout = 4000
                     instanceFollowRedirects = true
                     requestMethod = "GET"
-                    setRequestProperty("User-Agent", "XiquimVargasMobileApp/1.8.2")
+                    setRequestProperty("User-Agent", "XiquimVargasMobileApp/1.8.3")
                 }
                 val code = conn.responseCode
                 if (code in 200..499) {
@@ -737,6 +737,21 @@ class MainActivity : Activity() {
                     Toast.makeText(this@MainActivity, "Erro ao acionar impressora: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
+        }
+
+        @JavascriptInterface
+        fun getBaseUrl(): String {
+            return Api.getBaseUrl()
+        }
+
+        @JavascriptInterface
+        fun getRole(): String {
+            return "cashier"
+        }
+
+        @JavascriptInterface
+        fun getAppVersion(): String {
+            return BuildConfig.VERSION_NAME
         }
     }
 }

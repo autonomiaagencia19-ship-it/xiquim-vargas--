@@ -80,7 +80,8 @@ async function syncAdminOutbox(){
 }
 window.syncAdminOutbox=syncAdminOutbox;
 
-const API = (typeof window !== 'undefined' && (window.location.protocol === 'file:' || !window.location.origin || window.location.origin === 'null')) ? 'https://xiquim-vargas-erp.onrender.com' : '';let token=localStorage.getItem('xv_token');let me=null;const $=s=>document.querySelector(s);
+const NATIVE_BASE = (typeof window !== 'undefined' && window.AndroidApp && typeof window.AndroidApp.getBaseUrl === 'function') ? window.AndroidApp.getBaseUrl() : '';
+const API = (typeof window !== 'undefined' && (window.location.protocol === 'file:' || !window.location.origin || window.location.origin === 'null')) ? (NATIVE_BASE || 'https://xiquim-vargas-erp.onrender.com') : '';let token=localStorage.getItem('xv_token');let me=null;const $=s=>document.querySelector(s);
 function jsonArg(value){const bytes=new TextEncoder().encode(JSON.stringify(value));let binary='';for(const byte of bytes)binary+=String.fromCharCode(byte);return btoa(binary)}
 function parseJsonArg(encoded){return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(encoded),c=>c.charCodeAt(0))))}
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -188,8 +189,9 @@ async function refreshCurrentViewSilently(eventType,payload){
         const d=await api('/api/dashboard');
         window._dashboardData=d;
         if(typeof window.renderModalidadeRanking==='function') window.renderModalidadeRanking(window._currentModalidadePeriodo||'geral');
+        if(typeof window.renderTopProdutos==='function'&&!window._currentTopProdutosQuery) window.renderTopProdutos(window._currentTopProdutosPeriodo||'geral','');
         const kpis=document.querySelectorAll('.card.kpi .v');
-        const vals=[d.pedidosHoje,d.pendentes,d.separacao,d.rota,d.concluidos,brl(d.faturamento),d.produtos,d.criticos,d.clientes,d.vendedores];
+        const vals=[d.pedidosHoje,d.pendentes,d.separacao,d.rota,d.concluidos,brl(d.faturamento),brl(d.lucroReal||0),d.produtos,d.criticos,d.clientes,d.vendedores];
         if(kpis.length===vals.length){
           kpis.forEach((el,idx)=>{
             const nextStr=String(vals[idx]);
@@ -462,14 +464,609 @@ const menu=[['Visão Geral','home'],['Catálogo','products'],['Tabelas de preço
 function shell(){const dot='•';const groups=[['Operação',[[dot,'Visão Geral','home'],[dot,'Pedidos','orders'],[dot,'Catálogo','products'],[dot,'Loja Online','store'],[dot,'Estoque Inteligente','stock'],[dot,'Clientes & CRM','clients'],[dot,'Logística','logistics']]],['Suprimentos',[[dot,'Fornecedores','suppliers'],[dot,'Recebimento de Mercadorias','inbound']]],['Gestão',[[dot,'Vendedores','sellers'],[dot,'Usuários','users'],[dot,'Tabelas de preço','prices'],[dot,'Relatórios','reports']]],['Governança',[[dot,'Auditoria','audit'],[dot,'IA Administrativa','ai']]]];return `<div class="app"><aside class="sidebar"><img class="xv-logo" src="/assets/institucional/01_Logo_Xiquim_Vargas_HD.png" alt="Xiquim Vargas ERP"><div class="group">Torre de Controle</div>${groups.map(([title,items])=>`<div class="group">${title}</div><div class="nav">${items.map(([i,l,k])=>`<button data-view="${k}"><span style="width:16px;text-align:center;font-size:16px;line-height:1;display:inline-block">${i}</span>${l}</button>`).join('')}</div>`).join('')}<div class="group">Sessão</div><div class="nav"><button onclick="logout()"><span style="width:16px;text-align:center;font-size:16px;line-height:1;display:inline-block">•</span>Sair</button></div></aside><main class="main"><div class="topbar"><div class="brand-dark"><button class="mobile-back-btn btn" onclick="window.showSidebar()">← Voltar</button><div><h1 id="title">Visão Geral</h1></div></div><div class="topbar-actions"><span id="offlineIndicator" style="display:${navigator.onLine?'none':'inline-flex'};background:#e11d48;color:#fff;font-weight:700;font-size:11px;padding:3px 8px;border-radius:12px;margin-right:6px">OFFLINE</span><span class="badge">${esc(ROLE_LABELS[me?.role]||me?.role||'Administrador')}</span></div></div><div id="view"></div></main></div><div id="toast" class="toast"></div>`}
 async function render(){if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});Realtime.init((type,payload)=>refreshCurrentViewSilently(type,payload));document.body.innerHTML=shell();window.showSidebar=()=>document.querySelector('.app').classList.remove('view-open');document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{document.querySelector('.app').classList.add('view-open');show(b.dataset.view)});const h=location.hash.slice(1);if(h&&window.innerWidth<=800)document.querySelector('.app').classList.add('view-open');await show(h||'home')}
 async function show(view){document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));$('#title').textContent=({home:'Visão Geral',products:'Catálogo',stock:'Estoque Inteligente',clients:'Clientes & CRM',orders:'Pedidos',users:'Usuários',sellers:'Vendedores',logistics:'Logística',suppliers:'Fornecedores',inbound:'Recebimento de Mercadorias',reports:'Relatórios',store:'Loja Online',audit:'Auditoria',prices:'Tabelas de preço',ai:'IA Administrativa'})[view]||view;location.hash=view;const v=$('#view');v.innerHTML='<div class="panel">Carregando...</div>';try{if(view==='home')return home(v);if(view==='products')return products(v);if(view==='prices')return prices(v);if(view==='store')return storeSettings(v);if(view==='stock')return stock(v);if(view==='clients')return clients(v);if(view==='orders')return orders(v);if(view==='users')return users(v);if(view==='sellers')return sellers(v);if(view==='logistics')return logistics(v);if(view==='suppliers')return suppliers(v);if(view==='inbound')return inbound(v);if(view==='reports')return reports(v);if(view==='audit')return auditView(v);if(view==='ai')return ai(v)}catch(e){v.innerHTML=`<div class="panel">Erro: ${esc(e.message)}</div>`}}
-async function home(v){const d=await api('/api/dashboard');window._dashboardData=d;const cards=[['🛍','Pedidos hoje',d.pedidosHoje],['●','Pendentes',d.pendentes],['●','Separação',d.separacao],['🚚','Em rota',d.rota],['✓','Concluídos',d.concluidos],['R$','Faturamento',`${brl(d.faturamento)}`],['▪','Produtos',d.produtos],['!','Estoque baixo',d.criticos],['♣','Clientes',d.clientes],['♣','Vendedores',d.vendedores]];const kan=[['PENDENTE',d.pendentes,'status-pendente'],['SEPARACAO',d.separacao,'status-separacao'],['ROTA',d.rota,'status-rota'],['CONCLUIDO',d.concluidos,'status-concluido']];const top=d.topProdutos||[];const chunked=[];for(let i=0;i<top.length;i+=5)chunked.push(top.slice(i,i+5));const topKanbanHtml=chunked.length?`<div class="panel" style="margin-top:16px"><div class="panel-title"><h3>Top 20 Produtos Mais Vendidos</h3></div><div class="kanban">${chunked.map((chunk,idx)=>`<div class="kanban-col"><div class="kanban-head"><span><span class="dot" style="background:var(--xv-orange)"></span>Top ${idx*5+1} ao ${idx*5+chunk.length}</span><span class="badge">${chunk.length}</span></div>${chunk.map((p,i)=>`<div class="kanban-card" style="display:flex;gap:12px;align-items:center"><div class="catalog-product-cell">${p.foto_url?`<img class="catalog-mini-photo" src="${esc(p.foto_url)}" alt="">`:'<div class="catalog-mini-photo placeholder">XV</div>'}</div><div><strong>#${idx*5+i+1} - ${esc(p.nome)}</strong><br><small class="muted">${p.total_vendido} un vendidas</small><br><small class="orange">${brl(p.total_receita)}</small></div></div>`).join('')}</div>`).join('')}</div></div>`:'';window.renderModalidadeRanking=function(periodo='geral'){window._currentModalidadePeriodo=periodo;const db=window._dashboardData||d;const periodosMap=db.vendasPorOrigemPeriodos||{geral:db.vendasPorOrigem||[],semanal:[],mensal:[]};const rawList=periodosMap[periodo]||db.vendasPorOrigem||[];const originLabels={VENDEDOR:'Vendedor Externo',BALCAO:'Frente de Loja / Caixa',WEB:'Loja Online'};const originIcons={VENDEDOR:'👤',BALCAO:'🏪',WEB:'🛒'};const originColors={VENDEDOR:'var(--xv-orange)',BALCAO:'#4a90e2',WEB:'#2ecc71'};const originsData=rawList.reduce((acc,x)=>({...acc,[x.origem]:x}),{});const origensList=['VENDEDOR','BALCAO','WEB'].map(o=>({origem:o,label:originLabels[o],icon:originIcons[o],color:originColors[o],pedidos:Number(originsData[o]?.pedidos||0),faturamento:Number(originsData[o]?.faturamento||0)})).sort((a,b)=>b.faturamento-a.faturamento);const rankBadges=['🥇 1º Lugar','🥈 2º Lugar','🥉 3º Lugar'];const pLabels={geral:'Todo o histórico',semanal:'Últimos 7 dias',mensal:'Últimos 30 dias'};const el=document.getElementById('modalidadeRankingContainer');if(!el)return;el.innerHTML=`<div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px"><div><h3 style="margin:0">Ranking de Vendas por Modalidade</h3><p class="muted" style="margin:4px 0 0;font-size:12px">Período selecionado: <strong>${pLabels[periodo]||periodo}</strong></p></div><div class="actions" style="display:flex;gap:6px"><button class="btn ${periodo==='geral'?'primary':''}" style="font-size:12px;padding:6px 12px" onclick="renderModalidadeRanking('geral')">Geral</button><button class="btn ${periodo==='semanal'?'primary':''}" style="font-size:12px;padding:6px 12px" onclick="renderModalidadeRanking('semanal')">Semanal (7d)</button><button class="btn ${periodo==='mensal'?'primary':''}" style="font-size:12px;padding:6px 12px" onclick="renderModalidadeRanking('mensal')">Mensal (30d)</button></div></div><div class="kanban" style="margin-top:14px">${origensList.map((x,idx)=>`<div class="kanban-col"><div class="kanban-head"><span><span class="dot" style="background:${x.color}"></span>${x.label}</span><span class="badge" style="background:${idx===0?'rgba(253,94,2,0.18)':''};color:${idx===0?'#fd5e02':''}">${rankBadges[idx]}</span></div><div class="kanban-card" style="text-align:center;padding:22px;border:1px solid ${idx===0?'rgba(253,94,2,0.3)':'var(--border)'}"><div style="font-size:30px;margin-bottom:6px">${x.icon}</div><div class="v" style="font-size:22px;color:${x.color};font-weight:800">${brl(x.faturamento)}</div><div style="margin-top:8px"><span class="badge" style="font-size:11px">${x.pedidos} pedido(s)</span></div><small class="muted" style="display:block;margin-top:8px">${x.faturamento>0?`${brl(x.pedidos?x.faturamento/x.pedidos:0)} ticket médio`:'Sem vendas no período'}</small></div></div>`).join('')}</div>`};v.innerHTML=`<div class="grid">${cards.map(x=>`<div class="card kpi"><div class="kpi-title" style="font-size:19px;font-weight:850;color:#000000;margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#000;flex:0 0 10px"></span> <span>${x[1]}</span></div><div class="v">${x[2]}</div></div>`).join('')}</div><div class="panel" style="margin-top:16px"><div class="panel-title"><h3>Fluxo operacional</h3><button class="btn" onclick="show('orders')">Ver pedidos</button></div><div class="kanban kanban-orders">${kan.map(k=>`<div class="kanban-col" style="min-height:150px;display:flex;flex-direction:column"><div class="kanban-head"><span><span class="dot"></span>${k[0]}</span><span class="badge">${k[1]}</span></div><div class="kanban-card" style="flex:1;min-height:95px;margin:0;padding:18px 16px;display:flex;align-items:center;justify-content:center;text-align:center"><strong style="font-size:19px;font-weight:800;color:var(--xv-brand-navy,#0f172a);margin:0;letter-spacing:-0.2px">${k[1]} pedido(s)</strong></div></div>`).join('')}</div></div><div class="panel" id="modalidadeRankingContainer" style="margin-top:16px"></div>${topKanbanHtml}`;window.renderModalidadeRanking(window._currentModalidadePeriodo||'geral')}
+/* ==========================================================================
+   SISTEMA UNIFICADO DE FILTROS DE PERÍODO (XV_PERIOD_FILTER)
+   ========================================================================== */
+window.XV_MONTHS = [
+  { val: 1, name: 'Janeiro', abbrev: 'Jan' },
+  { val: 2, name: 'Fevereiro', abbrev: 'Fev' },
+  { val: 3, name: 'Março', abbrev: 'Mar' },
+  { val: 4, name: 'Abril', abbrev: 'Abr' },
+  { val: 5, name: 'Maio', abbrev: 'Mai' },
+  { val: 6, name: 'Junho', abbrev: 'Jun' },
+  { val: 7, name: 'Julho', abbrev: 'Jul' },
+  { val: 8, name: 'Agosto', abbrev: 'Ago' },
+  { val: 9, name: 'Setembro', abbrev: 'Set' },
+  { val: 10, name: 'Outubro', abbrev: 'Out' },
+  { val: 11, name: 'Novembro', abbrev: 'Nov' },
+  { val: 12, name: 'Dezembro', abbrev: 'Dez' }
+];
+
+window.formatDateToBrl = function(isoStr) {
+  if (!isoStr || typeof isoStr !== 'string') return '';
+  const parts = isoStr.split('-');
+  if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  return isoStr;
+};
+
+window.calculatePeriodRange = function(st) {
+  const now = new Date();
+  const curY = now.getFullYear();
+  const curM = now.getMonth() + 1;
+  const curD = now.getDate();
+
+  const mode = st?.mode || 'semana';
+  const year = parseInt(st?.year, 10) || curY;
+  const month = parseInt(st?.month, 10) || curM;
+
+  if (mode === 'dia') {
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const selectedDate = st?.date || (st?.inicio && /^\d{4}-\d{2}-\d{2}$/.test(st.inicio) ? st.inicio : todayIso);
+    const label = `Dia ${window.formatDateToBrl(selectedDate)}`;
+    return { mode: 'dia', date: selectedDate, inicio: selectedDate, fim: selectedDate, label };
+  }
+
+  if (mode === 'geral') {
+    return {
+      mode: 'geral',
+      inicio: '',
+      fim: '',
+      label: 'Todo o histórico registrado'
+    };
+  }
+
+  if (mode === 'personalizado') {
+    const inicio = st?.inicio || '';
+    const fim = st?.fim || '';
+    let label = 'Período Personalizado';
+    if (inicio && fim) {
+      label = `${window.formatDateToBrl(inicio)} até ${window.formatDateToBrl(fim)}`;
+    } else if (inicio) {
+      label = `A partir de ${window.formatDateToBrl(inicio)}`;
+    } else if (fim) {
+      label = `Até ${window.formatDateToBrl(fim)}`;
+    }
+    return { mode: 'personalizado', inicio, fim, label };
+  }
+
+  if (mode === 'mes') {
+    const mm = String(month).padStart(2, '0');
+    const lastDay = new Date(year, month, 0).getDate();
+    const inicio = `${year}-${mm}-01`;
+    const fim = `${year}-${mm}-${String(lastDay).padStart(2, '0')}`;
+    const mObj = window.XV_MONTHS[month - 1] || { name: `Mês ${month}` };
+    const label = `${mObj.name} de ${year} (${window.formatDateToBrl(inicio)} a ${window.formatDateToBrl(fim)})`;
+    return { mode: 'mes', year, month, inicio, fim, label };
+  }
+
+  if (mode === 'semana') {
+    const mm = String(month).padStart(2, '0');
+    const lastDay = new Date(year, month, 0).getDate();
+    let week = parseInt(st?.week, 10);
+    if (!week || week < 1 || week > 5) {
+      if (year === curY && month === curM) {
+        week = Math.min(5, Math.ceil(curD / 7));
+      } else {
+        week = 1;
+      }
+    }
+    const dStart = (week - 1) * 7 + 1;
+    const dEnd = Math.min(lastDay, week * 7);
+    const inicio = `${year}-${mm}-${String(dStart).padStart(2, '0')}`;
+    const fim = `${year}-${mm}-${String(dEnd).padStart(2, '0')}`;
+    const mObj = window.XV_MONTHS[month - 1] || { name: `Mês ${month}` };
+    const label = `Semana ${week} de ${mObj.name}/${year} (${window.formatDateToBrl(inicio)} a ${window.formatDateToBrl(fim)})`;
+    return { mode: 'semana', year, month, week, inicio, fim, label };
+  }
+
+  return { mode: 'geral', inicio: '', fim: '', label: 'Todo o histórico' };
+};
+
+window.getDefaultPeriodState = function() {
+  const now = new Date();
+  const curY = now.getFullYear();
+  const curM = now.getMonth() + 1;
+  const curD = now.getDate();
+  const curWeek = Math.min(5, Math.ceil(curD / 7));
+  const st = {
+    mode: 'semana',
+    year: curY,
+    month: curM,
+    week: curWeek,
+    inicio: '',
+    fim: '',
+    date: now.toISOString().slice(0, 10)
+  };
+  const calc = window.calculatePeriodRange(st);
+  st.inicio = calc.inicio;
+  st.fim = calc.fim;
+  st.label = calc.label;
+  return st;
+};
+
+window._xvFilters = window._xvFilters || {};
+
+window.renderPeriodFilterComponent = function(filterId, state, onApplyCallbackName) {
+  window._xvFilters[filterId] = Object.assign({}, window.getDefaultPeriodState(), state || {});
+  const cur = window._xvFilters[filterId];
+  const calc = window.calculatePeriodRange(cur);
+  cur.inicio = calc.inicio;
+  cur.fim = calc.fim;
+  cur.label = calc.label;
+
+  const nowYear = new Date().getFullYear();
+  const years = [nowYear + 1, nowYear, nowYear - 1, nowYear - 2, nowYear - 3];
+
+  let subControlsHtml = '';
+
+  if (cur.mode === 'dia') {
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const curDate = cur.date || cur.inicio || todayIso;
+    subControlsHtml = `
+      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:12px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="font-size:12px;color:#061a4f;font-weight:800">Dia Desejado (ex: 24/10/2026):</label>
+          <input type="date" value="${curDate}" class="field-input" style="padding:6px 12px;font-size:13px;font-weight:750;background:#ffffff;color:#061a4f;border:1px solid #cbd5e1;border-radius:7px" onchange="window.onPfcFieldChange('${filterId}','date',this.value,'${onApplyCallbackName}')">
+        </div>
+        <div class="actions" style="display:inline-flex;gap:6px">
+          <button type="button" class="btn" style="font-size:11px;padding:6px 12px;border-radius:6px;background:${curDate === todayIso ? 'var(--xv-orange,#fd5e02)' : '#ffffff'};color:${curDate === todayIso ? '#ffffff' : '#061a4f'};border:1px solid ${curDate === todayIso ? 'var(--xv-orange,#fd5e02)' : '#cbd5e1'};font-weight:800" onclick="window.onPfcFieldChange('${filterId}','date','${todayIso}','${onApplyCallbackName}')">
+            Hoje (${window.formatDateToBrl(todayIso)})
+          </button>
+          ${(()=>{
+            const yest = new Date();
+            yest.setDate(yest.getDate() - 1);
+            const yestIso = yest.toISOString().slice(0, 10);
+            return `
+              <button type="button" class="btn" style="font-size:11px;padding:6px 12px;border-radius:6px;background:${curDate === yestIso ? 'var(--xv-orange,#fd5e02)' : '#ffffff'};color:${curDate === yestIso ? '#ffffff' : '#061a4f'};border:1px solid ${curDate === yestIso ? 'var(--xv-orange,#fd5e02)' : '#cbd5e1'};font-weight:800" onclick="window.onPfcFieldChange('${filterId}','date','${yestIso}','${onApplyCallbackName}')">
+                Ontem (${window.formatDateToBrl(yestIso)})
+              </button>
+            `;
+          })()}
+        </div>
+      </div>
+    `;
+  } else if (cur.mode === 'semana') {
+    const curWeek = parseInt(cur.week, 10) || 1;
+    subControlsHtml = `
+      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:12px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <label style="font-size:12px;color:#061a4f;font-weight:800">Ano:</label>
+          <select style="background:#ffffff;color:#061a4f;border:1px solid #cbd5e1;border-radius:6px;padding:6px 10px;font-size:12px;font-weight:750" onchange="window.onPfcFieldChange('${filterId}','year',this.value,'${onApplyCallbackName}')">
+            ${years.map(y => `<option value="${y}" ${cur.year == y ? 'selected' : ''}>${y}</option>`).join('')}
+          </select>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <label style="font-size:12px;color:#061a4f;font-weight:800">Mês:</label>
+          <select style="background:#ffffff;color:#061a4f;border:1px solid #cbd5e1;border-radius:6px;padding:6px 10px;font-size:12px;font-weight:750" onchange="window.onPfcFieldChange('${filterId}','month',this.value,'${onApplyCallbackName}')">
+            ${window.XV_MONTHS.map(m => `<option value="${m.val}" ${cur.month == m.val ? 'selected' : ''}>${String(m.val).padStart(2,'0')} - ${m.name}</option>`).join('')}
+          </select>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <label style="font-size:12px;color:#061a4f;font-weight:800">Semana do Mês:</label>
+          <div class="actions" style="display:inline-flex;gap:4px">
+            ${[1,2,3,4,5].map(w => {
+              const mm = String(cur.month).padStart(2, '0');
+              const lastDay = new Date(cur.year, cur.month, 0).getDate();
+              const d1 = (w - 1) * 7 + 1;
+              const d2 = Math.min(lastDay, w * 7);
+              const isAct = curWeek === w;
+              return `<button type="button" class="btn ${isAct ? 'primary' : ''}" style="font-size:11px;padding:5px 9px;border-radius:6px;background:${isAct ? 'var(--xv-orange,#fd5e02)' : '#ffffff'};color:${isAct ? '#ffffff' : '#061a4f'};border:1px solid ${isAct ? 'var(--xv-orange,#fd5e02)' : '#cbd5e1'};font-weight:800" title="${String(d1).padStart(2,'0')}/${mm} a ${String(d2).padStart(2,'0')}/${mm}" onclick="window.onPfcFieldChange('${filterId}','week',${w},'${onApplyCallbackName}')">Sem ${w} (${String(d1).padStart(2,'0')}-${String(d2).padStart(2,'0')})</button>`;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  } else if (cur.mode === 'mes') {
+    subControlsHtml = `
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <label style="font-size:12px;color:#061a4f;font-weight:800">Ano Desejado:</label>
+          <select style="background:#ffffff;color:#061a4f;border:1px solid #cbd5e1;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:750" onchange="window.onPfcFieldChange('${filterId}','year',this.value,'${onApplyCallbackName}')">
+            ${years.map(y => `<option value="${y}" ${cur.year == y ? 'selected' : ''}>${y}</option>`).join('')}
+          </select>
+          <small style="color:#64748b;font-size:11px;font-weight:600">Selecione qualquer um dos 12 meses abaixo:</small>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:6px">
+          ${window.XV_MONTHS.map(m => {
+            const isAct = cur.month == m.val;
+            return `
+              <button type="button" class="btn ${isAct ? 'primary' : ''}" style="font-size:11px;padding:6px 2px;text-align:center;border-radius:6px;background:${isAct ? 'var(--xv-orange,#fd5e02)' : '#ffffff'};color:${isAct ? '#ffffff' : '#061a4f'};border:1px solid ${isAct ? 'var(--xv-orange,#fd5e02)' : '#cbd5e1'};font-weight:800" onclick="window.onPfcFieldChange('${filterId}','month',${m.val},'${onApplyCallbackName}')">
+                ${m.abbrev}
+              </button>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  } else if (cur.mode === 'personalizado') {
+    subControlsHtml = `
+      <div style="display:flex;align-items:flex-end;flex-wrap:wrap;gap:12px">
+        <div class="field" style="margin:0">
+          <label style="font-size:11px;color:#061a4f;font-weight:800">Data de Início (ex: 00/00/0000):</label>
+          <input type="date" id="${filterId}_dtInicio" value="${cur.inicio || ''}" class="field-input" style="padding:6px 10px;font-size:12px;font-weight:750;background:#ffffff;color:#061a4f;border:1px solid #cbd5e1;border-radius:6px">
+        </div>
+        <div class="field" style="margin:0">
+          <label style="font-size:11px;color:#061a4f;font-weight:800">Data de Término (ex: 00/00/0000):</label>
+          <input type="date" id="${filterId}_dtFim" value="${cur.fim || ''}" class="field-input" style="padding:6px 10px;font-size:12px;font-weight:750;background:#ffffff;color:#061a4f;border:1px solid #cbd5e1;border-radius:6px">
+        </div>
+        <button type="button" class="btn primary" style="padding:7px 16px;font-size:12px;background:var(--xv-orange,#fd5e02);color:#ffffff;border:1px solid var(--xv-orange,#fd5e02);border-radius:6px;display:flex;align-items:center;gap:6px;font-weight:800" onclick="window.onPfcApplyCustom('${filterId}','${onApplyCallbackName}')">
+          <span>🔍</span> Aplicar Período
+        </button>
+      </div>
+    `;
+  } else if (cur.mode === 'geral') {
+    subControlsHtml = `
+      <div style="color:#061a4f;font-size:12px;display:flex;align-items:center;gap:8px;font-weight:600">
+        <span style="font-size:16px">🌐</span>
+        <span>Exibindo <strong style="color:#061a4f">todo o histórico acumulado</strong> registrado no sistema sem restrição de datas.</span>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="panel xv-period-widget" id="${filterId}_box" style="margin-bottom:14px;background:#ffffff;border:1px solid var(--xv-brand-line,#dfe6ef);border-radius:12px;padding:14px 18px;box-shadow:0 4px 16px rgba(6,26,79,0.06)">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:18px">📅</span>
+          <strong style="font-size:14px;color:#061a4f;letter-spacing:-0.2px;font-weight:850">Filtro de Período</strong>
+          <span class="badge" style="background:rgba(253,94,2,0.12);border:1px solid rgba(253,94,2,0.3);color:var(--xv-orange,#fd5e02);font-weight:800;font-size:12px;padding:4px 10px">
+            ${calc.label}
+          </span>
+        </div>
+        <div class="actions" style="display:flex;gap:5px;flex-wrap:wrap">
+          <button type="button" class="btn ${cur.mode==='dia'?'primary':''}" style="font-size:11px;padding:5px 11px;border-radius:7px;background:${cur.mode==='dia'?'var(--xv-orange,#fd5e02)':'#ffffff'};color:${cur.mode==='dia'?'#ffffff':'#061a4f'};border:1px solid ${cur.mode==='dia'?'var(--xv-orange,#fd5e02)':'#cbd5e1'};font-weight:800" onclick="window.onPfcSetMode('${filterId}','dia','${onApplyCallbackName}')">
+            🗓️ Dia
+          </button>
+          <button type="button" class="btn ${cur.mode==='semana'?'primary':''}" style="font-size:11px;padding:5px 11px;border-radius:7px;background:${cur.mode==='semana'?'var(--xv-orange,#fd5e02)':'#ffffff'};color:${cur.mode==='semana'?'#ffffff':'#061a4f'};border:1px solid ${cur.mode==='semana'?'var(--xv-orange,#fd5e02)':'#cbd5e1'};font-weight:800" onclick="window.onPfcSetMode('${filterId}','semana','${onApplyCallbackName}')">
+            📅 Semana
+          </button>
+          <button type="button" class="btn ${cur.mode==='mes'?'primary':''}" style="font-size:11px;padding:5px 11px;border-radius:7px;background:${cur.mode==='mes'?'var(--xv-orange,#fd5e02)':'#ffffff'};color:${cur.mode==='mes'?'#ffffff':'#061a4f'};border:1px solid ${cur.mode==='mes'?'var(--xv-orange,#fd5e02)':'#cbd5e1'};font-weight:800" onclick="window.onPfcSetMode('${filterId}','mes','${onApplyCallbackName}')">
+            📆 Mês
+          </button>
+          <button type="button" class="btn ${cur.mode==='personalizado'?'primary':''}" style="font-size:11px;padding:5px 11px;border-radius:7px;background:${cur.mode==='personalizado'?'var(--xv-orange,#fd5e02)':'#ffffff'};color:${cur.mode==='personalizado'?'#ffffff':'#061a4f'};border:1px solid ${cur.mode==='personalizado'?'var(--xv-orange,#fd5e02)':'#cbd5e1'};font-weight:800" onclick="window.onPfcSetMode('${filterId}','personalizado','${onApplyCallbackName}')">
+            ⚙️ Personalizado
+          </button>
+          <button type="button" class="btn ${cur.mode==='geral'?'primary':''}" style="font-size:11px;padding:5px 11px;border-radius:7px;background:${cur.mode==='geral'?'var(--xv-orange,#fd5e02)':'#ffffff'};color:${cur.mode==='geral'?'#ffffff':'#061a4f'};border:1px solid ${cur.mode==='geral'?'var(--xv-orange,#fd5e02)':'#cbd5e1'};font-weight:800" onclick="window.onPfcSetMode('${filterId}','geral','${onApplyCallbackName}')">
+            🌐 Geral
+          </button>
+        </div>
+      </div>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px">
+        ${subControlsHtml}
+      </div>
+    </div>
+  `;
+};
+
+window.onPfcSetMode = function(filterId, mode, callbackName) {
+  const cur = window._xvFilters[filterId] || window.getDefaultPeriodState();
+  cur.mode = mode;
+  if (mode === 'dia' && !cur.date) {
+    cur.date = new Date().toISOString().slice(0, 10);
+  }
+  const calc = window.calculatePeriodRange(cur);
+  cur.inicio = calc.inicio;
+  cur.fim = calc.fim;
+  cur.label = calc.label;
+  if (typeof window[callbackName] === 'function') {
+    window[callbackName](cur);
+  }
+};
+
+window.onPfcFieldChange = function(filterId, field, val, callbackName) {
+  const cur = window._xvFilters[filterId] || window.getDefaultPeriodState();
+  cur[field] = val;
+  if (field === 'date') {
+    cur.inicio = val;
+    cur.fim = val;
+  }
+  const calc = window.calculatePeriodRange(cur);
+  cur.inicio = calc.inicio;
+  cur.fim = calc.fim;
+  cur.label = calc.label;
+  if (typeof window[callbackName] === 'function') {
+    window[callbackName](cur);
+  }
+};
+
+window.onPfcApplyCustom = function(filterId, callbackName) {
+  const cur = window._xvFilters[filterId] || window.getDefaultPeriodState();
+  const inp1 = document.getElementById(filterId + '_dtInicio');
+  const inp2 = document.getElementById(filterId + '_dtFim');
+  cur.inicio = inp1 ? inp1.value : '';
+  cur.fim = inp2 ? inp2.value : '';
+  cur.mode = 'personalizado';
+  const calc = window.calculatePeriodRange(cur);
+  cur.label = calc.label;
+  if (typeof window[callbackName] === 'function') {
+    window[callbackName](cur);
+  }
+};
+
+window.onHomePeriodChanged = async function(st) {
+  window._homePeriodState = st;
+  const v = document.getElementById('view');
+  if (v) await home(v);
+};
+
+window.onReportsPeriodChanged = async function(st) {
+  window._reportsPeriodState = st;
+  const v = document.getElementById('view');
+  if (v) await reports(v, st);
+};
+
+window.onProfitModalPeriodChanged = async function(st) {
+  window._profitModalPeriodState = st;
+  await renderProfitReportModalContent(st);
+};
+
+async function home(v){
+  window._homePeriodState = window._homePeriodState || window.getDefaultPeriodState();
+  const st = window._homePeriodState;
+  const calc = window.calculatePeriodRange(st);
+  st.inicio = calc.inicio;
+  st.fim = calc.fim;
+  st.label = calc.label;
+
+  const qParams = [];
+  if (st.inicio) qParams.push('inicio=' + encodeURIComponent(st.inicio));
+  if (st.fim) qParams.push('fim=' + encodeURIComponent(st.fim));
+  if (st.mode) qParams.push('periodo=' + encodeURIComponent(st.mode));
+  const qStr = qParams.length ? '?' + qParams.join('&') : '';
+
+  const d = await api('/api/dashboard' + qStr);
+  window._dashboardData = d;
+
+  const cards = [
+    ['🛍','Pedidos hoje',d.pedidosHoje],
+    ['●','Pendentes',d.pendentes],
+    ['●','Separação',d.separacao],
+    ['🚚','Em rota',d.rota],
+    ['✓','Concluídos no período',d.concluidos],
+    ['R$','Faturamento no período',`${brl(d.faturamento)}`],
+    ['💰','Lucro Real no período',`${brl(d.lucroReal||0)}`],
+    ['▪','Produtos',d.produtos],
+    ['!','Estoque baixo',d.criticos],
+    ['♣','Clientes',d.clientes],
+    ['♣','Vendedores',d.vendedores]
+  ];
+  const kan = [
+    ['PENDENTE',d.pendentes,'status-pendente'],
+    ['SEPARACAO',d.separacao,'status-separacao'],
+    ['ROTA',d.rota,'status-rota'],
+    ['CONCLUIDO',d.concluidos,'status-concluido']
+  ];
+
+  window.renderModalidadeRanking = function(periodo='geral'){
+    window._currentModalidadePeriodo = periodo;
+    const db = window._dashboardData || d;
+    const rawList = db.vendasPorOrigem || [];
+    const originLabels = {VENDEDOR:'Vendedor Externo', BALCAO:'Frente de Loja / Caixa', WEB:'Loja Online'};
+    const originsData = rawList.reduce((acc,x)=>({...acc,[x.origem]:x}),{});
+    const origensList = ['VENDEDOR','BALCAO','WEB'].map(o=>({
+      origem: o,
+      label: originLabels[o],
+      pedidos: Number(originsData[o]?.pedidos||0),
+      faturamento: Number(originsData[o]?.faturamento||0)
+    })).sort((a,b)=>b.faturamento-a.faturamento);
+    const el = document.getElementById('modalidadeRankingContainer');
+    if(!el) return;
+    el.innerHTML = `
+      <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+        <div>
+          <h3 style="margin:0">Ranking de Vendas por Modalidade</h3>
+          <p class="muted" style="margin:4px 0 0;font-size:12px">Período selecionado: <strong>${st.label}</strong></p>
+        </div>
+      </div>
+      <div class="modalidade-grid">
+        ${origensList.map((x,idx)=>`
+          <div class="modalidade-col">
+            <div class="kanban-head">
+              <span style="display:inline-flex;align-items:center;gap:8px">
+                <span class="dot" style="width:8px;height:8px;border-radius:50%;background:var(--xv-brand-orange,#fd5e02);box-shadow:0 0 0 3px rgba(244,90,8,0.12);flex-shrink:0"></span>
+                <span>${x.label}</span>
+              </span>
+              <span class="badge" style="font-size:11px;padding:3px 8px;font-weight:750">${idx+1}º Lugar</span>
+            </div>
+            <div class="kanban-card" style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:22px 16px;margin:0;background:#ffffff;border:1px solid var(--xv-brand-line,#dfe6ef);border-radius:12px;box-shadow:0 4px 12px rgba(6,26,79,0.04);box-sizing:border-box">
+              <div class="v" style="font-size:26px;color:var(--xv-brand-navy,#061a4f);font-weight:850;letter-spacing:-0.5px;line-height:1.1;margin:0 0 10px 0">${brl(x.faturamento)}</div>
+              <div style="margin-bottom:10px">
+                <span class="badge" style="font-size:12px;font-weight:750;padding:4px 12px;background:#ffffff;border:1px solid #d8e2ec;color:#000000">${x.pedidos} pedido(s) concluído(s)</span>
+              </div>
+              <div style="font-size:13px;font-weight:800;color:#000000;margin:0;line-height:1.3">
+                ${x.faturamento>0 ? `${brl(x.pedidos ? x.faturamento/x.pedidos : 0)} ticket médio` : '<span style="color:#64748b;font-weight:600">Sem vendas no período</span>'}
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  };
+
+  let _topSearchDebounce = null;
+  window.debounceTopProductSearch = function(val){
+    clearTimeout(_topSearchDebounce);
+    _topSearchDebounce = setTimeout(()=>{
+      window.renderTopProdutos(window._currentTopProdutosPeriodo||'geral', val);
+    }, 260);
+  };
+
+  window.clearTopProductSearch = function(){
+    window._currentTopProdutosQuery = '';
+    const inp = document.getElementById('topProductSearchInput');
+    if(inp) inp.value = '';
+    window.renderTopProdutos(window._currentTopProdutosPeriodo||'geral', '');
+  };
+
+  window.renderTopProdutos = async function(periodo='geral', query=''){
+    window._currentTopProdutosPeriodo = periodo;
+    window._currentTopProdutosQuery = query;
+    const container = document.getElementById('topProdutosSection');
+    if(!container) return;
+    const trimmedQ = (query||'').trim();
+    if(!document.getElementById('topProdutosHeader')){
+      container.innerHTML = `
+        <div id="topProdutosHeader" class="panel-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+          <div>
+            <h3 id="topProdutosTitle" style="margin:0;display:flex;align-items:center;gap:8px">
+              <span id="topProdutosIcon">🏆</span>
+              <span id="topProdutosText">Top 20 Produtos Mais Vendidos</span>
+            </h3>
+            <p id="topProdutosSubtitle" class="muted" style="margin:4px 0 0;font-size:12px"></p>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <div style="position:relative;display:inline-flex;align-items:center">
+              <input id="topProductSearchInput" class="search" style="width:280px;padding:7px 30px 7px 12px;font-size:13px" placeholder="🔍 Consultar qualquer produto por nome ou SKU..." oninput="debounceTopProductSearch(this.value)">
+              <button id="topProductClearBtn" type="button" onclick="clearTopProductSearch()" style="position:absolute;right:8px;background:none;border:none;color:#94a3b8;cursor:pointer;font-size:14px;padding:0;line-height:1;display:none" title="Limpar busca">✕</button>
+            </div>
+          </div>
+        </div>
+        <div id="topProdutosBody" style="margin-top:14px"></div>
+      `;
+    }
+    const iconEl = document.getElementById('topProdutosIcon');
+    const textEl = document.getElementById('topProdutosText');
+    const subEl = document.getElementById('topProdutosSubtitle');
+    const clearBtn = document.getElementById('topProductClearBtn');
+    const inputEl = document.getElementById('topProductSearchInput');
+    const bodyEl = document.getElementById('topProdutosBody');
+    if(iconEl) iconEl.textContent = trimmedQ ? '📊' : '🏆';
+    if(textEl) textEl.textContent = trimmedQ ? 'Consulta de Vendas de Produtos' : 'Top 20 Produtos Mais Vendidos';
+    if(subEl) subEl.innerHTML = trimmedQ ? `Buscando por: <strong>"${esc(trimmedQ)}"</strong> · Período: <strong>${st.label}</strong>` : `Período selecionado: <strong>${st.label}</strong>`;
+    if(clearBtn) clearBtn.style.display = trimmedQ ? 'inline-block' : 'none';
+    if(inputEl && inputEl.value !== query && document.activeElement !== inputEl) inputEl.value = query;
+
+    if(trimmedQ){
+      if(bodyEl) bodyEl.innerHTML = `<div class="panel" style="padding:24px;text-align:center;color:#64748b">Consultando vendas de produtos para "<strong>${esc(trimmedQ)}</strong>" (${st.label})...</div>`;
+      try {
+        const qp = [`q=${encodeURIComponent(trimmedQ)}`];
+        if (st.inicio) qp.push(`inicio=${encodeURIComponent(st.inicio)}`);
+        if (st.fim) qp.push(`fim=${encodeURIComponent(st.fim)}`);
+        if (st.mode) qp.push(`periodo=${encodeURIComponent(st.mode)}`);
+        const res = await api('/api/dashboard/product-sales?' + qp.join('&'));
+        if(window._currentTopProdutosQuery !== query || window._currentTopProdutosPeriodo !== periodo) return;
+        const items = res.items || [];
+        if(!bodyEl) return;
+        if(!items.length){
+          bodyEl.innerHTML = `<div style="padding:32px;text-align:center;color:#64748b;background:#f8fafc;border-radius:12px;border:1px dashed #cbd5e1">Nenhum produto cadastrado encontrado com o termo "<strong>${esc(trimmedQ)}</strong>".</div>`;
+          return;
+        }
+        bodyEl.innerHTML = `
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+            ${items.map(p=>`
+              <div class="card" style="display:flex;gap:12px;align-items:center;padding:14px;background:#ffffff;border:1px solid var(--xv-brand-line,#dfe6ef);border-left:4px solid var(--xv-brand-orange,#fd5e02);border-radius:12px;box-shadow:0 2px 8px rgba(6,26,79,0.04)">
+                <div class="catalog-product-cell" style="flex-shrink:0">
+                  ${p.foto_url?`<img class="catalog-mini-photo" src="${esc(p.foto_url)}" alt="">`:'<div class="catalog-mini-photo placeholder">XV</div>'}
+                </div>
+                <div style="flex:1;min-width:0">
+                  <strong style="font-size:14px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(p.nome)}">${esc(p.nome)}</strong>
+                  <small class="muted" style="display:block;font-size:11px">${esc(p.sku||'Sem SKU')} · Preço: ${brl(p.preco_base)}</small>
+                  <div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid #f1f5f9;padding-top:6px">
+                    <span style="font-size:13px;font-weight:850;color:var(--xv-brand-navy,#061a4f)">${p.total_vendido>0 ? `${p.total_vendido} un vendida(s)` : '<span style="color:#64748b;font-weight:600">0 un no período</span>'}</span>
+                    <span class="orange" style="font-size:13px;font-weight:800">${p.total_receita>0 ? brl(p.total_receita) : '—'}</span>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } catch(err) {
+        if(bodyEl) bodyEl.innerHTML = `<div style="color:#ef4444;padding:16px">Erro ao consultar produtos: ${esc(err.message)}</div>`;
+      }
+      return;
+    }
+
+    const topList = d.topProdutos || [];
+    const chunked = [];
+    for(let i=0; i<topList.length; i+=5) chunked.push(topList.slice(i, i+5));
+    if(bodyEl){
+      bodyEl.innerHTML = chunked.length ? `
+        <div class="kanban">
+          ${chunked.map((chunk,idx)=>`
+            <div class="kanban-col">
+              <div class="kanban-head">
+                <span><span class="dot" style="background:var(--xv-brand-orange,#fd5e02)"></span>Top ${idx*5+1} ao ${idx*5+chunk.length}</span>
+                <span class="badge">${chunk.length}</span>
+              </div>
+              ${chunk.map((p,i)=>`
+                <div class="kanban-card" style="display:flex;gap:12px;align-items:center;padding:12px">
+                  <div class="catalog-product-cell" style="flex-shrink:0">
+                    ${p.foto_url?`<img class="catalog-mini-photo" src="${esc(p.foto_url)}" alt="">`:'<div class="catalog-mini-photo placeholder">XV</div>'}
+                  </div>
+                  <div style="flex:1;min-width:0">
+                    <strong style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(p.nome)}">#${idx*5+i+1} - ${esc(p.nome)}</strong>
+                    <small class="muted" style="display:block;font-size:11px">${p.total_vendido} un vendidas</small>
+                    <small class="orange" style="font-weight:750">${brl(p.total_receita)}</small>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `).join('')}
+        </div>
+      ` : `<div style="padding:28px;text-align:center;color:#64748b;background:#f8fafc;border-radius:12px;border:1px dashed #cbd5e1">Nenhum produto vendido no período selecionado (${st.label}). Use o campo de busca acima para consultar qualquer produto cadastrado.</div>`;
+    }
+  };
+
+  v.innerHTML = `
+    ${window.renderPeriodFilterComponent('homeMasterPeriod', st, 'onHomePeriodChanged')}
+
+    <div class="grid">
+      ${cards.map(x=>`
+        <div class="card kpi"${x[1]==='Lucro Real no período'?' style="cursor:pointer" onclick="show(\'reports\')" title="Clique para abrir os Relatórios Gerenciais & Lucratividade Real"':''}>
+          <div class="kpi-title"><span class="kpi-dot"></span><span>${x[1]}</span></div>
+          <div class="v">${x[2]}</div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="panel" style="margin-top:16px">
+      <div class="panel-title">
+        <h3>Fluxo operacional</h3>
+        <button class="btn" onclick="show('orders')">Ver pedidos</button>
+      </div>
+      <div class="kanban kanban-orders">
+        ${kan.map(k=>`
+          <div class="kanban-col">
+            <div class="kanban-head">
+              <span><span class="dot" style="background:var(--xv-brand-orange,#fd5e02)"></span>${k[0]}</span>
+              <span class="badge">${k[1]}</span>
+            </div>
+            <div class="kanban-card"><strong>${k[1]} pedido(s)</strong></div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:16px;border-left:5px solid var(--xv-brand-orange,#fd5e02);cursor:pointer;background:linear-gradient(135deg,rgba(253,94,2,0.06) 0%,rgba(6,26,79,0.04) 100%)" onclick="show('reports')">
+      <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:gap;gap:12px;margin-bottom:6px">
+        <div>
+          <h3 style="margin:0;display:flex;align-items:center;gap:8px">
+            <span style="font-size:22px">📊</span> Relatórios Gerenciais & Lucratividade Real
+          </h3>
+          <p class="muted" style="margin:4px 0 0;font-size:13px">Torre de Controle · Acompanhe receita faturada, custo efetivo de mercadorias e margens de lucro por produto.</p>
+        </div>
+        <div class="actions" style="display:flex;gap:8px">
+          <button class="btn primary" style="display:flex;align-items:center;gap:6px" onclick="event.stopPropagation();show('reports')">
+            <span>📊</span> Acessar Relatórios Gerenciais
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="modalidadeRankingContainer" style="margin-top:16px"></div>
+    <div class="panel" id="topProdutosSection" style="margin-top:16px"></div>
+  `;
+
+  window.renderModalidadeRanking(st.mode || 'geral');
+  window.renderTopProdutos(st.mode || 'geral', '');
+}
 async function products(v){const [p,c,promo]=await Promise.all([api('/api/products?limit=100000'),api('/api/categories'),api('/api/promotions')]);window.adminProducts=p;window.adminCategories=c;window.catalogCategories=c.categorias;window.catalogSubcategories=c.subcategorias;window.adminPromotions=promo;renderAdminCatalog(v)}
 function renderAdminCatalogToolbar(){const cats=window.adminCategories?.categorias||[];const subs=window.adminCategories?.subcategorias||[];return `<div class="panel catalog-toolbar"><div class="actions"><input id="pq" class="search" placeholder="Pesquisar por nome, SKU ou código de barras" oninput="catalogFilter(this)"><button class="btn primary" onclick="newProduct()">+ Produto</button><button class="btn" onclick="newCategory()">+ Categoria</button><button class="btn" onclick="newSubcategory()">+ Subcategoria</button><button class="btn" onclick="exportCatalogPdf()">⇩ PDF do catálogo</button></div><div class="catalog-filters"><select id="catFilter" class="field-input" onchange="onAdminCatFilterChange(this.value)"><option value="">Todas as categorias</option>${cats.map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join('')}</select><select id="subFilter" class="field-input" onchange="catalogFilter()"><option value="">Todas as subcategorias</option>${subs.map(x=>`<option data-cat="${x.categoria_id}" value="${x.id}">${esc(x.nome)}</option>`).join('')}</select></div></div>`}
 function onAdminCatFilterChange(catId){const subSel=document.getElementById('subFilter');if(subSel){subSel.querySelectorAll('option[data-cat]').forEach(opt=>{opt.hidden=!!catId&&opt.dataset.cat!==catId});if(subSel.selectedOptions[0]?.hidden)subSel.value=''}catalogFilter()}
 function renderAdminCatalog(v){window.adminCurrentCatId='';window.adminCurrentSubId='';const p=window.adminProducts;const c=window.adminCategories;const promo=window.adminPromotions;const cats=c.categorias;const catCards=cats.length?`<div class="grid" style="margin-top:14px;margin-bottom:24px;">${cats.map(cat=>{const count=(p.items||[]).filter(x=>x.categoria_id===cat.id).length;const subCount=c.subcategorias.filter(s=>s.categoria_id===cat.id).length;return `<div class="card" style="cursor:pointer;position:relative" onclick="adminSubcategorias('${cat.id}')"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><h3 style="margin:0">${esc(cat.nome)}</h3><div style="display:flex;gap:4px;flex-shrink:0" onclick="event.stopPropagation()"><button class="btn" style="padding:4px 8px;font-size:12px" title="Editar categoria" onclick="editCategory(parseJsonArg('${jsonArg(cat)}'))">✏</button><button class="btn" style="padding:4px 8px;font-size:12px;color:#b42318" title="Excluir categoria" onclick="deleteCategory('${cat.id}',parseJsonArg('${jsonArg(cat.nome)}'))">🗑</button></div></div><p class="muted" style="margin-top:8px">${count} produtos · ${subCount} subcategorias</p></div>`}).join('')}</div>`:'';v.innerHTML=`${renderAdminCatalogToolbar()}<div class="catalog-summary"><span><b>${p.total}</b> produtos ativos</span><span><b>${cats.length}</b> categorias</span><span><b>${c.subcategorias.length}</b> subdivisões</span><span><b>${promo.items.length}</b> promoções ativas</span></div><div class="panel-title" style="margin-top:16px;"><h2>Categorias do Catálogo</h2></div>${catCards}<div class="panel-title" style="margin-top:24px;"><h2>Todos os Produtos</h2></div><div id="catalogTable" class="tablewrap"><table class="table"><thead><tr><th>Produto</th><th>SKU</th><th>Categoria</th><th>Subcategoria</th><th>Preço</th><th>Promoção</th><th>Ações</th></tr></thead><tbody>${p.items.map(x=>catalogRow(x)).join('')}</tbody></table></div><div class="panel category-panel" style="margin-top:24px"><div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div><h3>Estrutura do catálogo</h3><span class="badge">Editável pela Torre</span></div><div class="actions" style="display:flex;gap:8px"><button class="btn" onclick="newCategory()">+ Categoria</button><button class="btn" onclick="newSubcategory()">+ Subcategoria</button></div></div><div class="category-tree">${cats.map(cat=>{const subs=c.subcategorias.filter(s=>s.categoria_id===cat.id);return `<div class="category-node" style="display:flex;flex-direction:column;gap:10px;align-items:stretch"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap"><div><strong style="font-size:15px">${esc(cat.nome)}</strong><small>${esc(cat.descricao||'Sem descrição')}</small></div><div class="category-actions" style="display:flex;gap:6px"><button class="btn" style="padding:4px 8px;font-size:12px" onclick="editCategory(parseJsonArg('${jsonArg(cat)}'))">✏ Editar</button><button class="btn" style="padding:4px 8px;font-size:12px;color:#b42318" onclick="deleteCategory('${cat.id}',parseJsonArg('${jsonArg(cat.nome)}'))">🗑 Excluir</button><button class="btn primary" style="padding:4px 8px;font-size:12px" onclick="newSubcategory('${cat.id}')">+ Subcategoria</button></div></div><div style="display:flex;flex-wrap:wrap;gap:8px;padding-top:8px;border-top:1px solid #1e2c40"><span class="muted" style="font-size:11px;align-self:center;text-transform:uppercase;letter-spacing:0.5px">Subcategorias:</span>${subs.length?subs.map(s=>`<span class="badge" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:#f1f5f9;border:1px solid #cbd5e1;color:#000000;font-size:12px"><span>${esc(s.nome)}</span><button type="button" title="Editar subcategoria" style="background:none;border:none;color:#94a3b8;cursor:pointer;padding:0 2px;font-size:12px" onmouseover="this.style.color='#f97316'" onmouseout="this.style.color='#94a3b8'" onclick="editSubcategory(parseJsonArg('${jsonArg(s)}'))">✏</button><button type="button" title="Excluir subcategoria" style="background:none;border:none;color:#f87171;cursor:pointer;padding:0 2px;font-size:12px" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#f87171'" onclick="deleteSubcategory('${s.id}',parseJsonArg('${jsonArg(s.nome)}'),'${cat.id}')">✕</button></span>`).join(''):'<span class="muted" style="font-size:12px">Sem subdivisões</span>'}</div></div>`}).join('')}</div></div>`}
 function adminSubcategorias(catId){const v=$('#view');window.adminCurrentCatId=catId;window.adminCurrentSubId='';const cat=window.adminCategories.categorias.find(c=>c.id===catId);const subs=window.adminCategories.subcategorias.filter(s=>s.categoria_id===catId);const p=window.adminProducts;const catItems=(p.items||[]).filter(x=>x.categoria_id===catId);v.innerHTML=`${renderAdminCatalogToolbar()}<div class="mobile-nav" style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><button class="btn" onclick="renderAdminCatalog(document.getElementById('view'))">← Voltar a Todas as Categorias</button><div style="display:flex;gap:6px">${cat?`<button class="btn" onclick="editCategory(parseJsonArg('${jsonArg(cat)}'))">✏ Editar Categoria</button><button class="btn" style="color:#b42318" onclick="deleteCategory('${cat.id}',parseJsonArg('${jsonArg(cat.nome)}'))">🗑 Excluir Categoria</button>`:''}<button class="btn primary" onclick="newSubcategory('${catId}')">+ Nova Subcategoria</button></div></div><div class="panel-title"><h2>Categoria: ${esc(cat?.nome||'')}</h2><span class="badge">${catItems.length} produtos cadastrados</span></div><div class="grid" style="margin-top:14px;margin-bottom:24px;"><div class="card" style="cursor:pointer;border-left:4px solid #f97316" onclick="adminProdutosSub('','Todos os Produtos (${catItems.length})','${catId}')"><h3>Todos os Produtos</h3><p class="muted">Exibir todos os ${catItems.length} produtos desta categoria</p></div>${subs.length?subs.map(s=>{const count=(p.items||[]).filter(x=>x.subcategoria_id===s.id).length;return `<div class="card" style="cursor:pointer;position:relative" onclick="adminProdutosSub('${s.id}','${esc(s.nome).replace(/'/g,"\\'").replace(/"/g,"&quot;")}','${catId}')"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><h3 style="margin:0">${esc(s.nome)}</h3><div style="display:flex;gap:4px;flex-shrink:0" onclick="event.stopPropagation()"><button class="btn" style="padding:4px 8px;font-size:12px" title="Editar subcategoria" onclick="editSubcategory(parseJsonArg('${jsonArg(s)}'))">✏</button><button class="btn" style="padding:4px 8px;font-size:12px;color:#b42318" title="Excluir subcategoria" onclick="deleteSubcategory('${s.id}',parseJsonArg('${jsonArg(s.nome)}'),'${catId}')">🗑</button></div></div><p class="muted" style="margin-top:8px">${count} produtos</p></div>`}).join(''):'<p class="muted">Nenhuma subcategoria encontrada.</p>'}</div><div class="panel-title" style="margin-top:20px"><h2>Produtos em ${esc(cat?.nome||'')}</h2></div><div id="catalogTable" class="tablewrap"><table class="table"><thead><tr><th>Produto</th><th>SKU</th><th>Categoria</th><th>Subcategoria</th><th>Preço</th><th>Promoção</th><th>Ações</th></tr></thead><tbody>${catItems.map(x=>catalogRow(x)).join('')}</tbody></table></div>`;const cf=$('#catFilter');if(cf){cf.value=catId;onAdminCatFilterChange(catId)}}
 function adminProdutosSub(subId,subName,catId){const v=$('#view');window.adminCurrentSubId=subId;window.adminCurrentCatId=catId;const p=window.adminProducts;const sub=subId?(window.adminCategories?.subcategorias||[]).find(s=>s.id===subId):null;const items=(p.items||[]).filter(x=>{if(catId&&x.categoria_id!==catId)return false;if(subId&&x.subcategoria_id!==subId)return false;return true});v.innerHTML=`${renderAdminCatalogToolbar()}<div class="mobile-nav" style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="display:flex;gap:8px"><button class="btn" onclick="adminSubcategorias('${catId||''}')">← Subcategorias</button><button class="btn" onclick="renderAdminCatalog(document.getElementById('view'))">🏠 Catálogo Geral</button></div>${sub?`<div style="display:flex;gap:6px"><button class="btn" onclick="editSubcategory(parseJsonArg('${jsonArg(sub)}'))">✏ Editar Subcategoria</button><button class="btn" style="color:#b42318" onclick="deleteSubcategory('${sub.id}',parseJsonArg('${jsonArg(sub.nome)}'),'${catId}')">🗑 Excluir Subcategoria</button></div>`:''}</div><div class="panel-title"><h2>${esc(subName)}</h2><span class="badge">${items.length} produtos</span></div><div class="form" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;"><div class="field"><label>Menor preço</label><input type="number" step="0.01" id="adminSubMin" class="search" placeholder="R$ 0,00" oninput="catalogFilter()"></div><div class="field"><label>Maior preço</label><input type="number" step="0.01" id="adminSubMax" class="search" placeholder="Sem limite" oninput="catalogFilter()"></div></div><div id="catalogTable" class="tablewrap"><table class="table"><thead><tr><th>Produto</th><th>SKU</th><th>Categoria</th><th>Subcategoria</th><th>Preço</th><th>Promoção</th><th>Ações</th></tr></thead><tbody>${items.map(x=>catalogRow(x)).join('')}</tbody></table></div>`;const cf=$('#catFilter');if(cf){cf.value=catId||'';onAdminCatFilterChange(catId||'');if(subId&&$('#subFilter'))$('#subFilter').value=subId}catalogFilter()}
-function catalogRow(x){return `<tr data-product="${x.id}" data-cat="${x.categoria_id||''}" data-sub="${x.subcategoria_id||''}" data-price="${x.promocao_preco!=null?Number(x.promocao_preco):Number(x.preco_base)}"><td><div class="catalog-product-cell">${x.foto_url?`<img class="catalog-mini-photo" src="${esc(x.foto_url)}" alt="" onerror="this.onerror=null;this.replaceWith(Object.assign(document.createElement('div'),{className:'catalog-mini-photo placeholder',textContent:'XV'}))">`:'<div class="catalog-mini-photo placeholder">XV</div>'}<div><strong>${esc(x.nome)}</strong>${Number(x.esgotado)?' <span class="badge" style="background:#fde2e2;color:#b42318;border-color:#f5b5b5">ESGOTADO</span>':''}<br><small>${esc([x.marca,x.sabor,x.tamanho].filter(Boolean).join(' · '))}</small></div></div></td><td>${esc(x.sku)}</td><td>${esc(x.categoria_nome||'-')}</td><td>${esc(x.subcategoria_nome||'-')}</td><td>${brl(x.preco_base)}</td><td>${x.promocao_preco!=null?`<strong class="orange">${brl(x.promocao_preco)}</strong>`:'—'}</td><td><button class="btn" onclick="editProduct(parseJsonArg('${jsonArg(x)}'))">Editar</button> <button class="btn" onclick="manageProductImages(parseJsonArg('${jsonArg(x)}'))">Fotos</button> <button class="btn" onclick="managePromotion(parseJsonArg('${jsonArg(x)}'))">Promoção</button> <button class="btn" onclick="productSuppliersModal('${x.id}',parseJsonArg('${jsonArg(x.nome)}'))">🏢 Fornecedores</button> <button class="btn" onclick="toggleSoldOut('${x.id}',${Number(x.esgotado)?0:1})">${Number(x.esgotado)?'✔ Disponível':'⊘ Esgotado'}</button> <button class="btn" style="color:#b42318" onclick="deleteProduct('${x.id}',parseJsonArg('${jsonArg(x.nome)}'))">🗑 Excluir</button></td></tr>`}
+function catalogRow(x){return `<tr data-product="${x.id}" data-cat="${x.categoria_id||''}" data-sub="${x.subcategoria_id||''}" data-price="${x.promocao_preco!=null?Number(x.promocao_preco):Number(x.preco_base)}"><td><div class="catalog-product-cell">${x.foto_url?`<img class="catalog-mini-photo" src="${esc(x.foto_url)}" alt="" onerror="this.onerror=null;this.replaceWith(Object.assign(document.createElement('div'),{className:'catalog-mini-photo placeholder',textContent:'XV'}))">`:'<div class="catalog-mini-photo placeholder">XV</div>'}<div><strong>${esc(x.nome)}</strong>${Number(x.esgotado)?' <span class="badge" style="background:#fde2e2;color:#b42318;border-color:#f5b5b5">ESGOTADO</span>':''}<br><small>${esc([x.marca,x.sabor,x.tamanho].filter(Boolean).join(' · '))}</small></div></div></td><td>${esc(x.sku)}</td><td>${esc(x.categoria_nome||'-')}</td><td>${esc(x.subcategoria_nome||'-')}</td><td>${brl(x.preco_base)}</td><td>${x.promocao_preco!=null?`<strong class="orange">${brl(x.promocao_preco)}</strong>`:'—'}</td><td><button class="btn" onclick="editProduct(parseJsonArg('${jsonArg(x)}'))">Editar</button> <button class="btn" onclick="productCostHistoryModal('${x.id}',parseJsonArg('${jsonArg(x.nome)}'))" title="Ver linha do tempo de custos e lucros">💰 Custos & Lucro</button> <button class="btn" onclick="manageProductImages(parseJsonArg('${jsonArg(x)}'))">Fotos</button> <button class="btn" onclick="managePromotion(parseJsonArg('${jsonArg(x)}'))">Promoção</button> <button class="btn" onclick="productSuppliersModal('${x.id}',parseJsonArg('${jsonArg(x.nome)}'))">🏢 Fornecedores</button> <button class="btn" onclick="toggleSoldOut('${x.id}',${Number(x.esgotado)?0:1})">${Number(x.esgotado)?'✔ Disponível':'⊘ Esgotado'}</button> <button class="btn" style="color:#b42318" onclick="deleteProduct('${x.id}',parseJsonArg('${jsonArg(x.nome)}'))">🗑 Excluir</button></td></tr>`}
 async function toggleSoldOut(id,flag){
   const row=document.querySelector(`tr[data-product="${id}"]`);
   const btn=row?.querySelector(`button[onclick*="toggleSoldOut('${id}'"]`);
@@ -513,12 +1110,12 @@ async function deleteProduct(id,nome){
   try{await api('/api/products/'+id,{method:'DELETE'})}catch(e){toast(e.message,true);refreshCurrentViewSilently('products_changed')}
 }
 function catalogFilter(input){const q=(input?.value??$('#pq')?.value??'').toLowerCase();const isSubView=!!document.getElementById('adminSubMin');let cat='';let sub='';let min=0;let max=Infinity;if(isSubView){cat=window.adminCurrentCatId||'';sub=window.adminCurrentSubId||'';min=Number($('#adminSubMin')?.value)||0;const maxRaw=$('#adminSubMax')?.value;max=maxRaw?Number(maxRaw):Infinity}else{cat=$('#catFilter')?.value||'';sub=$('#subFilter')?.value||''}document.querySelectorAll('#catalogTable tbody tr').forEach(r=>{const okText=r.innerText.toLowerCase().includes(q);const okCat=!cat||r.dataset.cat===cat;const okSub=!sub||r.dataset.sub===sub;const price=Number(r.dataset.price||0);const okPrice=(price>=min&&price<=max);r.style.display=okText&&okCat&&okSub&&okPrice?'':'none'})}
-function productFormHtml(x={}){const cats=window.catalogCategories||[],subs=window.catalogSubcategories||[];return `<form id="productForm" class="form"><div class="field"><label>Nome</label><input name="nome" required maxlength="180" value="${esc(x.nome||'')}"></div><div class="field"><label>SKU (opcional)</label><input name="sku" maxlength="80" value="${esc(x.sku||'')}"></div><div class="field"><label>Código de barras</label><input name="codigo_barras" value="${esc(x.codigo_barras||'')}"></div><div class="field"><label>Marca</label><input name="marca" value="${esc(x.marca||'')}"></div><div class="field"><label>Sabor</label><input name="sabor" value="${esc(x.sabor||'')}"></div><div class="field"><label>Tamanho</label><input name="tamanho" value="${esc(x.tamanho||'')}"></div><div class="field"><label>Unidade</label><input name="unidade" value="${esc(x.unidade||'UN')}"></div><div class="field"><label>Categoria</label><select id="productCat" name="categoria_id"><option value="">Sem categoria</option>${cats.map(c=>`<option value="${c.id}" ${c.id===x.categoria_id?'selected':''}>${esc(c.nome)}</option>`).join('')}</select></div><div class="field"><label>Subcategoria</label><select id="productSub" name="subcategoria_id"><option value="">Sem subcategoria</option>${subs.map(z=>`<option data-cat="${z.categoria_id}" value="${z.id}" ${z.id===x.subcategoria_id?'selected':''}>${esc(z.nome)}</option>`).join('')}</select></div><div class="field"><label>Preço base</label><input name="preco_base" type="number" min="0" step="0.01" value="${Number(x.preco_base||0)}"></div><div class="field" style="grid-column:1/-1"><label>Descrição</label><textarea name="descricao" rows="4">${esc(x.descricao||'')}</textarea></div><div class="field" style="grid-column:1/-1"><small class="muted">Estoque é administrado exclusivamente no módulo Estoque Inteligente. Catálogo não altera saldo.</small></div><div class="actions"><button class="btn primary">Salvar produto</button></div></form>`}
+function productFormHtml(x={}){const cats=window.catalogCategories||[],subs=window.catalogSubcategories||[];const isEdit=Boolean(x.id);return `<form id="productForm" class="form"><div class="field"><label>Nome</label><input name="nome" required maxlength="180" value="${esc(x.nome||'')}"></div><div class="field"><label>SKU (opcional)</label><input name="sku" maxlength="80" value="${esc(x.sku||'')}"></div><div class="field"><label>Código de barras</label><input name="codigo_barras" value="${esc(x.codigo_barras||'')}"></div><div class="field"><label>Marca</label><input name="marca" value="${esc(x.marca||'')}"></div><div class="field"><label>Sabor</label><input name="sabor" value="${esc(x.sabor||'')}"></div><div class="field"><label>Tamanho</label><input name="tamanho" value="${esc(x.tamanho||'')}"></div><div class="field"><label>Unidade</label><input name="unidade" value="${esc(x.unidade||'UN')}"></div><div class="field"><label>Categoria</label><select id="productCat" name="categoria_id"><option value="">Sem categoria</option>${cats.map(c=>`<option value="${c.id}" ${c.id===x.categoria_id?'selected':''}>${esc(c.nome)}</option>`).join('')}</select></div><div class="field"><label>Subcategoria</label><select id="productSub" name="subcategoria_id"><option value="">Sem subcategoria</option>${subs.map(z=>`<option data-cat="${z.categoria_id}" value="${z.id}" ${z.id===x.subcategoria_id?'selected':''}>${esc(z.nome)}</option>`).join('')}</select></div><div class="field"><label>Preço de venda (base)</label><input name="preco_base" type="number" min="0" step="0.01" value="${Number(x.preco_base||0)}"></div><div class="field"><label>Preço de Custo (R$) <span style="font-size:11px;color:var(--muted)">(visível apenas p/ admin)</span></label><input name="preco_custo" type="number" min="0" step="0.01" placeholder="0.00" value="${Number(x.preco_custo||0)}"></div>${isEdit?`<div class="field" style="grid-column:1/-1"><label>Motivo do ajuste manual de custo (opcional)</label><input name="motivo_custo" placeholder="Ex: Negociação especial, correção de frete..."></div>`:''}<div class="field" style="grid-column:1/-1"><label>Descrição</label><textarea name="descricao" rows="4">${esc(x.descricao||'')}</textarea></div><div class="field" style="grid-column:1/-1"><small class="muted">💡 <strong>Dica de custos:</strong> Se você usa o módulo de Compras, o preço de custo é alimentado e registrado no histórico automaticamente ao dar entrada nas compras na doca.</small></div><div class="actions"><button class="btn primary">Salvar produto</button></div></form>`}
 function newProduct(){modal('Novo produto',productFormHtml());$('#productCat').onchange=()=>filterSubOptions($('#productCat').value);filterSubOptions('');$('#productForm').onsubmit=async e=>{e.preventDefault();try{const x=await api('/api/products',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});closeModal();toast('Produto criado. Estoque inicial permanece zero até lançamento no módulo Estoque.');show('products')}catch(x){toast(x.message)}}}
 function filterSubOptions(cat){document.querySelectorAll('#productSub option[data-cat]').forEach(o=>o.hidden=!!cat&&o.dataset.cat!==cat);if($('#productSub')?.selectedOptions[0]?.hidden)$('#productSub').value=''}
 function editProduct(x){modal('Editar produto',productFormHtml(x));$('#productCat').onchange=()=>filterSubOptions($('#productCat').value);filterSubOptions(x.categoria_id||'');$('#productForm').onsubmit=async e=>{e.preventDefault();try{await api('/api/products/'+x.id,{method:'PUT',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});closeModal();toast('Produto atualizado sem alterar o estoque');show('products')}catch(z){toast(z.message)}}}
 function manageProductImages(x){modal('Fotos do produto — '+esc(x.nome),`<div class="photo-manager"><div class="photo-upload" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px"><label class="btn primary photo-picker" style="cursor:pointer">+ Adicionar e Enquadrar Foto <input id="productPhotoInput" type="file" accept="image/png,image/jpeg,image/webp" hidden></label><span class="muted" style="font-size:12px">Mecanismo visual para mover, centralizar e ver exatamente a exibição no catálogo e loja.</span></div><div id="productPhotos" class="photo-grid">Carregando…</div></div>`,'780px');loadProductImages(x.id);$('#productPhotoInput').onchange=e=>{const f=e.target.files?.[0];if(!f)return;if(f.size>8*1024*1024)return toast('A imagem excede 8 MB');const r=new FileReader();r.onload=()=>{openImagePositionerModal(r.result,async(croppedDataUrl)=>{try{await api('/api/products/'+x.id+'/images',{method:'POST',body:JSON.stringify({data_url:croppedDataUrl})});toast('Foto centralizada e salva com sucesso!');loadProductImages(x.id);const [newP]=await Promise.all([api('/api/products?limit=100000')]);window.adminProducts=newP}catch(z){toast(z.message,true)}})};r.readAsDataURL(f)}}
-function openImagePositionerModal(dataUrl,onSaveCallback,aspectMode='square'){const isCover=aspectMode==='cover_banner';const positionerModal=document.createElement('div');positionerModal.id='imagePositionerModal';positionerModal.style='position:fixed;inset:0;background:rgba(0,0,0,0.88);display:grid;place-items:center;z-index:110';positionerModal.innerHTML=`<div class="panel" style="width:min(820px,96vw);max-height:94vh;overflow-y:auto;background:#0b1422;border:1px solid #23344a;box-shadow:0 24px 60px rgba(0,0,0,0.6)"><div class="top" style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1e2c3f;padding-bottom:10px;margin-bottom:14px"><div><h2 style="margin:0;font-size:1.25rem;color:#fff">📐 Enquadrar e Centralizar ${isCover?'Foto de Capa da Loja':'Foto'}</h2><p class="muted" style="margin:4px 0 0;font-size:12px">Arraste a foto com o mouse ou toque para mover. Ajuste o zoom para o tamanho e posição perfeitos.</p></div><button class="btn" id="closePositionerBtn" style="padding:4px 10px;font-size:18px">×</button></div><div class="photo-crop-workspace"><div class="photo-cropper-viewport" id="cropperViewport" style="${isCover?'max-width:680px;height:240px;aspect-ratio:16/9;':'max-width:420px;height:300px;'}"><img id="cropperImage" src="${dataUrl}" alt="Ajuste"><div class="photo-cropper-grid-overlay"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div></div><div class="photo-cropper-controls"><label>🔍 Zoom: <input type="range" id="cropZoom" min="0.5" max="3.0" step="0.05" value="1.0" style="width:140px"><span id="zoomVal" style="color:#fd5e02;font-weight:bold;min-width:35px">100%</span></label><button type="button" class="btn" id="btnCenterCrop" style="font-size:12px;padding:6px 12px">🎯 Centralizar Foto</button><button type="button" class="btn" id="btnFitCrop" style="font-size:12px;padding:6px 12px">⛶ Ajustar às Bordas</button></div><div><strong style="display:block;font-size:13px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;text-align:center">Como ela será exibida nos locais do sistema:</strong><div class="photo-preview-group">${isCover?`<div class="photo-preview-item" style="width:100%"><div style="width:100%;max-width:540px;height:160px;border-radius:12px;background:#021d60;border:2px solid var(--xv-brand-orange,#fd5e02);overflow:hidden;position:relative;display:flex;align-items:flex-end;box-shadow:0 8px 24px rgba(2,29,96,0.3)"><canvas id="previewCanvasCover" width="540" height="160" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></canvas><div style="position:relative;z-index:2;padding:12px;color:#fff;pointer-events:none;background:linear-gradient(90deg,rgba(2,29,96,0.9),rgba(2,29,96,0.3),transparent);width:100%"><strong style="font-size:16px;display:block">Catálogo Xiquim Vargas</strong><span style="font-size:11px;opacity:0.9">Card de Capa da Loja Online</span></div></div><span>Card Oficial da Loja Online</span></div>`:`<div class="photo-preview-item"><div class="photo-preview-box-store"><canvas id="previewCanvasStore" width="140" height="140"></canvas></div><span>Card da Loja Online & PDV</span></div><div class="photo-preview-item"><div class="photo-preview-box-mini"><canvas id="previewCanvasMini" width="48" height="48"></canvas></div><span>Tabelas & Miniaturas</span></div>`}</div></div><div class="actions" style="justify-content:flex-end;margin-top:14px;border-top:1px solid #1e2c3f;padding-top:14px"><button type="button" class="btn" id="cancelPositionerBtn">Cancelar</button><button type="button" class="btn primary" id="confirmPositionerBtn" style="padding:10px 20px;font-weight:800">✓ Confirmar e Usar Esta Posição</button></div></div></div>`;document.body.appendChild(positionerModal);const vp=positionerModal.querySelector('#cropperViewport');const img=positionerModal.querySelector('#cropperImage');const zoomInput=positionerModal.querySelector('#cropZoom');const zoomVal=positionerModal.querySelector('#zoomVal');const cvsCover=positionerModal.querySelector('#previewCanvasCover');const cvsStore=positionerModal.querySelector('#previewCanvasStore');const cvsMini=positionerModal.querySelector('#previewCanvasMini');let scale=1.0;let posX=0;let posY=0;let isDragging=false;let startX=0;let startY=0;let initialImgW=0;let initialImgH=0;function updateTransform(){img.style.transform=`translate(${posX}px, ${posY}px) scale(${scale})`;zoomVal.textContent=Math.round(scale*100)+'%';renderLivePreviews()}function renderLivePreviews(){if(!initialImgW||!initialImgH)return;const vpRect=vp.getBoundingClientRect();const vpW=vpRect.width||(isCover?680:420);const vpH=vpRect.height||(isCover?240:300);const targets=isCover?[cvsCover]:[cvsStore,cvsMini];targets.forEach(cvs=>{if(!cvs)return;const ctx=cvs.getContext('2d');ctx.clearRect(0,0,cvs.width,cvs.height);ctx.fillStyle=isCover?'#021d60':'#ffffff';ctx.fillRect(0,0,cvs.width,cvs.height);const ratio=cvs.width/vpW;ctx.save();ctx.translate(cvs.width/2,cvs.height/2);ctx.translate(posX*ratio,posY*ratio);ctx.scale(scale*ratio,scale*ratio);ctx.drawImage(img,-initialImgW/2,-initialImgH/2,initialImgW,initialImgH);ctx.restore()})}img.onload=()=>{const vpRect=vp.getBoundingClientRect();const vpW=vpRect.width||(isCover?680:420);const vpH=vpRect.height||(isCover?240:300);initialImgW=img.naturalWidth;initialImgH=img.naturalHeight;img.style.width=initialImgW+'px';img.style.height=initialImgH+'px';scale=isCover?Math.max(vpW/initialImgW,vpH/initialImgH):Math.min((vpW*0.9)/(initialImgW||1),(vpH*0.9)/(initialImgH||1),1.0);zoomInput.value=scale;posX=0;posY=0;updateTransform()};if(img.complete)img.onload();vp.addEventListener('mousedown',e=>{isDragging=true;startX=e.clientX-posX;startY=e.clientY-posY});window.addEventListener('mousemove',e=>{if(!isDragging)return;posX=e.clientX-startX;posY=e.clientY-startY;updateTransform()});window.addEventListener('mouseup',()=>{isDragging=false});vp.addEventListener('touchstart',e=>{if(e.touches.length===1){isDragging=true;startX=e.touches[0].clientX-posX;startY=e.touches[0].clientY-posY}},{passive:true});window.addEventListener('touchmove',e=>{if(!isDragging||e.touches.length!==1)return;posX=e.touches[0].clientX-startX;posY=e.touches[0].clientY-startY;updateTransform()},{passive:true});window.addEventListener('touchend',()=>{isDragging=false});zoomInput.oninput=()=>{scale=parseFloat(zoomInput.value);updateTransform()};positionerModal.querySelector('#btnCenterCrop').onclick=()=>{posX=0;posY=0;updateTransform()};positionerModal.querySelector('#btnFitCrop').onclick=()=>{const vpRect=vp.getBoundingClientRect();const vpW=vpRect.width||(isCover?680:420);const vpH=vpRect.height||(isCover?240:300);scale=isCover?Math.max(vpW/initialImgW,vpH/initialImgH):Math.min((vpW*0.9)/(initialImgW||1),(vpH*0.9)/(initialImgH||1),1.0);zoomInput.value=scale;posX=0;posY=0;updateTransform()};const closeMe=()=>positionerModal.remove();positionerModal.querySelector('#closePositionerBtn').onclick=closeMe;positionerModal.querySelector('#cancelPositionerBtn').onclick=closeMe;positionerModal.querySelector('#confirmPositionerBtn').onclick=()=>{const outCanvas=document.createElement('canvas');const outW=isCover?1280:600;const outH=isCover?480:600;outCanvas.width=outW;outCanvas.height=outH;const ctx=outCanvas.getContext('2d');ctx.fillStyle=isCover?'#021d60':'#ffffff';ctx.fillRect(0,0,outW,outH);const vpRect=vp.getBoundingClientRect();const vpW=vpRect.width||(isCover?680:420);const ratio=outW/vpW;ctx.save();ctx.translate(outW/2,outH/2);ctx.translate(posX*ratio,posY*ratio);ctx.scale(scale*ratio,scale*ratio);ctx.drawImage(img,-initialImgW/2,-initialImgH/2,initialImgW,initialImgH);ctx.restore();const resultDataUrl=outCanvas.toDataURL('image/jpeg',0.92);closeMe();onSaveCallback(resultDataUrl)}}
+function openImagePositionerModal(dataUrl,onSaveCallback,aspectMode='square'){const isCover=aspectMode==='cover_banner';const positionerModal=document.createElement('div');positionerModal.id='imagePositionerModal';positionerModal.style='position:fixed;inset:0;background:rgba(0,0,0,0.88);display:grid;place-items:center;z-index:110';positionerModal.innerHTML=`<div class="panel" style="width:min(840px,96vw);max-height:94vh;overflow-y:auto;background:#0b1422;border:1px solid #23344a;box-shadow:0 24px 60px rgba(0,0,0,0.6)"><div class="top" style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1e2c3f;padding-bottom:12px;margin-bottom:14px"><div><h2 style="margin:0;font-size:1.3rem;color:#ffffff;font-weight:800">📐 Enquadrar e Centralizar ${isCover?'Foto de Capa da Loja':'Foto'}</h2><p style="margin:6px 0 0;font-size:13.5px;color:#ffffff !important;font-weight:600;opacity:0.95;line-height:1.4">Arraste a foto com o mouse ou toque para mover. Ajuste o zoom para o tamanho e posição perfeitos.</p></div><button class="btn" id="closePositionerBtn" style="padding:4px 10px;font-size:18px;color:#ffffff">×</button></div><div class="photo-crop-workspace"><div class="photo-cropper-viewport" id="cropperViewport" style="${isCover?'max-width:680px;height:240px;aspect-ratio:16/9;':'max-width:420px;height:300px;'}"><img id="cropperImage" src="${dataUrl}" alt="Ajuste" style="image-rendering:auto;mix-blend-mode:normal"><div class="photo-cropper-grid-overlay"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div></div><div class="photo-cropper-controls"><label style="color:#ffffff !important;font-size:13px;font-weight:700">🔍 Zoom: <input type="range" id="cropZoom" min="0.5" max="3.0" step="0.05" value="1.0" style="width:140px"><span id="zoomVal" style="color:#fd5e02;font-weight:bold;min-width:35px">100%</span></label><button type="button" class="btn" id="btnCenterCrop" style="font-size:12px;padding:6px 12px">🎯 Centralizar Foto</button><button type="button" class="btn" id="btnFitCrop" style="font-size:12px;padding:6px 12px">⛶ Ajustar às Bordas</button></div><div><strong style="display:block;font-size:13px;color:#ffffff;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;text-align:center">Como ela será exibida nos locais do sistema:</strong><div class="photo-preview-group">${isCover?`<div class="photo-preview-item" style="width:100%"><div style="width:100%;max-width:540px;height:160px;border-radius:12px;background:#021d60;border:2px solid var(--xv-brand-orange,#fd5e02);overflow:hidden;position:relative;display:flex;align-items:flex-end;box-shadow:0 8px 24px rgba(2,29,96,0.3)"><canvas id="previewCanvasCover" width="540" height="160" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></canvas><div style="position:relative;z-index:2;padding:12px;color:#fff;pointer-events:none;background:linear-gradient(90deg,rgba(2,29,96,0.9),rgba(2,29,96,0.3),transparent);width:100%"><strong style="font-size:16px;display:block">Catálogo Xiquim Vargas</strong><span style="font-size:11px;opacity:0.9">Card de Capa da Loja Online</span></div></div><span style="color:#ffffff !important">Card Oficial da Loja Online</span></div>`:`<div class="photo-preview-item"><div class="photo-preview-box-store"><canvas id="previewCanvasStore" width="140" height="140"></canvas></div><span style="color:#ffffff !important">Card da Loja Online & PDV</span></div><div class="photo-preview-item"><div class="photo-preview-box-mini"><canvas id="previewCanvasMini" width="48" height="48"></canvas></div><span style="color:#ffffff !important">Tabelas & Miniaturas</span></div>`}</div></div><div class="actions" style="justify-content:flex-end;margin-top:14px;border-top:1px solid #1e2c3f;padding-top:14px"><button type="button" class="btn" id="cancelPositionerBtn">Cancelar</button><button type="button" class="btn primary" id="confirmPositionerBtn" style="padding:10px 20px;font-weight:800">✓ Confirmar e Usar Esta Posição</button></div></div></div>`;document.body.appendChild(positionerModal);const vp=positionerModal.querySelector('#cropperViewport');const img=positionerModal.querySelector('#cropperImage');const zoomInput=positionerModal.querySelector('#cropZoom');const zoomVal=positionerModal.querySelector('#zoomVal');const cvsCover=positionerModal.querySelector('#previewCanvasCover');const cvsStore=positionerModal.querySelector('#previewCanvasStore');const cvsMini=positionerModal.querySelector('#previewCanvasMini');let scale=1.0;let posX=0;let posY=0;let isDragging=false;let startX=0;let startY=0;let initialImgW=0;let initialImgH=0;function updateTransform(){img.style.transform=`translate(${posX}px, ${posY}px) scale(${scale})`;zoomVal.textContent=Math.round(scale*100)+'%';renderLivePreviews()}function renderLivePreviews(){if(!initialImgW||!initialImgH)return;const vpRect=vp.getBoundingClientRect();const vpW=vpRect.width||(isCover?680:420);const vpH=vpRect.height||(isCover?240:300);const targets=isCover?[cvsCover]:[cvsStore,cvsMini];targets.forEach(cvs=>{if(!cvs)return;const ctx=cvs.getContext('2d');ctx.clearRect(0,0,cvs.width,cvs.height);ctx.fillStyle=isCover?'#021d60':'#ffffff';ctx.fillRect(0,0,cvs.width,cvs.height);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';const ratio=cvs.width/vpW;ctx.save();ctx.translate(cvs.width/2,cvs.height/2);ctx.translate(posX*ratio,posY*ratio);ctx.scale(scale*ratio,scale*ratio);ctx.drawImage(img,-initialImgW/2,-initialImgH/2,initialImgW,initialImgH);ctx.restore()})}img.onload=()=>{const vpRect=vp.getBoundingClientRect();const vpW=vpRect.width||(isCover?680:420);const vpH=vpRect.height||(isCover?240:300);initialImgW=img.naturalWidth;initialImgH=img.naturalHeight;img.style.width=initialImgW+'px';img.style.height=initialImgH+'px';scale=isCover?Math.max(vpW/initialImgW,vpH/initialImgH):Math.min((vpW*0.9)/(initialImgW||1),(vpH*0.9)/(initialImgH||1),1.0);zoomInput.value=scale;posX=0;posY=0;updateTransform()};if(img.complete)img.onload();vp.addEventListener('mousedown',e=>{isDragging=true;startX=e.clientX-posX;startY=e.clientY-posY});window.addEventListener('mousemove',e=>{if(!isDragging)return;posX=e.clientX-startX;posY=e.clientY-startY;updateTransform()});window.addEventListener('mouseup',()=>{isDragging=false});vp.addEventListener('touchstart',e=>{if(e.touches.length===1){isDragging=true;startX=e.touches[0].clientX-posX;startY=e.touches[0].clientY-posY}},{passive:true});window.addEventListener('touchmove',e=>{if(!isDragging||e.touches.length!==1)return;posX=e.touches[0].clientX-startX;posY=e.touches[0].clientY-startY;updateTransform()},{passive:true});window.addEventListener('touchend',()=>{isDragging=false});zoomInput.oninput=()=>{scale=parseFloat(zoomInput.value);updateTransform()};positionerModal.querySelector('#btnCenterCrop').onclick=()=>{posX=0;posY=0;updateTransform()};positionerModal.querySelector('#btnFitCrop').onclick=()=>{const vpRect=vp.getBoundingClientRect();const vpW=vpRect.width||(isCover?680:420);const vpH=vpRect.height||(isCover?240:300);scale=isCover?Math.max(vpW/initialImgW,vpH/initialImgH):Math.min((vpW*0.9)/(initialImgW||1),(vpH*0.9)/(initialImgH||1),1.0);zoomInput.value=scale;posX=0;posY=0;updateTransform()};const closeMe=()=>positionerModal.remove();positionerModal.querySelector('#closePositionerBtn').onclick=closeMe;positionerModal.querySelector('#cancelPositionerBtn').onclick=closeMe;positionerModal.querySelector('#confirmPositionerBtn').onclick=()=>{const outCanvas=document.createElement('canvas');const outW=isCover?1280:800;const outH=isCover?480:800;outCanvas.width=outW;outCanvas.height=outH;const ctx=outCanvas.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.fillStyle=isCover?'#021d60':'#ffffff';ctx.fillRect(0,0,outW,outH);const vpRect=vp.getBoundingClientRect();const vpW=vpRect.width||(isCover?680:420);const ratio=outW/vpW;ctx.save();ctx.translate(outW/2,outH/2);ctx.translate(posX*ratio,posY*ratio);ctx.scale(scale*ratio,scale*ratio);ctx.drawImage(img,-initialImgW/2,-initialImgH/2,initialImgW,initialImgH);ctx.restore();const isPng=dataUrl.startsWith('data:image/png')||(typeof img.src==='string'&&img.src.toLowerCase().includes('.png'));const outMime=isPng?'image/png':'image/jpeg';const outQuality=isPng?undefined:0.98;const resultDataUrl=outCanvas.toDataURL(outMime,outQuality);closeMe();onSaveCallback(resultDataUrl)}}
 async function loadProductImages(id){try{const x=await api('/api/products/'+id+'/images');$('#productPhotos').innerHTML=x.items.length?x.items.map(i=>`<div class="photo-item" style="display:flex;justify-content:space-between;align-items:center;background:#0d1624;padding:12px;border:1px solid #203248;border-radius:10px;margin-bottom:8px"><div style="display:flex;align-items:center;gap:12px"><img src="${i.url}" alt="" style="width:58px;height:58px;object-fit:contain;background:#fff;border-radius:8px;border:1px solid #cbd5e1"><div><span class="badge" style="background:${i.principal?'rgba(253,94,2,0.18)':'rgba(255,255,255,0.08)'};color:${i.principal?'#fd5e02':'#cbd5e1'}">${i.principal?'Principal':'Foto'}</span></div></div><div class="actions" style="display:flex;gap:6px"><button type="button" class="btn" style="font-size:12px;padding:6px 10px" onclick="repositionProductImage('${i.url}', '${id}')">📐 Ajustar / Mover</button><button class="btn danger" style="font-size:12px;padding:6px 10px" onclick="deleteProductImage('${i.id}',${id?`'${id}'`:'null'})">Excluir</button></div></div>`).join(''):'<div class="empty-state">Nenhuma foto cadastrada.</div>'}catch(e){$('#productPhotos').textContent=e.message}}
 function repositionProductImage(imageUrl, productId){openImagePositionerModal(imageUrl, async(croppedDataUrl)=>{try{await api('/api/products/'+productId+'/images',{method:'POST',body:JSON.stringify({data_url:croppedDataUrl})});toast('Novo enquadramento salvo com sucesso!');loadProductImages(productId);const [newP]=await Promise.all([api('/api/products?limit=100000')]);window.adminProducts=newP}catch(z){toast(z.message,true)}})}
 async function deleteProductImage(imageId,productId){if(!confirm('Excluir esta foto?'))return;try{await api('/api/product-images/'+imageId,{method:'DELETE'});toast('Foto excluída');loadProductImages(productId);show('products')}catch(e){toast(e.message)}}
@@ -1429,18 +2026,73 @@ async function storeSettings(v){
           <textarea name="store.about_subtitle" rows="2">${esc(vals['store.about_subtitle']||'Tradição, agilidade e compromisso no fornecimento de bebidas, doces e alimentos para o comércio e varejo de Governador Valadares e região.')}</textarea>
         </div>
         <div class="field" style="grid-column:1/-1">
-          <label>Foto de capa da loja</label>
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
-            <label class="btn primary photo-picker" style="cursor:pointer">
+          <label style="font-size:15px;font-weight:800;color:#fff;margin-bottom:8px;display:block">Foto de Capa da Loja Online</label>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+            <label class="btn primary photo-picker" style="cursor:pointer;padding:10px 18px;font-weight:700">
               📷 Escolher e Ajustar Foto de Capa
               <input id="storeCoverInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
             </label>
-            ${vals['store.cover']?`<button type="button" class="btn" style="padding:10px 14px" onclick="repositionStoreCover('${esc(vals['store.cover'])}')">📐 Mover e Centralizar Capa Atual</button>`:''}
+            ${vals['store.cover']?`
+              <button type="button" class="btn" style="padding:10px 16px;font-weight:700" onclick="repositionStoreCover('${esc(vals['store.cover'])}')">📐 Mover e Centralizar Capa Atual</button>
+              <button type="button" class="btn danger" style="padding:10px 16px;font-weight:700" onclick="adminRemoveStoreCover()">🗑 Remover Foto de Capa</button>
+            `:''}
           </div>
-          <div id="storeCoverPreview" class="store-cover-preview">
-            ${vals['store.cover']?`<img src="${esc(vals['store.cover'])}" alt="Capa atual">`:'<span class="muted">Nenhuma capa cadastrada.</span>'}
+
+          <div style="background:#091322;border:1px solid #1f2d40;border-radius:12px;padding:16px;margin-bottom:14px">
+            <h4 style="margin:0 0 14px;color:#fff;font-size:14px;display:flex;align-items:center;gap:8px">
+              <span>🎨 Personalização Visual da Capa e Textos</span>
+              <span class="badge" style="background:rgba(253,94,2,0.18);color:#fd5e02">Ao Vivo</span>
+            </h4>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;align-items:start">
+              <div class="field" style="margin:0">
+                <label style="color:#cbd5e1;font-size:12px;font-weight:700">Fonte dos Textos</label>
+                <select name="store.card_font" id="storeCardFont" class="field-input" style="font-weight:700">
+                  ${['Inter','Montserrat','Poppins','Roboto','Outfit','Playfair Display','Oswald'].map(f=>`<option value="${f}" ${(vals['store.card_font']||'Inter')===f?'selected':''}>${f}</option>`).join('')}
+                </select>
+              </div>
+              <div class="field" style="margin:0">
+                <label style="color:#cbd5e1;font-size:12px;font-weight:700;display:flex;justify-content:space-between">
+                  <span>Tamanho do Título</span>
+                  <b id="titleSizeBadge" style="color:#fd5e02">${vals['store.title_size']||38}px</b>
+                </label>
+                <input type="range" name="store.title_size" id="storeTitleSize" min="24" max="52" step="2" value="${vals['store.title_size']||38}" style="accent-color:#fd5e02;cursor:pointer">
+              </div>
+              <div class="field" style="margin:0">
+                <label style="color:#cbd5e1;font-size:12px;font-weight:700;display:flex;justify-content:space-between">
+                  <span>Tamanho do Subtítulo / Texto</span>
+                  <b id="subSizeBadge" style="color:#fd5e02">${vals['store.subtitle_size']||18}px</b>
+                </label>
+                <input type="range" name="store.subtitle_size" id="storeSubtitleSize" min="14" max="26" step="1" value="${vals['store.subtitle_size']||18}" style="accent-color:#fd5e02;cursor:pointer">
+              </div>
+              <div class="field" style="margin:0">
+                <label style="color:#cbd5e1;font-size:12px;font-weight:700">Posição Vertical do Texto</label>
+                <select name="store.text_pos_v" id="storeTextPosV" class="field-input" style="font-weight:700">
+                  <option value="flex-start" ${(vals['store.text_pos_v'])==='flex-start'?'selected':''}>⬆ Topo (Superior)</option>
+                  <option value="center" ${(vals['store.text_pos_v'])==='center'?'selected':''}>⏺ Centro (Meio)</option>
+                  <option value="flex-end" ${(vals['store.text_pos_v']||'flex-end')==='flex-end'?'selected':''}>⬇ Base (Inferior - Padrão)</option>
+                </select>
+              </div>
+              <div class="field" style="margin:0">
+                <label style="color:#cbd5e1;font-size:12px;font-weight:700">Posição Horizontal / Alinhamento</label>
+                <select name="store.text_pos_h" id="storeTextPosH" class="field-input" style="font-weight:700">
+                  <option value="flex-start" ${(vals['store.text_pos_h']||'flex-start')==='flex-start'?'selected':''}>⬅ Esquerda (Padrão)</option>
+                  <option value="center" ${(vals['store.text_pos_h'])==='center'?'selected':''}>⏺ Centro</option>
+                  <option value="flex-end" ${(vals['store.text_pos_h'])==='flex-end'?'selected':''}>➡ Direita</option>
+                </select>
+              </div>
+            </div>
           </div>
-          <span class="muted">PNG, JPG ou WEBP · até 8 MB. A capa aparece imediatamente abaixo do cabeçalho da Loja Online.</span>
+
+          <label style="display:block;margin-bottom:6px;font-size:13px;font-weight:700;color:#cbd5e1">Prévia em Tempo Real do Card de Exibição:</label>
+          <div id="storeCoverPreview" class="store-cover-preview" style="align-items:${vals['store.text_pos_v']||'flex-end'};justify-content:${vals['store.text_pos_h']||'flex-start'};font-family:'${esc(vals['store.card_font']||'Inter')}',sans-serif">
+            ${vals['store.cover']?`<img id="storeCoverPreviewImg" src="${esc(vals['store.cover'])}" alt="Capa atual">`:''}
+            <div class="store-cover-content" id="storeCoverPreviewContent" style="text-align:${(vals['store.text_pos_h']==='center'?'center':(vals['store.text_pos_h']==='flex-end'?'right':'left'))};align-items:${(vals['store.text_pos_h']==='center'?'center':(vals['store.text_pos_h']==='flex-end'?'flex-end':'flex-start'))}">
+              <h1 id="previewTitle" style="font-size:${vals['store.title_size']||38}px;font-family:'${esc(vals['store.card_font']||'Inter')}',sans-serif">${esc(vals['store.title']||'Catálogo Xiquim Vargas')}</h1>
+              <h2 id="previewSubtitle" style="font-size:calc(${(vals['store.subtitle_size']||18)}px * 1.3);font-family:'${esc(vals['store.card_font']||'Inter')}',sans-serif">${esc(vals['store.subtitle']||'Distribuição, reposição e condições comerciais em um só lugar.')}</h2>
+              <p id="previewHero" style="font-size:${vals['store.subtitle_size']||18}px;font-family:'${esc(vals['store.card_font']||'Inter')}',sans-serif">${esc(vals['store.hero']||'Encontre produtos, condições e reposição para o seu negócio.')}</p>
+            </div>
+          </div>
+          <span class="muted" style="display:block;margin-top:6px">PNG, JPG ou WEBP · até 8 MB. A capa e os textos configurados aparecem imediatamente abaixo do cabeçalho da Loja Online.</span>
         </div>
         <div class="field" style="grid-column:1/-1">
           <label>💰 Valor Mínimo de Compra na Loja Online (R$)</label>
@@ -1478,12 +2130,72 @@ async function storeSettings(v){
 
   renderAdminAboutCardsList();
 
+  window.adminRemoveStoreCover = async function() {
+    if(!confirm('Deseja realmente remover a foto de capa da loja online e voltar ao fundo institucional padrão?')) return;
+    try {
+      await api('/api/store-cover', { method: 'DELETE' });
+      toast('Foto de capa removida com sucesso!');
+      show('store');
+    } catch(e) {
+      toast(e.message, true);
+    }
+  };
+
+  function updateLiveCoverPreview() {
+    const font = $('#storeCardFont')?.value || 'Inter';
+    const titleSize = ($('#storeTitleSize')?.value || 38) + 'px';
+    const subSize = ($('#storeSubtitleSize')?.value || 18) + 'px';
+    const posV = $('#storeTextPosV')?.value || 'flex-end';
+    const posH = $('#storeTextPosH')?.value || 'flex-start';
+    const align = posH === 'center' ? 'center' : (posH === 'flex-end' ? 'right' : 'left');
+
+    if($('#titleSizeBadge')) $('#titleSizeBadge').textContent = ($('#storeTitleSize')?.value || 38) + 'px';
+    if($('#subSizeBadge')) $('#subSizeBadge').textContent = ($('#storeSubtitleSize')?.value || 18) + 'px';
+
+    const pv = $('#storeCoverPreview');
+    if(pv) {
+      pv.style.alignItems = posV;
+      pv.style.justifyContent = posH;
+      pv.style.fontFamily = `'${font}', sans-serif`;
+    }
+    const cnt = $('#storeCoverPreviewContent');
+    if(cnt) {
+      cnt.style.textAlign = align;
+      cnt.style.alignItems = align === 'center' ? 'center' : (align === 'right' ? 'flex-end' : 'flex-start');
+    }
+    const t = $('#previewTitle');
+    if(t) {
+      t.textContent = $('input[name="store.title"]')?.value || 'Catálogo Xiquim Vargas';
+      t.style.fontSize = titleSize;
+      t.style.fontFamily = `'${font}', sans-serif`;
+    }
+    const s = $('#previewSubtitle');
+    if(s) {
+      s.textContent = $('input[name="store.subtitle"]')?.value || '';
+      s.style.fontSize = `calc(${subSize} * 1.3)`;
+      s.style.fontFamily = `'${font}', sans-serif`;
+    }
+    const h = $('#previewHero');
+    if(h) {
+      h.textContent = $('textarea[name="store.hero"]')?.value || '';
+      h.style.fontSize = subSize;
+      h.style.fontFamily = `'${font}', sans-serif`;
+    }
+  }
+
+  ['input[name="store.title"]', 'input[name="store.subtitle"]', 'textarea[name="store.hero"]', '#storeCardFont', '#storeTitleSize', '#storeSubtitleSize', '#storeTextPosV', '#storeTextPosH'].forEach(sel => {
+    const el = document.querySelector(sel);
+    if(el) {
+      el.addEventListener('input', updateLiveCoverPreview);
+      el.addEventListener('change', updateLiveCoverPreview);
+    }
+  });
+
   window.repositionStoreCover = function(coverUrl) {
     if(!coverUrl) return;
     openImagePositionerModal(coverUrl, async (croppedDataUrl) => {
       try {
         const out = await api('/api/store-cover', { method: 'POST', body: JSON.stringify({ data_url: croppedDataUrl }) });
-        $('#storeCoverPreview').innerHTML = `<img src="${esc(out.url)}" alt="Capa atual">`;
         toast('Foto de capa ajustada e salva com sucesso!');
         show('store');
       } catch(z) { toast(z.message, true); }
@@ -1499,19 +2211,11 @@ async function storeSettings(v){
       openImagePositionerModal(r.result, async (croppedDataUrl) => {
         try {
           const out = await api('/api/store-cover', { method: 'POST', body: JSON.stringify({ data_url: croppedDataUrl }) });
-          $('#storeCoverPreview').innerHTML = `<img src="${esc(out.url)}" alt="Capa atual">`;
           toast('Foto de capa ajustada e salva com sucesso!');
           show('store');
         } catch(z) { toast(z.message, true); }
       }, 'cover_banner');
     };
-    /*
-      try {
-        const out = await api('/api/store-cover', { method: 'POST', body: JSON.stringify({ data_url: r.result }) });
-        $('#storeCoverPreview').innerHTML = `<img src="${esc(out.url)}" alt="Capa atual">`;
-        toast('Foto de capa atualizada');
-      } catch(z) { toast(z.message, true); }
-    */
     r.readAsDataURL(f);
   };
 
@@ -2132,13 +2836,39 @@ async function sellers(v) {
     window._currentSellerDashboardNome=null;
     v.innerHTML=`<div class="panel"><div class="panel-title"><div><h3>Vendedores</h3><p class="muted">Desempenho e painel do mês de cada vendedor.</p></div><button class="btn primary" onclick="show('sellers')">↻ Atualizar</button></div></div><div class="grid" style="margin-top:14px">${vendedores.map(u=>`<div class="card" style="cursor:pointer" onclick="renderSellerDashboard('${u.id}','${esc(u.nome)}')"><h3 style="margin-top:0;display:flex;align-items:center;gap:8px"><span class="client-icon" style="width:30px;height:30px;font-size:14px">👤</span>${esc(u.nome)}</h3><p class="muted" style="margin:0">${esc(u.email)}</p></div>`).join('')||'<div class="empty-state">Nenhum vendedor ativo encontrado.</div>'}</div>`;
   };
-  window.renderSellerDashboard=async function(id,nome){
+  window.renderSellerDashboard=async function(id,nome,filterYm){
     window._currentSellerDashboardId=id;
     window._currentSellerDashboardNome=nome;
+    if(filterYm!==undefined) window._currentSellerDashboardFilter=filterYm;
+    else if(!window._currentSellerDashboardFilter) window._currentSellerDashboardFilter='';
     v.innerHTML='<div class="panel">Carregando painel do mês...</div>';
     try{
-      const d=await api('/api/seller/dashboard/monthly?vendedor_id='+encodeURIComponent(id));
-      v.innerHTML=`<div class="panel"><div class="panel-title"><div style="display:flex;align-items:center;gap:12px"><button class="btn" onclick="renderSellersDashboard()">← Voltar</button><div><h3 style="margin:0">${nome} · Painel do mês</h3><p class="muted" style="margin-top:4px">${esc(d.mes||'Mês atual')}</p></div></div><button class="btn primary" onclick="renderSellerDashboard('${id}','${esc(nome)}')">↻ Atualizar</button></div></div><div class="grid" style="margin-top:14px"><div class="card"><small class="muted">Pedidos no mês</small><h2>${Number(d.pedidos||0)}</h2></div><div class="card"><small class="muted">Valor total dos pedidos</small><h2 class="orange">${brl(d.valor_total||0)}</h2><p class="muted" style="font-size:16px">Valor dos pedidos emitidos, não apenas pagamentos recebidos.</p></div></div>`;
+      let url='/api/seller/dashboard/monthly?vendedor_id='+encodeURIComponent(id);
+      if(window._currentSellerDashboardFilter){
+        url+='&mes='+encodeURIComponent(window._currentSellerDashboardFilter);
+      }
+      const d=await api(url);
+      const ymParts=(d.ano_mes||new Date().toISOString().slice(0,7)).split('-').map(Number);
+      const curYear=ymParts[0]||new Date().getFullYear();
+      const curMonth=ymParts[1]||(new Date().getMonth()+1);
+
+      const meses=[
+        {v:1, l:'01 - Janeiro'},
+        {v:2, l:'02 - Fevereiro'},
+        {v:3, l:'03 - Março'},
+        {v:4, l:'04 - Abril'},
+        {v:5, l:'05 - Maio'},
+        {v:6, l:'06 - Junho'},
+        {v:7, l:'07 - Julho'},
+        {v:8, l:'08 - Agosto'},
+        {v:9, l:'09 - Setembro'},
+        {v:10, l:'10 - Outubro'},
+        {v:11, l:'11 - Novembro'},
+        {v:12, l:'12 - Dezembro'}
+      ];
+      const anos=[2024, 2025, 2026, 2027, 2028, 2029, 2030];
+
+      v.innerHTML=`<div class="panel"><div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px"><div style="display:flex;align-items:center;gap:12px"><button class="btn" onclick="renderSellersDashboard()">← Voltar</button><div><h3 style="margin:0">${esc(nome)} · Painel do mês</h3><p class="muted" style="margin-top:4px">${esc(d.mes||'Mês atual')}</p></div></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:13px;font-weight:700;color:var(--text)">📅 Escolher Mês / Ano:</span><select id="sellerFilterMonth" class="search" style="padding:7px 10px;font-size:13px;border-radius:8px;background:#fff;color:#000;border:1px solid #cbd5e1" onchange="renderSellerDashboard(window._currentSellerDashboardId, window._currentSellerDashboardNome, $('#sellerFilterYear').value+'-'+String(this.value).padStart(2,'0'))">${meses.map(m=>`<option value="${m.v}" ${m.v===curMonth?'selected':''}>${m.l}</option>`).join('')}</select><select id="sellerFilterYear" class="search" style="padding:7px 10px;font-size:13px;border-radius:8px;background:#fff;color:#000;border:1px solid #cbd5e1" onchange="renderSellerDashboard(window._currentSellerDashboardId, window._currentSellerDashboardNome, this.value+'-'+String($('#sellerFilterMonth').value).padStart(2,'0'))">${anos.map(y=>`<option value="${y}" ${y===curYear?'selected':''}>${y}</option>`).join('')}</select><button class="btn" style="padding:7px 12px;font-size:13px" onclick="renderSellerDashboard(window._currentSellerDashboardId, window._currentSellerDashboardNome, '')">Mês Atual</button><button class="btn primary" onclick="renderSellerDashboard(window._currentSellerDashboardId, window._currentSellerDashboardNome, window._currentSellerDashboardFilter)">↻ Atualizar</button></div></div></div><div class="grid" style="margin-top:14px"><div class="card"><small class="muted">Pedidos no mês (${esc(d.mes)})</small><h2>${Number(d.pedidos||0)}</h2></div><div class="card"><small class="muted">Valor total dos pedidos (${esc(d.mes)})</small><h2 class="orange">${brl(d.valor_total||0)}</h2><p class="muted" style="font-size:16px">Valor dos pedidos emitidos, não apenas pagamentos recebidos.</p></div></div>`;
     }catch(e){
       v.innerHTML=`<div class="panel"><div class="panel-title"><div style="display:flex;align-items:center;gap:12px"><button class="btn" onclick="renderSellersDashboard()">← Voltar</button><div><h3 style="margin:0">Erro</h3></div></div></div><div class="empty-state" style="margin-top:14px">Erro ao carregar dados: ${esc(e.message)}</div></div>`;
     }
@@ -2351,14 +3081,14 @@ async function logistics(v){
         <table class="table">
           <thead>
             <tr>
-              <th>Pedido</th>
-              <th>Data / Horário</th>
-              <th>Cliente</th>
-              <th>Motorista</th>
-              <th>Motivo do Retorno</th>
-              <th>Observação do Motorista</th>
-              <th>Total</th>
-              <th>Situação / Destino</th>
+              <th style="min-width:110px">Pedido</th>
+              <th style="min-width:140px">Data / Horário</th>
+              <th style="min-width:180px">Cliente</th>
+              <th style="min-width:160px">Motorista</th>
+              <th style="min-width:180px">Motivo do Retorno</th>
+              <th style="min-width:280px">Observação do Motorista</th>
+              <th style="min-width:100px">Total</th>
+              <th style="min-width:160px">Situação / Destino</th>
             </tr>
           </thead>
           <tbody id="returnedOrdersTableBody"></tbody>
@@ -2413,7 +3143,7 @@ async function logistics(v){
       const dateStr = x.created_at ? new Date(x.created_at).toLocaleString('pt-BR') : '-';
 
       return `<tr>
-        <td>
+        <td style="white-space:nowrap">
           <strong>${esc(x.pedido_numero)}</strong>
           <br>
           ${isLiberado
@@ -2421,27 +3151,27 @@ async function logistics(v){
             : `<span class="badge" style="font-size:10px;padding:2px 5px">${esc(curStatus)}</span>`}
         </td>
         <td style="font-size:13px;white-space:nowrap">${dateStr}</td>
-        <td>
+        <td style="white-space:normal;min-width:180px;max-width:260px;word-break:break-word">
           <strong>${esc(clientName)}</strong>
           ${bairro ? `<br><strong style="color:#ef4444;font-size:12px">📍 ${esc(bairro)}</strong>` : ''}
           ${phone ? `<br><small class="muted">📞 ${esc(phone)}</small>` : ''}
         </td>
-        <td>
+        <td style="white-space:normal;min-width:160px;max-width:220px;word-break:break-word">
           <span>👤 ${esc(x.motorista_nome || 'Não informado')}</span>
           ${x.rota_data ? `<br><small class="muted">Rota: ${esc(x.rota_data)}</small>` : ''}
         </td>
-        <td>
-          <span style="display:inline-block;padding:3px 8px;border-radius:6px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;font-weight:600;font-size:12px">
+        <td style="white-space:normal;min-width:180px;max-width:240px;word-break:break-word">
+          <span style="display:inline-block;padding:3px 8px;border-radius:6px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;font-weight:600;font-size:12px;white-space:normal;word-break:break-word">
             ✕ ${esc(x.motivo || 'Motivo não informado')}
           </span>
         </td>
-        <td style="max-width:240px">
-          <div style="font-size:12px;color:var(--text);word-break:break-word">
+        <td style="white-space:normal;min-width:280px;max-width:380px;word-break:break-word;overflow-wrap:break-word">
+          <div style="font-size:12px;color:var(--text);line-height:1.45;white-space:normal;word-break:break-word;overflow-wrap:break-word">
             ${x.descricao ? esc(x.descricao) : '<span class="muted">Sem observação adicional</span>'}
           </div>
         </td>
-        <td><strong>${brl(orderTotal)}</strong></td>
-        <td>
+        <td style="white-space:nowrap"><strong>${brl(orderTotal)}</strong></td>
+        <td style="white-space:nowrap">
           ${isLiberado
             ? `<span class="badge" style="background:#10b98120;color:#10b981;border:1px solid #10b98150;font-weight:600;font-size:11px">Liberado p/ Nova Rota</span><br><button class="btn" style="font-size:11px;padding:3px 7px;margin-top:4px" onclick="closeReturnedOrdersDashboard();renderModalityDashboard('TODOS')">Ver na Separação →</button>`
             : `<span class="badge">${esc(curStatus)}</span>`}
@@ -2750,7 +3480,7 @@ async function logistics(v){
      <div class="panel-title">
        <div>
          <h3>📍 Ponto de Partida e Roteirização Inteligente (OpenStreetMap)</h3>
-         <p class="muted">A fila de paradas das entregas é calculada automaticamente pela rota mais curta nas ruas reais via <strong>OpenStreetMap (OSRM)</strong>, 100% gratuito e sem necessidade de chave de API.</p>
+         <p class="muted">A fila de paradas das entregas é calculada automaticamente pela rota mais curta nas ruas reais via <strong>OpenStreetMap</strong>.</p>
        </div>
      </div>
      <div class="form">
@@ -2856,37 +3586,74 @@ window.renderSellerRoutesDashboardContent = async function(){
             </button>
             <div>
               <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-                <h2 style="margin:0;font-size:22px;letter-spacing:-0.5px">👔 Modalidade 1: Rotas de Vendedor</h2>
+                <h2 style="margin:0;font-size:22px;letter-spacing:-0.5px">👔 Rotas de Vendedor</h2>
                 <span class="badge" style="background:rgba(253,94,2,0.15);color:#fd5e02;border:1px solid rgba(253,94,2,0.3);font-size:12px;font-weight:700">
                   Carteira Comercial
                 </span>
               </div>
               <p class="muted" style="margin-top:4px;font-size:13px">
-                ℹ️ <strong>Finalidade desta modalidade:</strong> Serve <strong>apenas para designar vendedores</strong> para aquela rota / carteira de atendimento. <span style="color:#fd5e02;font-weight:600">Não causa nenhuma mudança na parte de entregas ou logística física.</span>
+                Designar vendedores para rota / carteira de atendimento. <span style="color:#fd5e02;font-weight:600">Não causa nenhuma mudança na parte de entregas ou logística física.</span>
               </p>
             </div>
-          </div>
-          <div class="actions">
-            <button class="btn primary" onclick="newRouteConfig()" style="background:#fd5e02;border-color:#fd5e02">+ Criar Nova Rota</button>
           </div>
         </div>
       </div>
 
       <div class="grid" style="margin-bottom:18px">
-        <div class="card" style="border-top:3px solid #fd5e02">
-          <small class="muted">Vendedores Ativos</small>
-          <h2 style="color:#fd5e02;margin:4px 0">${sellers.length}</h2>
-          <small class="muted">Equipe externa disponível</small>
-        </div>
         <div class="card" style="border-top:3px solid #3b82f6">
           <small class="muted">Rotas de Visitas Cadastradas</small>
           <h2 style="color:#3b82f6;margin:4px 0">${routes.length}</h2>
           <small class="muted">Regiões e agrupamentos</small>
         </div>
+        <div class="card" style="border-top:3px solid #fd5e02">
+          <small class="muted">Vendedores Ativos</small>
+          <h2 style="color:#fd5e02;margin:4px 0">${sellers.length}</h2>
+          <small class="muted">Equipe externa disponível</small>
+        </div>
         <div class="card" style="border-top:3px solid #10b981">
           <small class="muted">Designações Ativas</small>
           <h2 style="color:#10b981;margin:4px 0">${assignments.length}</h2>
           <small class="muted">Vendedor ➔ Rota ➔ Dia</small>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:18px">
+        <div class="panel-title">
+          <div>
+            <h3>🗺️ Rotas e Bairros Comerciais</h3>
+            <p class="muted">Cadastros de rotas e suas listas de bairros.</p>
+          </div>
+          <button class="btn primary" onclick="newRouteConfig()">+ Nova Rota</button>
+        </div>
+        <div class="tablewrap">
+          <table class="table" style="width:100%;table-layout:fixed;min-width:760px">
+            <colgroup>
+              <col style="width:25%">
+              <col style="width:15%">
+              <col style="width:48%">
+              <col style="width:12%">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Nome da Rota</th>
+                <th>Qtd. Bairros</th>
+                <th>Bairros Cadastrados</th>
+                <th style="text-align:right;width:110px">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${routes.map(x => `
+                <tr>
+                  <td><strong>${esc(x.nome)}</strong></td>
+                  <td><span class="badge">${(x.bairros||[]).length}</span></td>
+                  <td style="white-space:normal!important;vertical-align:middle;line-height:1.4;padding:12px">${(x.bairros||[]).map(b => esc(b.bairro)).join(' · ') || '<span class="muted">Sem bairros</span>'}</td>
+                  <td style="text-align:right;white-space:nowrap;vertical-align:middle;padding:12px">
+                    <button class="btn" style="padding:6px 14px;font-size:12px;font-weight:700;margin:0;display:inline-block;white-space:nowrap" onclick="editRouteConfig(parseJsonArg('${jsonArg(x)}'))">Editar</button>
+                  </td>
+                </tr>
+              `).join('') || '<tr><td colspan="4" class="empty-state">Nenhuma rota cadastrada.</td></tr>'}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -2922,7 +3689,7 @@ window.renderSellerRoutesDashboardContent = async function(){
         </div>
       </div>
 
-      <div class="panel" style="margin-bottom:18px">
+      <div class="panel">
         <div class="panel-title">
           <div>
             <h3>📋 Designações de Vendedores Ativas</h3>
@@ -2961,46 +3728,6 @@ window.renderSellerRoutesDashboardContent = async function(){
                   </td>
                 </tr>`;
               }).join('') || '<tr><td colspan="5" class="empty-state">Nenhuma designação de rota configurada para vendedores.</td></tr>'}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="panel">
-        <div class="panel-title">
-          <div>
-            <h3>🗺️ Rotas e Bairros Comerciais</h3>
-            <p class="muted">Cadastros de rotas e suas listas de bairros.</p>
-          </div>
-          <button class="btn primary" onclick="newRouteConfig()">+ Nova Rota</button>
-        </div>
-        <div class="tablewrap">
-          <table class="table" style="width:100%;table-layout:fixed;min-width:760px">
-            <colgroup>
-              <col style="width:25%">
-              <col style="width:15%">
-              <col style="width:48%">
-              <col style="width:12%">
-            </colgroup>
-            <thead>
-              <tr>
-                <th>Nome da Rota</th>
-                <th>Qtd. Bairros</th>
-                <th>Bairros Cadastrados</th>
-                <th style="text-align:right;width:110px">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${routes.map(x => `
-                <tr>
-                  <td><strong>${esc(x.nome)}</strong></td>
-                  <td><span class="badge">${(x.bairros||[]).length}</span></td>
-                  <td style="white-space:normal!important;vertical-align:middle;line-height:1.4;padding:12px">${(x.bairros||[]).map(b => esc(b.bairro)).join(' · ') || '<span class="muted">Sem bairros</span>'}</td>
-                  <td style="text-align:right;white-space:nowrap;vertical-align:middle;padding:12px">
-                    <button class="btn" style="padding:6px 14px;font-size:12px;font-weight:700;margin:0;display:inline-block;white-space:nowrap" onclick="editRouteConfig(parseJsonArg('${jsonArg(x)}'))">Editar</button>
-                  </td>
-                </tr>
-              `).join('') || '<tr><td colspan="4" class="empty-state">Nenhuma rota cadastrada.</td></tr>'}
             </tbody>
           </table>
         </div>
@@ -3055,7 +3782,7 @@ window.openDeliveryRoutesDashboard = async function(tab = 'expedicao', grupoKey 
   if(dDb) {
     dDb.style.display = 'block';
     const t = document.getElementById('title');
-    if(t) t.textContent = 'Logística · Rotas de Entrega (Tela Cheia)';
+    if(t) t.textContent = 'Logística · Rotas de Entrega';
     window.scrollTo({top:0, behavior:'smooth'});
     await renderDeliveryRoutesDashboardContent();
   }
@@ -3309,25 +4036,25 @@ window.renderDeliveryRoutesDashboardContent = async function(){
         </div>
 
         <!-- Sticky Action Toolbar -->
-        <div class="panel" style="margin-bottom:16px; position:sticky; top:10px; z-index:30; background:var(--xv-panel,#101d2e); border:1px solid #1e3a8a; box-shadow:0 8px 24px rgba(0,0,0,0.35); padding:12px 18px">
+        <div class="panel" style="margin-bottom:16px; position:sticky; top:10px; z-index:30; background:#ffffff; border:1px solid #dce4ef; box-shadow:0 8px 24px rgba(6,26,79,0.08); padding:12px 18px">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
             <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap">
-              <input id="delivQuickSearch" class="field-input search" style="margin:0; width:260px; min-width:200px; padding:7px 12px; font-size:13px" placeholder="🔍 Filtrar pedido, cliente ou bairro..." oninput="filterDelivOrdersTable()">
-              <span id="delivSelectedCount" style="font-size:13px">
-                <strong>0</strong> pedidos selecionados · <span class="orange">R$ 0,00</span>
+              <input id="delivQuickSearch" class="field-input search" style="margin:0; width:260px; min-width:200px; padding:7px 12px; font-size:13px; background:#fff; border:1px solid #cbd5e1; color:#061a4f" placeholder="🔍 Filtrar pedido, cliente ou bairro..." oninput="filterDelivOrdersTable()">
+              <span id="delivSelectedCount" style="font-size:13px; color:#17233d">
+                <strong style="color:#061a4f">0</strong> pedidos selecionados · <strong class="orange" style="color:var(--xv-orange,#fd5e02)">R$ 0,00</strong>
               </span>
             </div>
             <div style="display:flex; gap:10px; flex-wrap:wrap">
-              <button id="btnDelivMakeList" class="btn" onclick="generateLoadingList()">
+              <button id="btnDelivMakeList" class="btn" style="background:#fff; color:#061a4f; border:1px solid #dce4ef" onclick="generateLoadingList()">
                 📋 Gerar Lista de Carregamento
               </button>
-              <button class="btn" onclick="downloadDeliveryOrdersPdf()">
+              <button class="btn" style="background:#fff; color:#061a4f; border:1px solid #dce4ef" onclick="downloadDeliveryOrdersPdf()">
                 🖨️ Imprimir Pedidos em PDF
               </button>
-              <button id="btnDelivCompleteDirect" class="btn good" style="background:#059669; border-color:#059669; font-weight:800; font-size:13px; display:inline-flex; align-items:center; gap:6px" onclick="completeOrdersWithoutDriver()">
+              <button id="btnDelivCompleteDirect" class="btn" style="background:#ffffff; color:var(--xv-brand-navy,#061a4f); border:1px solid #dce4ef; font-weight:800; font-size:13px; display:inline-flex; align-items:center; gap:6px" onclick="completeOrdersWithoutDriver()">
                 ✓ Concluir Pedidos (Sem Motorista)
               </button>
-              <button id="btnDelivMakeRoute" class="btn primary" style="background:#10b981; border-color:#10b981; font-weight:800; font-size:13px" onclick="makeRouteModal()">
+              <button id="btnDelivMakeRoute" class="btn" style="background:#ffffff; color:var(--xv-brand-navy,#061a4f); border:1px solid #dce4ef; font-weight:800; font-size:13px" onclick="makeRouteModal()">
                 🚚 Gerar Rota & Designar Motorista →
               </button>
             </div>
@@ -3348,33 +4075,33 @@ window.renderDeliveryRoutesDashboardContent = async function(){
               hasAny = true;
               const sgTotal = pList.reduce((acc, p) => acc + Number(p.total || 0), 0);
               return `
-                <div class="card logistics-neighborhood" style="margin-bottom:16px; border-left:4px solid #10b981">
+                <div class="card logistics-neighborhood" style="margin-bottom:16px; border-left:4px solid #10b981; background:#ffffff; border-top:1px solid #dce4ef; border-right:1px solid #dce4ef; border-bottom:1px solid #dce4ef; box-shadow:0 4px 14px rgba(6,26,79,0.05)">
                   <div class="panel-title" style="margin-bottom:10px; flex-wrap:wrap; gap:8px">
                     <div style="display:flex; align-items:center; gap:10px">
                       <strong style="color:#10b981; font-size:15px">📍 ${esc(sg.bairro)}</strong>
-                      <span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981;font-weight:700">
+                      <span class="badge" style="background:rgba(16,185,129,0.12); color:#059669; font-weight:750; border:1px solid rgba(16,185,129,0.25)">
                         ${pList.length} ${pList.length === 1 ? 'pedido' : 'pedidos'} · ${brl(sgTotal)}
                       </span>
                     </div>
-                    <label style="cursor:pointer;font-size:12px;display:flex;align-items:center;gap:6px;font-weight:600">
+                    <label style="cursor:pointer;font-size:12px;display:flex;align-items:center;gap:6px;font-weight:600;color:#17233d">
                       <input type="checkbox" onchange="const cb=this.closest('.logistics-neighborhood').querySelectorAll('.routeOrder'); cb.forEach(c => c.checked = this.checked); updateDelivSelectionCounter()">
                       Selecionar todos deste bairro
                     </label>
                   </div>
                   <div class="actions" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:10px">
                     ${pList.map(p => `
-                      <label class="card logistics-order" style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; padding:10px; background:rgba(255,255,255,0.02); border:1px solid var(--border)">
+                      <label class="card logistics-order" style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; padding:12px; background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; box-shadow:0 2px 6px rgba(6,26,79,0.03)">
                         <input type="checkbox" class="load-order routeOrder" value="${p.id}" data-total="${p.total || 0}" onchange="updateDelivSelectionCounter()" style="margin-top:3px">
                         <div style="flex:1; font-size:12px; line-height:1.4">
                           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px">
-                            <strong style="font-size:13px; color:var(--text)">${esc(p.numero)}</strong>
-                            <strong class="orange" style="font-size:12px">${brl(p.total)}</strong>
+                            <strong style="font-size:13px; color:#061a4f">${esc(p.numero)}</strong>
+                            <strong class="orange" style="font-size:12px; color:var(--xv-orange,#fd5e02)">${brl(p.total)}</strong>
                           </div>
-                          <div style="font-weight:700; color:var(--text)">${esc(p.nome_fantasia || p.razao_social)}</div>
-                          <div class="muted" style="font-size:11px; margin-top:2px">
+                          <div style="font-weight:700; color:#1e293b">${esc(p.nome_fantasia || p.razao_social)}</div>
+                          <div class="muted" style="font-size:11px; margin-top:2px; color:#64748b">
                             📍 ${esc(p.endereco || sg.bairro)}
                           </div>
-                          <div class="muted" style="font-size:11px; margin-top:2px">
+                          <div class="muted" style="font-size:11px; margin-top:2px; color:#64748b">
                             👤 ${esc(p.operador_nome || 'N/A')}${activeGrupo === 'TODOS' ? ` · ${esc(p.origem)}` : ''}
                           </div>
                         </div>
@@ -3394,7 +4121,7 @@ window.renderDeliveryRoutesDashboardContent = async function(){
           <div class="panel-title">
             <div>
               <h3>📍 Ponto de Partida e Roteirização Inteligente (OpenStreetMap)</h3>
-              <p class="muted">A rota mais curta pelas ruas reais é calculada automaticamente via <strong>OpenStreetMap (OSRM)</strong>, 100% gratuito e sem necessidade de chave de API.</p>
+              <p class="muted">A rota mais curta pelas ruas reais é calculada automaticamente via <strong>OpenStreetMap</strong>.</p>
             </div>
           </div>
           <div class="form">
@@ -3442,13 +4169,13 @@ window.renderDeliveryRoutesDashboardContent = async function(){
               </p>
             </div>
             <div style="display:flex; gap:8px; flex-wrap:wrap">
-              <button class="btn" style="border:1px solid #1e3a8a; background:rgba(8,43,120,0.25); color:#60a5fa; font-weight:700" onclick="initDefaultDeliverySchedule()">
+              <button class="btn" style="background:#ffffff; color:#000000; border:1px solid #dce4ef; font-weight:700" onclick="initDefaultDeliverySchedule()">
                 ⚡ Inicializar Semana Padrão (Seg a Sáb)
               </button>
-              <button class="btn primary" style="background:#3b82f6; border-color:#3b82f6; font-weight:700" onclick="addDeliveryDayModal()">
+              <button class="btn" style="background:#ffffff; color:#000000; border:1px solid #dce4ef; font-weight:700" onclick="addDeliveryDayModal()">
                 + Adicionar Dia / Rota
               </button>
-              <button class="btn primary" style="background:linear-gradient(135deg,#021d60,#082b78); border:1px solid #1e3a8a; color:#fff; font-weight:700" onclick="saveDeliveryRoutesSchedule()">
+              <button class="btn" style="background:#ffffff; color:#000000; border:1px solid #dce4ef; font-weight:700" onclick="saveDeliveryRoutesSchedule()">
                 💾 Salvar Cronograma Completo
               </button>
             </div>
@@ -3473,14 +4200,14 @@ window.renderDeliveryRoutesDashboardContent = async function(){
           ` : `
             <!-- Known Neighborhoods Quick Selection Chips -->
             ${allKnownBairros.length ? `
-              <div style="margin-bottom:18px; padding:12px 14px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:8px">
-                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
-                  <span style="font-size:12px; font-weight:700; color:#60a5fa">💡 Bairros com clientes cadastrados:</span>
-                  <span class="muted" style="font-size:11px">Clique em qualquer bairro abaixo para adicioná-lo à rota selecionada no momento.</span>
+              <div style="margin-bottom:18px; padding:14px 16px; background:#ffffff; border:1px solid #dce4ef; border-radius:10px; box-shadow:0 2px 8px rgba(6,26,79,0.04)">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap">
+                  <span style="font-size:13px; font-weight:800; color:#061a4f">💡 Bairros com clientes cadastrados:</span>
+                  <span class="muted" style="font-size:12px; color:#64748b">Clique em qualquer bairro abaixo para adicioná-lo à rota selecionada no momento.</span>
                 </div>
                 <div style="display:flex; gap:6px; flex-wrap:wrap">
                   ${allKnownBairros.map(b => `
-                    <span class="badge" style="cursor:pointer; background:rgba(8,43,120,0.35); color:#93c5fd; border:1px solid rgba(30,58,138,0.6); font-size:11px; padding:3px 8px" onclick="appendBairroToActiveDay('${esc(b)}')">
+                    <span class="badge" style="cursor:pointer; background:#061a4f; color:#ffffff; border:1px solid #061a4f; font-weight:700; font-size:11.5px; padding:4px 10px; border-radius:6px; transition:transform 0.12s" onclick="appendBairroToActiveDay('${esc(b)}')">
                       + ${esc(b)}
                     </span>
                   `).join('')}
@@ -3532,10 +4259,10 @@ window.renderDeliveryRoutesDashboardContent = async function(){
             </div>
 
             <div class="actions" style="margin-top:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
-              <button class="btn" onclick="addDeliveryDayModal()">
+              <button class="btn" style="background:#ffffff; color:#000000; border:1px solid #dce4ef; font-weight:700" onclick="addDeliveryDayModal()">
                 + Adicionar Outro Dia ao Cronograma
               </button>
-              <button class="btn primary" style="background:linear-gradient(135deg,#021d60,#082b78); border:1px solid #1e3a8a; color:#fff; font-size:14px; padding:10px 20px; font-weight:700" onclick="saveDeliveryRoutesSchedule()">
+              <button class="btn" style="background:#ffffff; color:#000000; border:1px solid #dce4ef; font-size:14px; padding:10px 20px; font-weight:700" onclick="saveDeliveryRoutesSchedule()">
                 💾 Salvar Cronograma Completo de Entregas
               </button>
             </div>
@@ -3918,7 +4645,445 @@ async function makeRouteModal(){
       } catch(ex){ toast(ex.message,true) }
     };
   }
-async function reports(v,periodo='geral'){window._currentReportsPeriodo=periodo;v.innerHTML='<div class="panel">Carregando relatórios...</div>';const qStr=periodo!=='geral'?`?periodo=${periodo}`:'';const r=await api('/api/reports'+qStr);const periodLabels={geral:'Histórico Geral',semanal:'Últimos 7 dias',mensal:'Últimos 30 dias'};const originLabels={VENDEDOR:'Vendedor Externo',BALCAO:'Frente de Loja / PDV',WEB:'Loja Online (Web)'};v.innerHTML=`<div class="panel" style="margin-bottom:14px"><div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px"><div><h3 style="margin:0">Relatórios Gerenciais</h3><p class="muted" style="margin:4px 0 0">Torre de Controle · Período: <strong>${periodLabels[periodo]||periodo}</strong></p></div><div class="actions" style="display:flex;gap:6px"><button class="btn ${periodo==='geral'?'primary':''}" style="font-size:12px;padding:6px 12px" onclick="reports(document.getElementById('view'),'geral')">Geral</button><button class="btn ${periodo==='semanal'?'primary':''}" style="font-size:12px;padding:6px 12px" onclick="reports(document.getElementById('view'),'semanal')">Semanal</button><button class="btn ${periodo==='mensal'?'primary':''}" style="font-size:12px;padding:6px 12px" onclick="reports(document.getElementById('view'),'mensal')">Mensal</button></div></div></div><div class="grid"><div class="card" style="border-top:4px solid #2ecc71"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><h3 style="margin:0;display:flex;align-items:center;gap:6px"><span>🛒</span> Vendas da Loja Online</h3><span class="badge" style="background:rgba(46,204,113,0.15);color:#2ecc71;border:1px solid rgba(46,204,113,0.3)">Canal Web</span></div><div style="padding:12px;background:rgba(46,204,113,0.08);border-radius:8px;margin-bottom:12px"><div style="font-size:24px;font-weight:800;color:#2ecc71">${brl(r.lojaOnline?.faturamento||0)}</div><small class="muted">${r.lojaOnline?.pedidos||0} pedido(s) concluído(s)</small></div>${(r.lojaOnline?.clientes||[]).length?`<small class="muted" style="font-weight:700;display:block;margin-bottom:6px">Clientes da Loja Online:</small>${r.lojaOnline.clientes.map(x=>`<p style="margin:4px 0">${esc(x.nome)} — <strong>${x.pedidos} pedidos</strong> — ${brl(x.faturamento)}</p>`).join('')}`:'<p class="muted">Nenhuma venda concluída na loja online no período.</p>'}</div><div class="card"><h3>Por Modalidade (Origem)</h3>${(r.origens||[]).map(x=>`<p><strong>${originLabels[x.origem]||x.origem}:</strong> ${x.pedidos} pedidos — <span class="orange">${brl(x.faturamento)}</span></p>`).join('')||'<p class="muted">Nenhum pedido no período.</p>'}</div><div class="card"><h3>Top produtos</h3>${r.topProdutos.slice(0,10).map(x=>`<p>${esc(x.nome)} — <strong>${x.quantidade} un.</strong> — ${brl(x.faturamento)}</p>`).join('')||'<p class="muted">Sem produtos vendidos no período.</p>'}</div><div class="card"><h3>Vendedores</h3>${r.vendedores.map(x=>`<p>${esc(x.nome)} — <strong>${x.pedidos} pedidos</strong> — ${brl(x.faturamento)}</p>`).join('')||'<p class="muted">Sem vendas de vendedores no período.</p>'}</div><div class="card"><h3>Frente de Loja / PDV</h3>${(r.balcao||[]).map(x=>`<p>${esc(x.nome)} — <strong>${x.pedidos} pedidos</strong> — ${brl(x.faturamento)}</p>`).join('')||'<p class="muted">Sem vendas no balcão no período.</p>'}</div></div>`}
+async function reports(v,periodParam){
+  let st = null;
+  if (typeof periodParam === 'object' && periodParam !== null) {
+    st = periodParam;
+  } else if (typeof periodParam === 'string' && periodParam) {
+    st = { mode: periodParam };
+    if (periodParam === 'semana' || periodParam === 'mes') {
+      st = Object.assign({}, window.getDefaultPeriodState(), { mode: periodParam });
+    }
+  }
+  window._reportsPeriodState = st || window._reportsPeriodState || window.getDefaultPeriodState();
+  st = window._reportsPeriodState;
+  const calc = window.calculatePeriodRange(st);
+  st.inicio = calc.inicio;
+  st.fim = calc.fim;
+  st.label = calc.label;
+
+  v.innerHTML='<div class="panel">Carregando relatórios gerenciais e análise de lucros...</div>';
+  const qp = [];
+  if (st.inicio) qp.push('inicio=' + encodeURIComponent(st.inicio));
+  if (st.fim) qp.push('fim=' + encodeURIComponent(st.fim));
+  if (st.mode) qp.push('periodo=' + encodeURIComponent(st.mode));
+  const qStr = qp.length ? '?' + qp.join('&') : '';
+
+  const r = await api('/api/reports' + qStr);
+  const originLabels = {VENDEDOR:'Vendedor Externo', BALCAO:'Frente de Loja / PDV', WEB:'Loja Online (Web)'};
+  const tot = r.totaisLucro || {receita_total:0, custo_total:0, lucro_total:0, margem_geral_pct:0};
+
+  v.innerHTML=`
+    ${window.renderPeriodFilterComponent('reportsPeriodWidget', st, 'onReportsPeriodChanged')}
+
+    <!-- CARDS DE CONSOLIDAÇÃO FINANCEIRA E LUCRO -->
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:18px">
+      <div class="card kpi">
+        <div class="kpi-title"><span class="kpi-dot"></span><span>Receita Faturada</span></div>
+        <div class="v">${brl(tot.receita_total)}</div>
+      </div>
+      <div class="card kpi">
+        <div class="kpi-title"><span class="kpi-dot"></span><span>Custo Mercadorias</span></div>
+        <div class="v">${brl(tot.custo_total)}</div>
+      </div>
+      <div class="card kpi">
+        <div class="kpi-title"><span class="kpi-dot"></span><span>Lucro Real</span></div>
+        <div class="v">${brl(tot.lucro_total)}</div>
+      </div>
+      <div class="card kpi">
+        <div class="kpi-title"><span class="kpi-dot"></span><span>Margem de Lucro</span></div>
+        <div class="v">${tot.margem_geral_pct}%</div>
+      </div>
+    </div>
+
+    <!-- TABELA COMPLETA DE LUCRO POR PRODUTO -->
+    <div class="panel" style="margin-bottom:18px">
+      <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+        <div>
+          <h3 style="margin:0">📊 Medição de Lucro por Produto</h3>
+          <p class="muted" style="margin:4px 0 0;font-size:12px">Cálculo de margem baseado no custo de aquisição da compra e histórico de vigência.</p>
+        </div>
+        <div class="actions">
+          <input id="profitProductSearch" class="search" style="max-width:280px" placeholder="Filtrar por produto ou SKU..." oninput="filterProfitTable(this.value)">
+        </div>
+      </div>
+      <div class="tablewrap" style="max-height:450px;overflow-y:auto">
+        <table class="table" id="profitReportTable">
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th>SKU</th>
+              <th>Qtd Vendida</th>
+              <th>Receita Total</th>
+              <th>Custo Efetivo</th>
+              <th>Lucro Gerado</th>
+              <th>Margem (%)</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${(r.topProdutos||[]).map(p=>`
+              <tr data-ptext="${esc((p.nome+' '+(p.sku||'')).toLowerCase())}">
+                <td><strong>${esc(p.nome)}</strong></td>
+                <td><small class="muted">${esc(p.sku||'-')}</small></td>
+                <td><strong>${p.quantidade} un</strong></td>
+                <td>${brl(p.faturamento)}</td>
+                <td>${brl(p.custo_total)}</td>
+                <td><strong style="color:${Number(p.lucro_bruto)>=0?'#10b981':'#ef4444'}">${brl(p.lucro_bruto)}</strong></td>
+                <td>
+                  <span class="badge" style="background:${Number(p.margem_pct)>=30?'rgba(16,185,129,0.15)':Number(p.margem_pct)>0?'rgba(245,158,11,0.15)':'rgba(239,68,68,0.15)'};color:${Number(p.margem_pct)>=30?'#10b981':Number(p.margem_pct)>0?'#f59e0b':'#ef4444'};font-weight:700">
+                    ${p.margem_pct}%
+                  </span>
+                </td>
+                <td>
+                  <button class="btn" style="padding:4px 8px;font-size:12px" onclick="productCostHistoryModal('${p.id}',parseJsonArg('${jsonArg(p.nome)}'))">📜 Linha do Tempo</button>
+                </td>
+              </tr>
+            `).join('') || '<tr><td colspan="8">Nenhum produto concluído no período selecionado.</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CARDS EXISTENTES DE CANAIS E OPERAÇÃO -->
+    <div class="grid">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <h3 style="margin:0;display:flex;align-items:center;gap:6px"><span>🛒</span> Vendas da Loja Online</h3>
+          <span class="badge">Canal Web</span>
+        </div>
+        <div style="padding:12px 14px;background:#ffffff;border:1px solid #dfe6ef;border-radius:10px;margin-bottom:12px;box-shadow:0 2px 8px rgba(6,26,79,0.04)">
+          <div style="font-size:24px;font-weight:850;color:var(--xv-brand-navy,#061a4f);letter-spacing:-0.5px">${brl(r.lojaOnline?.faturamento||0)}</div>
+          <small style="color:#64748b;font-weight:750;font-size:12px;display:block;margin-top:2px">${r.lojaOnline?.pedidos||0} pedido(s) concluído(s)</small>
+        </div>
+        ${(r.lojaOnline?.clientes||[]).length?`
+          <small class="muted" style="font-weight:700;display:block;margin-bottom:6px">Clientes da Loja Online:</small>
+          ${r.lojaOnline.clientes.map(x=>`<p style="margin:4px 0">${esc(x.nome)} — <strong>${x.pedidos} pedidos</strong> — <span class="orange">${brl(x.faturamento)}</span></p>`).join('')}
+        `:'<p class="muted">Nenhuma venda concluída na loja online no período.</p>'}
+      </div>
+      <div class="card">
+        <h3>Por Modalidade (Origem)</h3>
+        ${(r.origens||[]).map(x=>`<p><strong>${originLabels[x.origem]||x.origem}:</strong> ${x.pedidos} pedidos — <span class="orange">${brl(x.faturamento)}</span></p>`).join('')||'<p class="muted">Nenhum pedido no período.</p>'}
+      </div>
+      <div class="card">
+        <h3>Vendedores Externos</h3>
+        ${r.vendedores.map(x=>`<p>${esc(x.nome)} — <strong>${x.pedidos} pedidos</strong> — ${brl(x.faturamento)}</p>`).join('')||'<p class="muted">Sem vendas de vendedores no período.</p>'}
+      </div>
+      <div class="card">
+        <h3>Frente de Loja / PDV</h3>
+        ${(r.balcao||[]).map(x=>`<p>${esc(x.nome)} — <strong>${x.pedidos} pedidos</strong> — ${brl(x.faturamento)}</p>`).join('')||'<p class="muted">Sem vendas no balcão no período.</p>'}
+      </div>
+    </div>
+  `;
+}
+
+async function openProfitReportModal(periodo='geral'){
+  let overlay = document.getElementById('profitFullscreenDashboard');
+  if(!overlay){
+    overlay = document.createElement('div');
+    overlay.id = 'profitFullscreenDashboard';
+    overlay.style = 'position:fixed;inset:0;background:var(--xv-dark,#0a1019);z-index:99999;overflow-y:auto;padding:24px;box-sizing:border-box;display:flex;flex-direction:column;';
+    document.body.appendChild(overlay);
+  } else {
+    overlay.style.display = 'flex';
+  }
+  document.body.style.overflow = 'hidden';
+  await renderProfitReportModalContent(periodo);
+}
+
+function closeProfitFullscreenDashboard(){
+  const overlay = document.getElementById('profitFullscreenDashboard');
+  if(overlay) overlay.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+async function renderProfitReportModalContent(periodParam){
+  const container = document.getElementById('profitFullscreenDashboard');
+  if(!container) return;
+
+  let st = null;
+  if (typeof periodParam === 'object' && periodParam !== null) {
+    st = periodParam;
+  } else if (typeof periodParam === 'string' && periodParam) {
+    st = { mode: periodParam };
+    if (periodParam === 'semana' || periodParam === 'mes') {
+      st = Object.assign({}, window.getDefaultPeriodState(), { mode: periodParam });
+    }
+  }
+  window._profitModalPeriodState = st || window._profitModalPeriodState || window._reportsPeriodState || window.getDefaultPeriodState();
+  st = window._profitModalPeriodState;
+  const calc = window.calculatePeriodRange(st);
+  st.inicio = calc.inicio;
+  st.fim = calc.fim;
+  st.label = calc.label;
+
+  container.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 18px;background:#0d1624;border:1px solid #203248;border-radius:12px;margin-bottom:20px;box-shadow:0 6px 20px rgba(0,0,0,0.3)">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-size:28px">📊</span>
+        <div>
+          <h2 style="margin:0;font-size:20px;color:#fff;font-weight:800;letter-spacing:-0.3px">Relatórios Gerenciais & Lucratividade Real</h2>
+          <span class="muted" style="font-size:13px">Torre de Controle · Painel em Tela Cheia</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="btn" style="background:#1e293b;border-color:#334155;color:#fff;font-size:14px;padding:8px 16px;display:flex;align-items:center;gap:8px" onclick="closeProfitFullscreenDashboard()">
+          <span>✕</span> Fechar Tela Cheia
+        </button>
+      </div>
+    </div>
+    <div id="profitFullscreenBody" style="flex:1">
+      <div class="panel">Carregando dados consolidados de lucros...</div>
+    </div>
+  `;
+
+  const bodyEl = document.getElementById('profitFullscreenBody');
+  if(!bodyEl) return;
+
+  try {
+    const qp = [];
+    if (st.inicio) qp.push('inicio=' + encodeURIComponent(st.inicio));
+    if (st.fim) qp.push('fim=' + encodeURIComponent(st.fim));
+    if (st.mode) qp.push('periodo=' + encodeURIComponent(st.mode));
+    const qStr = qp.length ? '?' + qp.join('&') : '';
+
+    const r = await api('/api/reports' + qStr);
+    const tot = r.totaisLucro || {receita_total:0, custo_total:0, lucro_total:0, margem_geral_pct:0};
+
+    bodyEl.innerHTML = `
+      ${window.renderPeriodFilterComponent('profitModalPeriodWidget', st, 'onProfitModalPeriodChanged')}
+
+      <!-- CARDS DE CONSOLIDAÇÃO FINANCEIRA -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:22px">
+        <div class="card kpi" style="border-left:4px solid var(--xv-brand-orange,#fd5e02)!important;background:#ffffff!important;padding:16px 18px!important">
+          <div class="kpi-title"><span class="kpi-dot"></span><span>Receita Faturada</span></div>
+          <div class="v">${brl(tot.receita_total)}</div>
+        </div>
+        <div class="card kpi" style="border-left:4px solid var(--xv-brand-orange,#fd5e02)!important;background:#ffffff!important;padding:16px 18px!important">
+          <div class="kpi-title"><span class="kpi-dot"></span><span>Custo Mercadorias</span></div>
+          <div class="v">${brl(tot.custo_total)}</div>
+        </div>
+        <div class="card kpi" style="border-left:4px solid var(--xv-brand-orange,#fd5e02)!important;background:#ffffff!important;padding:16px 18px!important">
+          <div class="kpi-title"><span class="kpi-dot"></span><span>Lucro Real</span></div>
+          <div class="v">${brl(tot.lucro_total)}</div>
+        </div>
+        <div class="card kpi" style="border-left:4px solid var(--xv-brand-orange,#fd5e02)!important;background:#ffffff!important;padding:16px 18px!important">
+          <div class="kpi-title"><span class="kpi-dot"></span><span>Margem de Lucro</span></div>
+          <div class="v">${tot.margem_geral_pct}%</div>
+        </div>
+      </div>
+
+      <!-- TABELA DE PRODUTOS -->
+      <div class="panel" style="margin-bottom:20px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.25)">
+        <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;padding-bottom:12px">
+          <div>
+            <h3 style="margin:0;font-size:18px;display:flex;align-items:center;gap:8px"><span>📊</span> Medição de Lucro por Produto</h3>
+            <p class="muted" style="margin:4px 0 0;font-size:13px">Detalhamento unitário de faturamento, custo efetivo congelado e margens apuradas.</p>
+          </div>
+          <div class="actions">
+            <input id="profitModalSearch" class="search" style="min-width:320px;padding:10px 14px;font-size:14px" placeholder="Filtrar por produto ou SKU..." oninput="filterProfitModalTable(this.value)">
+          </div>
+        </div>
+        <div class="tablewrap" style="max-height:calc(100vh - 430px);min-height:300px;overflow-y:auto">
+          <table class="table" id="profitModalTable" style="width:100%">
+            <thead style="position:sticky;top:0;background:#0e1724;z-index:2">
+              <tr>
+                <th>Produto</th>
+                <th>SKU</th>
+                <th>Qtd Vendida</th>
+                <th>Receita Total</th>
+                <th>Custo Efetivo</th>
+                <th>Lucro Gerado</th>
+                <th>Margem (%)</th>
+                <th style="text-align:right">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(r.topProdutos||[]).map(p=>`
+                <tr data-ptext="${esc((p.nome+' '+(p.sku||'')).toLowerCase())}">
+                  <td><strong style="font-size:14px;color:#fff">${esc(p.nome)}</strong></td>
+                  <td><small class="muted" style="font-size:12px">${esc(p.sku||'-')}</small></td>
+                  <td><strong>${p.quantidade} un</strong></td>
+                  <td><span style="color:#e2e8f0;font-weight:600">${brl(p.faturamento)}</span></td>
+                  <td><span class="muted">${brl(p.custo_total)}</span></td>
+                  <td><strong style="color:${Number(p.lucro_bruto)>=0?'#10b981':'#ef4444'};font-size:14px">${brl(p.lucro_bruto)}</strong></td>
+                  <td>
+                    <span class="badge" style="background:${Number(p.margem_pct)>=30?'rgba(16,185,129,0.18)':Number(p.margem_pct)>0?'rgba(245,158,11,0.18)':'rgba(239,68,68,0.18)'};color:${Number(p.margem_pct)>=30?'#10b981':Number(p.margem_pct)>0?'#f59e0b':'#ef4444'};font-weight:800;padding:4px 8px">
+                      ${p.margem_pct}%
+                    </span>
+                  </td>
+                  <td style="text-align:right">
+                    <button class="btn" style="padding:6px 12px;font-size:12px" onclick="productCostHistoryModal('${p.id}',parseJsonArg('${jsonArg(p.nome)}'))">📜 Linha do Tempo</button>
+                  </td>
+                </tr>
+              `).join('') || '<tr><td colspan="8" style="text-align:center;padding:30px;color:#94a3b8">Nenhum produto concluído no período selecionado.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  } catch(e) {
+    bodyEl.innerHTML = `<div class="panel" style="color:#ef4444">Erro ao carregar relatório: ${esc(e.message)}</div>`;
+  }
+}
+
+function filterProfitModalTable(q){
+  const sq=(q||'').toLowerCase().trim();
+  document.querySelectorAll('#profitModalTable tbody tr').forEach(r=>{
+    r.style.display=sq&&r.dataset.ptext&&!r.dataset.ptext.includes(sq)?'none':'';
+  });
+}
+
+function filterProfitTable(q){
+  const sq=(q||'').toLowerCase().trim();
+  document.querySelectorAll('#profitReportTable tbody tr').forEach(r=>{
+    r.style.display=sq&&r.dataset.ptext&&!r.dataset.ptext.includes(sq)?'none':'';
+  });
+}
+
+async function productCostHistoryModal(pid, pnome){
+  try {
+    modal('Carregando histórico...', '<div class="panel">Consultando linha do tempo de custos...</div>');
+    const res = await api('/api/products/' + pid + '/costs-history');
+    const p = res.produto;
+    const items = res.historico || [];
+
+    const tipoLabels = {
+      COMPRA: 'Entrada de Compra (Fornecedor)',
+      AJUSTE_MANUAL: 'Ajuste Manual Administrativo',
+      INVENTARIO: 'Ajuste de Inventário',
+      INICIAL: 'Custo Inicial de Cadastro'
+    };
+    const tipoBadges = {
+      COMPRA: 'background:rgba(59,130,246,0.18);color:#3b82f6',
+      AJUSTE_MANUAL: 'background:rgba(249,115,22,0.18);color:#f97316',
+      INVENTARIO: 'background:rgba(139,92,246,0.18);color:#8b5cf6',
+      INICIAL: 'background:rgba(100,116,139,0.18);color:#64748b'
+    };
+
+    // Calcular totais acumulados de vendas e lucro no histórico
+    const totalVendido = items.reduce((acc, h) => acc + Number(h.stats?.qtd_vendida || 0), 0);
+    const totalLucro = items.reduce((acc, h) => acc + Number(h.stats?.lucro || 0), 0);
+    const totalReceita = items.reduce((acc, h) => acc + Number(h.stats?.receita || 0), 0);
+    const hasHistory = items.length > 0;
+    const hasSales = totalVendido > 0;
+
+    let fallbackBanner = '';
+    if (!hasHistory && !Number(p.preco_custo)) {
+      fallbackBanner = `
+        <div style="background:rgba(239,68,68,0.1);border:1px dashed #ef4444;border-radius:8px;padding:20px;text-align:center;margin:16px 0">
+          <div style="font-size:32px;margin-bottom:8px">📦 ✕ 💰</div>
+          <strong style="font-size:16px;color:#fca5a5;display:block;margin-bottom:6px">Nenhum Registro de Custo ou Lucro Cadastrado</strong>
+          <p class="muted" style="font-size:13px;max-width:540px;margin:0 auto 14px;line-height:1.5">
+            Este produto ainda não possui preço de custo definido e nenhuma entrada de compra ou ajuste foi registrada no sistema.
+          </p>
+          <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="closeModal();location.hash='#catalog';editProduct(parseJsonArg('${jsonArg(p)}'))">
+              ✏️ Informar Preço de Custo no Produto
+            </button>
+            <button class="btn" onclick="closeModal();location.hash='#purchases'">
+              🏢 Registrar Entrada via Fornecedor
+            </button>
+          </div>
+        </div>
+      `;
+    } else if (hasHistory && !hasSales) {
+      fallbackBanner = `
+        <div style="background:rgba(245,158,11,0.08);border:1px dashed #f59e0b;border-radius:8px;padding:16px;margin:12px 0;display:flex;align-items:center;gap:14px">
+          <div style="font-size:26px">ℹ️</div>
+          <div>
+            <strong style="color:#fbbf24;font-size:14px">Sem Movimentação de Vendas no Período</strong>
+            <p class="muted" style="margin:4px 0 0;font-size:12px;line-height:1.4">
+              O custo está devidamente configurado, porém este produto ainda não possui vendas faturadas/concluídas nos períodos de vigência registrados. O lucro e a margem serão calculados automaticamente assim que houver pedidos concluídos.
+            </p>
+          </div>
+        </div>
+      `;
+    }
+
+    modal(`Linha do Tempo de Custos & Lucro — ${esc(pnome)}`, `
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:14px;background:#0d1624;padding:12px;border:1px solid #203248;border-radius:8px">
+        <div>
+          <strong style="font-size:15px;color:#fff">${esc(p.nome)}</strong><br>
+          <small style="color:#ffffff !important;opacity:1 !important">SKU: ${esc(p.sku||'Sem SKU')} · Preço de Venda Base: ${brl(p.preco_base)}</small>
+        </div>
+        <div style="text-align:right">
+          <span style="font-size:12px;color:#ffffff !important;display:block">Custo Ativo Atual:</span>
+          <strong style="font-size:18px;color:#ffffff !important;display:block">
+            ${Number(p.preco_custo)>0 ? brl(p.preco_custo) : '<span style="color:#ffffff !important;font-size:14px">Não Definido (R$ 0,00)</span>'}
+          </strong>
+        </div>
+      </div>
+
+      ${fallbackBanner}
+
+      <p class="muted" style="font-size:13px;margin-bottom:12px">
+        O sistema registra cada alteração com período exato de vigência (data início e término). As vendas realizadas em cada faixa utilizam o custo congelado correspondente.
+      </p>
+
+      <div class="tablewrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Período de Vigência</th>
+              <th>Origem / Tipo</th>
+              <th>Custo Unit.</th>
+              <th>Detalhes / Fornecedor / Motivo</th>
+              <th>Vendas no Período</th>
+              <th>Receita</th>
+              <th>Lucro Gerado</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map(h=>{
+              const dIni = new Date(h.data_inicio).toLocaleDateString('pt-BR') + ' ' + new Date(h.data_inicio).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+              const dFim = h.data_fim ? (new Date(h.data_fim).toLocaleDateString('pt-BR') + ' ' + new Date(h.data_fim).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})) : '<span class="badge" style="background:#10b981;color:#fff;font-weight:700">VIGENTE ATUAL</span>';
+              return `
+                <tr>
+                  <td>
+                    <strong>${dIni}</strong><br>
+                    <small class="muted">até ${dFim}</small>
+                  </td>
+                  <td>
+                    <span class="badge" style="${tipoBadges[h.tipo_ajuste]||''}">
+                      ${tipoLabels[h.tipo_ajuste]||h.tipo_ajuste}
+                    </span>
+                  </td>
+                  <td><strong class="orange">${brl(h.custo)}</strong></td>
+                  <td>
+                    ${esc(h.motivo||'—')}<br>
+                    ${h.usuario_nome?`<small class="muted">Operador: ${esc(h.usuario_nome)}</small>`:''}
+                  </td>
+                  <td><strong>${h.stats?.qtd_vendida||0} un</strong></td>
+                  <td>${brl(h.stats?.receita||0)}</td>
+                  <td>
+                    <strong style="color:${(h.stats?.lucro||0)>=0?'#10b981':'#ef4444'}">${brl(h.stats?.lucro||0)}</strong>
+                    <br><small class="muted">Margem: ${h.stats?.margem_pct||0}%</small>
+                  </td>
+                </tr>
+              `;
+            }).join('') || `
+              <tr>
+                <td colspan="7" style="text-align:center;padding:24px;color:#94a3b8">
+                  <div style="font-size:24px;margin-bottom:6px">🔍</div>
+                  <strong>Nenhum histórico de custos registrado para este produto.</strong><br>
+                  <span style="font-size:12px">O histórico passa a ser gravado a partir do primeiro custo definido no cadastro ou pela entrada de NFe de fornecedores.</span>
+                </td>
+              </tr>
+            `}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="actions" style="margin-top:16px;justify-content:flex-end">
+        <button class="btn" onclick="closeModal()">Fechar</button>
+      </div>
+    `, '960px');
+  } catch(e) {
+    toast(e.message, true);
+  }
+}
+
 async function auditView(v){const a=await api('/api/audit');v.innerHTML=`<div class="tablewrap"><table class="table"><thead><tr><th>Quando</th><th>Usuário</th><th>Ação</th><th>Entidade</th><th>ID</th></tr></thead><tbody>${a.items.map(x=>`<tr><td>${new Date(x.created_at).toLocaleString('pt-BR')}</td><td>${esc(x.user_nome||'-')}</td><td>${esc(x.action)}</td><td>${esc(x.entity)}</td><td>${esc(x.entity_id||'-')}</td></tr>`).join('')}</tbody></table></div>`}
 async function ai(v){
   let status = { configured: false, model: 'openai/gpt-oss-120b' };
@@ -4647,41 +5812,52 @@ async function newPurchaseOrderModal(preselectedSupplierId=null){
   if(!suppliers.length) return alert('Cadastre ao menos um fornecedor antes de emitir um pedido de compra.');
 
   modal('Novo Pedido de Compra', `
-    <form id="purchaseOrderForm" class="form">
-      <div class="field">
-        <label>Fornecedor *</label>
-        <select id="poSupplierSelect" name="fornecedor_id" required class="field-input" onchange="onPoSupplierChange(this.value)">
-          <option value="">Selecione o Fornecedor...</option>
-          ${suppliers.map(s=>`<option value="${s.id}" data-lead="${s.lead_time_padrao_dias}" ${s.id===preselectedSupplierId?'selected':''}>${esc(s.nome)} (Prazo médio: ${s.lead_time_padrao_dias}d)</option>`).join('')}
-        </select>
-      </div>
-      <div class="field">
-        <label>Prazo de Entrega Prometido pelo Fornecedor (ETA) *</label>
-        <input id="poPrevisaoInput" name="previsao_entrega" type="date" required class="field-input">
-      </div>
-      <div class="field">
-        <label>Número da Nota Fiscal (se já emitida)</label>
-        <input name="numero_nota_fiscal" placeholder="Ex: NF-e 45291" class="field-input">
-      </div>
-      <div class="field" style="grid-column:1/-1">
-        <label>Observações do Pedido</label>
-        <input name="observacoes" placeholder="Condições de frete, transportadora ou instruções de descarga..." class="field-input">
-      </div>
-
-      <div style="grid-column:1/-1;margin-top:14px;border-top:1px solid #24344b;padding-top:14px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-          <h4 style="margin:0">Itens do Pedido</h4>
-          <button type="button" class="btn" style="font-size:12px" onclick="addPoItemRow()">+ Adicionar Item</button>
+    <form id="purchaseOrderForm" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;align-items:stretch">
+        <div class="card po-card">
+          <label>
+            Fornecedor <span class="po-req-star">*</span>
+          </label>
+          <select id="poSupplierSelect" name="fornecedor_id" required class="po-input" onchange="onPoSupplierChange(this.value)">
+            <option value="">Selecione o Fornecedor...</option>
+            ${suppliers.map(s=>`<option value="${s.id}" data-lead="${s.lead_time_padrao_dias}" ${s.id===preselectedSupplierId?'selected':''}>${esc(s.nome)} (Prazo médio: ${s.lead_time_padrao_dias}d)</option>`).join('')}
+          </select>
         </div>
-        <div id="poItemsContainer" style="display:grid;gap:8px"></div>
-        <div style="display:flex;justify-content:flex-end;margin-top:12px;font-size:16px">
-          <span>Total do Pedido: <strong id="poTotalDisplay" class="orange">R$ 0,00</strong></span>
+        <div class="card po-card">
+          <label>
+            Prazo de Entrega (ETA) <span class="po-req-star">*</span>
+          </label>
+          <input id="poPrevisaoInput" name="previsao_entrega" type="date" required class="po-input">
+        </div>
+        <div class="card po-card">
+          <label>
+            Número da Nota Fiscal (opcional)
+          </label>
+          <input name="numero_nota_fiscal" placeholder="Ex: NF-e 45291" class="po-input">
         </div>
       </div>
+      <div class="card po-card">
+        <label>
+          Observações do Pedido (opcional)
+        </label>
+        <input name="observacoes" placeholder="Condições de frete, transportadora ou instruções de descarga..." class="po-input">
+      </div>
 
-      <div class="actions" style="grid-column:1/-1;margin-top:14px;justify-content:flex-end">
-        <button type="button" class="btn" onclick="closeModal()">Cancelar</button>
-        <button class="btn primary">Emitir Pedido de Compra</button>
+      <div style="margin-top:10px;border-top:1.5px solid #e2e8f0;padding-top:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <h4 style="margin:0;font-size:15px;color:var(--xv-brand-navy,#061a4f);font-weight:800">📦 Itens do Pedido</h4>
+          <button type="button" class="btn po-btn-navy" onclick="addPoItemRow()">➕ Adicionar Item</button>
+        </div>
+        <div id="poItemsContainer" style="display:grid;gap:10px"></div>
+        <div style="display:flex;justify-content:flex-end;align-items:center;margin-top:14px;padding:10px 14px;background:#f8fafc;border:1px solid #dfe6ef;border-radius:9px;font-size:14px">
+          <span style="font-weight:750;color:var(--xv-brand-navy,#061a4f)">Total do Pedido:</span>
+          <strong id="poTotalDisplay" class="orange" style="color:var(--xv-brand-orange,#fd5e02)!important;font-size:19px!important;font-weight:850!important;margin-left:8px!important">R$ 0,00</strong>
+        </div>
+      </div>
+
+      <div class="actions" style="margin-top:16px;justify-content:flex-end;gap:10px">
+        <button type="button" class="btn po-btn-cancel" onclick="closeModal()">Cancelar</button>
+        <button class="btn po-btn-submit">✓ Emitir Pedido de Compra</button>
       </div>
     </form>
   `, '850px');
@@ -4745,26 +5921,27 @@ function addPoItemRow(){
   if(!container) return;
   const prods = window._currentPoSupplierProducts || [];
   const row = document.createElement('div');
-  row.className = 'po-item-row form';
-  row.style = 'grid-template-columns: 2fr 1fr 1fr auto; align-items:flex-end; background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0';
+  row.className = 'po-item-row';
 
   row.innerHTML = `
-    <div class="field">
-      <label>Produto</label>
-      <select class="po-prod-id field-input" onchange="onPoProdSelect(this)" required>
+    <div class="field" style="display:flex;flex-direction:column;gap:6px">
+      <label>Produto <span class="po-req-star">*</span></label>
+      <select class="po-prod-id po-input" onchange="onPoProdSelect(this)" required>
         <option value="">Selecione o produto...</option>
         ${prods.map(p=>`<option value="${p.produto_id}" data-cost="${p.custo_aquisicao}">${esc(p.produto_nome)} (${esc(p.produto_sku||'-')})</option>`).join('')}
       </select>
     </div>
-    <div class="field">
-      <label>Quantidade</label>
-      <input type="number" min="1" value="10" class="po-prod-qtd field-input" oninput="calcPoTotal()" required>
+    <div class="field" style="display:flex;flex-direction:column;gap:6px">
+      <label>Quantidade <span class="po-req-star">*</span></label>
+      <input type="number" min="1" value="10" class="po-prod-qtd po-input" oninput="calcPoTotal()" required>
     </div>
-    <div class="field">
-      <label>Custo Unit. (R$)</label>
-      <input type="number" step="0.01" min="0" value="0.00" class="po-prod-custo field-input" oninput="calcPoTotal()" required>
+    <div class="field" style="display:flex;flex-direction:column;gap:6px">
+      <label>Custo Unit. (R$) <span class="po-req-star">*</span></label>
+      <input type="number" step="0.01" min="0" value="0.00" class="po-prod-custo po-input" oninput="calcPoTotal()" required>
     </div>
-    <button type="button" class="btn danger" style="padding:10px" onclick="this.closest('.po-item-row').remove();calcPoTotal()">🗑</button>
+    <div style="display:flex;align-items:flex-end">
+      <button type="button" class="btn po-btn-delete" title="Remover item" onclick="this.closest('.po-item-row').remove();calcPoTotal()">🗑</button>
+    </div>
   `;
   container.appendChild(row);
   calcPoTotal();
