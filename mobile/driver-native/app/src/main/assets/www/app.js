@@ -108,6 +108,9 @@ async function api(path,opt={}){
     return data;
   }catch(err){
     if(err.message==='Failed to fetch'||err.message?.includes('NetworkError')||err.message?.includes('fetch')||!navigator.onLine){
+      if(path.startsWith('/api/auth/')||path.startsWith('/api/setup/')){
+        throw new Error('Não foi possível conectar ao servidor ERP. Verifique sua conexão com a internet ou se o endereço do servidor está correto.');
+      }
       if(method==='GET'){
         const cached=await adminOfflineGet('kv',path);
         if(cached){
@@ -394,7 +397,7 @@ async function refreshCurrentViewSilently(eventType,payload){
           }
         }
       }else if(currentView==='sellers'){
-        if(!eventType||eventType==='orders_changed'||eventType==='users_changed'||eventType==='tab_focused'){
+        if(!eventType||eventType==='orders_changed'||eventType==='users_changed'||eventType==='clients_changed'||eventType==='tab_focused'){
           if(!hasOpenModal){
             if(window._currentSellerDashboardId && window._currentSellerDashboardNome){
               renderSellerDashboard(window._currentSellerDashboardId, window._currentSellerDashboardNome);
@@ -421,29 +424,63 @@ async function refreshCurrentViewSilently(eventType,payload){
     }catch(err){console.warn('Silent refresh error:',err)}
   },120);
 }
-async function login(e){e.preventDefault();try{const b=Object.fromEntries(new FormData(e.currentTarget));const x=await api('/api/auth/login',{method:'POST',body:JSON.stringify(b)});token=x.token;me=x.user;localStorage.setItem('xv_token',token);localStorage.setItem('xv_user',JSON.stringify(x.user||{}));location.reload()}catch(err){toast(err.message)}}
+async function login(e){
+  e.preventDefault();
+  const form=e.currentTarget;
+  const btn=form.querySelector('button[type=submit]')||form.querySelector('button');
+  if(btn){btn.disabled=true;btn.textContent='Entrando…';}
+  try{
+    const rawData=Object.fromEntries(new FormData(form));
+    const data={email:String(rawData.email||'').trim(),password:String(rawData.password||'').trim()};
+    if(!data.email)throw new Error('Informe o e-mail ou usuário para entrar.');
+    if(!data.password)throw new Error('Informe a senha.');
+    const x=await api('/api/auth/login',{method:'POST',body:JSON.stringify(data)});
+    if(!x||!x.token){
+      throw new Error(x?.error||'Não foi possível validar as credenciais no servidor.');
+    }
+    token=x.token;
+    me=x.user;
+    localStorage.setItem('xv_token',token);
+    localStorage.setItem('xv_user',JSON.stringify(x.user||{}));
+    if(me?.role!=='admin'){
+      localStorage.removeItem('xv_token');
+      localStorage.removeItem('xv_user');
+      token=null;me=null;
+      throw new Error(`A Torre de Controle é de uso exclusivo para o Administrador Geral. Seu usuário possui o perfil: ${x.user?.role||'outro'}.`);
+    }
+    toast('Conectado à Torre de Controle com sucesso!');
+    await render();
+  }catch(err){
+    toast(err.message,true);
+    if(btn){btn.disabled=false;btn.textContent='Entrar';}
+  }
+}
 function getAuthPdfUrl(url){try{const full=new URL(url,window.location.origin);if(token&&!full.searchParams.has('token'))full.searchParams.set('token',token);if(!full.searchParams.has('format'))full.searchParams.set('format','pdf');return full.href}catch(_){return url+(url.includes('?')?'&':'?')+'token='+encodeURIComponent(token||'')+'&format=pdf'}}
 function closePdfViewerModal(){const m=document.getElementById('xvPdfModal');if(m)m.remove()}
 function printPdfFrame(frameId){if(window.AndroidApp?.printWebPage){try{window.AndroidApp.printWebPage();return}catch(_){}}const frame=document.getElementById(frameId);if(frame&&frame.contentWindow){try{frame.contentWindow.focus();frame.contentWindow.print();return}catch(_){}}window.print()}
 function openPdfViewerModal(pdfUrl,filename,blob){closePdfViewerModal();const blobUrl=blob?URL.createObjectURL(blob):pdfUrl;const modal=document.createElement('div');modal.id='xvPdfModal';modal.style.cssText='position:fixed;inset:0;background:rgba(2,6,23,0.85);z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;backdrop-filter:blur(4px);';modal.innerHTML=`<div style="background:#0f172a;border:1px solid #334155;border-radius:12px;width:100%;max-width:900px;height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);"><div style="padding:12px 16px;background:#1e293b;border-bottom:1px solid #334155;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;"><div style="display:flex;align-items:center;gap:8px;color:#fff;font-weight:700;font-size:15px;"><span>📄</span><span style="max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${filename||'Documento PDF'}</span></div><div style="display:flex;gap:8px;align-items:center;"><button type="button" class="btn" style="padding:6px 12px;font-size:13px;background:#fd5e02;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;" onclick="printPdfFrame('xvPdfFrame')">🖨️ Imprimir</button><a href="${blobUrl}" download="${filename||'documento.pdf'}" target="_blank" class="btn" style="padding:6px 12px;font-size:13px;background:#3b82f6;color:#fff;border:none;border-radius:6px;text-decoration:none;font-weight:700;display:inline-flex;align-items:center;">⬇ Baixar</a><button type="button" class="btn" style="padding:6px 12px;font-size:13px;background:#475569;color:#fff;border:none;border-radius:6px;cursor:pointer;" onclick="closePdfViewerModal()">✕ Fechar</button></div></div><div style="flex:1;position:relative;background:#f8fafc;width:100%;height:100%;"><iframe id="xvPdfFrame" src="${blobUrl}" style="width:100%;height:100%;border:none;" title="Visualizador de PDF"></iframe></div></div>`;document.body.appendChild(modal)}
 async function downloadAuthFile(url,filename){try{const authedUrl=getAuthPdfUrl(url);if(window.AndroidApp?.openPdf){try{window.AndroidApp.openPdf(authedUrl,filename||'documento.pdf')}catch(_){}}const reqId=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);console.log(`[${reqId}] GET ${url}`);const r=await fetch(url,{headers:{'x-request-id':reqId,...(token?{authorization:'Bearer '+token}:{})}});if(!r.ok)throw new Error('Não foi possível abrir o documento');const b=await r.blob();openPdfViewerModal(authedUrl,filename,b)}catch(e){if(window.AndroidApp?.openPdf){try{window.AndroidApp.openPdf(getAuthPdfUrl(url),filename||'documento.pdf');return}catch(_){}}alert(e.message)}}
 async function downloadAuthPost(url,body,filename){try{const reqId=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);console.log(`[${reqId}] POST ${url}`);const r=await fetch(url,{method:'POST',headers:{'x-request-id':reqId,'content-type':'application/json',...(token?{authorization:'Bearer '+token}:{})},body:JSON.stringify(body)});if(!r.ok)throw new Error('Não foi possível gerar o documento');const b=await r.blob();openPdfViewerModal(getAuthPdfUrl(url),filename||'documento.pdf',b)}catch(e){alert(e.message)}}
-function logout(){localStorage.removeItem('xv_token');localStorage.removeItem('xv_user');location.href='/admin.html'}
+function logout(){localStorage.removeItem('xv_token');localStorage.removeItem('xv_user');token=null;me=null;roleLoginPage('Administrador Geral')}
 async function boot(){
-  if(!token){try{const st=await fetch('/api/setup/status',{cache:'no-store'}).then(r=>r.json());if(st.required)return setupPage(st)}catch{}return roleLoginPage('Administrador Geral')}
+  if(!token){try{const st=await fetch(API+'/api/setup/status',{cache:'no-store'}).then(r=>r.json());if(st.required)return setupPage(st)}catch{}return roleLoginPage('Administrador Geral')}
   const cachedMe=localStorage.getItem('xv_user');
   if(cachedMe){try{me=JSON.parse(cachedMe)}catch{}}
   try{
     const m=await api('/api/me');
+    if(!m?.user){
+      throw Object.assign(new Error('Sessão inválida'),{status:401});
+    }
     me=m.user;
     localStorage.setItem('xv_user',JSON.stringify(me));
     if(me.role!=='admin'){
       localStorage.removeItem('xv_token');
       localStorage.removeItem('xv_user');
-      alert('A Torre de Controle é de uso exclusivo para o Administrador Geral. Você será redirecionado para o login.');
-      return location.href='/admin.html';
+      token=null;me=null;
+      alert(`A Torre de Controle é de uso exclusivo para o Administrador Geral. Seu usuário possui o perfil: ${me?.role||'outro'}.`);
+      return roleLoginPage('Administrador Geral');
     }
-    render();
+    await render();
   }catch(err){
     if(!navigator.onLine&&me?.role==='admin'){
       console.warn('Operando offline com sessão em cache');
@@ -458,7 +495,7 @@ async function boot(){
     logout();
   }
 }
-function setupPage(status){const q=new URLSearchParams(location.search);const setupToken=q.get('setup')||'';document.body.innerHTML=`<div class="login"><div class="loginbox"><img class="xv-logo" src="/assets/institucional/01_Logo_Xiquim_Vargas_HD.png" alt="Xiquim Vargas"><h1>Primeiro acesso</h1><p style="color:var(--muted)">Este ERP ainda não foi configurado. Crie agora o administrador principal. Não existe uma senha fixa de fábrica.</p>${setupToken?`<form id="setupForm"><div class="field"><label>Nome do administrador</label><input name="nome" required maxlength="180"></div><br><div class="field"><label>E-mail</label><input name="email" type="email" required autocomplete="email"></div><br><div class="field"><label>Senha</label><div style="display:flex;gap:6px"><input name="password" type="password" minlength="10" required autocomplete="new-password" style="flex:1"><button type="button" class="btn" tabindex="-1" onclick="const x=this.previousElementSibling; x.type=x.type==='password'?'text':'password'">👁</button></div><small style="display:block;margin-top:6px;color:var(--muted)">Use pelo menos 10 caracteres.</small></div><br><button class="btn primary" style="width:100%">Criar administrador e entrar</button></form>`:`<div class="panel" style="margin-top:18px"><strong>Configuração inicial protegida</strong><p style="color:var(--muted)">Abra o link de primeiro acesso exibido nos logs do serviço no Render. Esse link é criado uma única vez e deixa de funcionar depois que o administrador é criado.</p></div>`}<div id="toast" class="toast"></div></div></div>`;if(setupToken){$('#setupForm').onsubmit=async e=>{e.preventDefault();const b=Object.fromEntries(new FormData(e.currentTarget));b.setup_token=setupToken;try{const x=await fetch('/api/setup/initialize',{method:'POST',headers:{'content-type':'application/json','x-setup-token':setupToken},body:JSON.stringify(b)});const out=await x.json();if(!x.ok)throw new Error(out.error||'Não foi possível concluir a configuração');token=out.token;localStorage.setItem('xv_token',token);history.replaceState({},'', '/admin');location.reload()}catch(err){toast(err.message)}}}}
+function setupPage(status){const q=new URLSearchParams(location.search);const setupToken=q.get('setup')||'';document.body.innerHTML=`<div class="login"><div class="loginbox"><img class="xv-logo" src="/assets/institucional/01_Logo_Xiquim_Vargas_HD.png" alt="Xiquim Vargas"><h1>Primeiro acesso</h1><p style="color:#ffffff">Este ERP ainda não foi configurado. Crie agora o administrador principal. Não existe uma senha fixa de fábrica.</p>${setupToken?`<form id="setupForm"><div class="field"><label>Nome do administrador</label><input name="nome" required maxlength="180"></div><br><div class="field"><label>E-mail</label><input name="email" type="email" required autocomplete="email"></div><br><div class="field"><label>Senha</label><div style="display:flex;gap:6px"><input name="password" type="password" minlength="10" required autocomplete="new-password" style="flex:1"><button type="button" class="btn" tabindex="-1" onclick="const x=this.previousElementSibling; x.type=x.type==='password'?'text':'password'">👁</button></div><small style="display:block;margin-top:6px;color:#e2e8f0">Use pelo menos 10 caracteres.</small></div><br><button class="btn primary" style="width:100%">Criar administrador e entrar</button></form>`:`<div class="panel" style="margin-top:18px"><strong>Configuração inicial protegida</strong><p style="color:#ffffff">Abra o link de primeiro acesso exibido nos logs do serviço no Render. Esse link é criado uma única vez e deixa de funcionar depois que o administrador é criado.</p></div>`}<div id="toast" class="toast"></div></div></div>`;if(setupToken){$('#setupForm').onsubmit=async e=>{e.preventDefault();const b=Object.fromEntries(new FormData(e.currentTarget));b.setup_token=setupToken;try{const x=await fetch('/api/setup/initialize',{method:'POST',headers:{'content-type':'application/json','x-setup-token':setupToken},body:JSON.stringify(b)});const out=await x.json();if(!x.ok)throw new Error(out.error||'Não foi possível concluir a configuração');token=out.token;localStorage.setItem('xv_token',token);history.replaceState({},'', '/admin');location.reload()}catch(err){toast(err.message)}}}}
 
 const menu=[['Visão Geral','home'],['Catálogo','products'],['Tabelas de preço','prices'],['Estoque Inteligente','stock'],['Clientes & CRM','clients'],['Pedidos','orders'],['Logística','logistics'],['Fornecedores','suppliers'],['Recebimento','inbound'],['Vendedores','sellers'],['Relatórios','reports'],['Auditoria','audit'],['Usuários','users'],['IA Administrativa','ai']];
 function shell(){const dot='•';const groups=[['Operação',[[dot,'Visão Geral','home'],[dot,'Pedidos','orders'],[dot,'Catálogo','products'],[dot,'Loja Online','store'],[dot,'Estoque Inteligente','stock'],[dot,'Clientes & CRM','clients'],[dot,'Logística','logistics']]],['Suprimentos',[[dot,'Fornecedores','suppliers'],[dot,'Recebimento de Mercadorias','inbound']]],['Gestão',[[dot,'Vendedores','sellers'],[dot,'Usuários','users'],[dot,'Tabelas de preço','prices'],[dot,'Relatórios','reports']]],['Governança',[[dot,'Auditoria','audit'],[dot,'IA Administrativa','ai']]]];return `<div class="app"><aside class="sidebar"><img class="xv-logo" src="/assets/institucional/01_Logo_Xiquim_Vargas_HD.png" alt="Xiquim Vargas ERP"><div class="group">Torre de Controle</div>${groups.map(([title,items])=>`<div class="group">${title}</div><div class="nav">${items.map(([i,l,k])=>`<button data-view="${k}"><span style="width:16px;text-align:center;font-size:16px;line-height:1;display:inline-block">${i}</span>${l}</button>`).join('')}</div>`).join('')}<div class="group">Sessão</div><div class="nav"><button onclick="logout()"><span style="width:16px;text-align:center;font-size:16px;line-height:1;display:inline-block">•</span>Sair</button></div></aside><main class="main"><div class="topbar"><div class="brand-dark"><button class="mobile-back-btn btn" onclick="window.showSidebar()">← Voltar</button><div><h1 id="title">Visão Geral</h1></div></div><div class="topbar-actions"><span id="offlineIndicator" style="display:${navigator.onLine?'none':'inline-flex'};background:#e11d48;color:#fff;font-weight:700;font-size:11px;padding:3px 8px;border-radius:12px;margin-right:6px">OFFLINE</span><span class="badge">${esc(ROLE_LABELS[me?.role]||me?.role||'Administrador')}</span></div></div><div id="view"></div></main></div><div id="toast" class="toast"></div>`}
@@ -1132,7 +1169,8 @@ function stockRow(x){return `<tr data-stock-text="${esc((x.nome+' '+x.sku+' '+(x
 function stockFilter(i){const q=i.value.toLowerCase();document.querySelectorAll('#stockTable tbody tr').forEach(r=>r.style.display=r.dataset.stockText.includes(q)?'':'none')}
 function exportStockPdf(){downloadAuthFile('/api/admin/export/stock.pdf','xiquim-vargas-estoque.pdf')}
 async function stockHistory(id){try{const x=await api('/api/stock/'+id+'/movements');modal('Histórico de estoque',`<div class="tablewrap"><table class="table"><thead><tr><th>Data</th><th>Tipo</th><th>Delta</th><th>Saldo</th><th>Operador</th><th>Observação</th></tr></thead><tbody>${x.items.map(m=>`<tr><td>${new Date(m.created_at).toLocaleString('pt-BR')}</td><td>${esc(m.tipo)}</td><td>${m.quantidade>0?'+':''}${m.quantidade}</td><td>${m.quantidade_posterior}</td><td>${esc(m.operador_nome||'-')}</td><td>${esc(m.observacao||'-')}</td></tr>`).join('')||'<tr><td colspan="6">Sem movimentações.</td></tr>'}</tbody></table></div>`)}catch(e){toast(e.message)}}
-function adjustStock(id){modal('Movimentar estoque',`<form id="stockForm"><div class="field"><label>Delta (+ entrada / - saída)</label><input name="delta" type="number" required></div><div class="field"><label>Tipo</label><select name="tipo"><option>ENTRADA</option><option>SAIDA</option><option>AJUSTE</option><option>INVENTARIO</option></select></div><div class="field"><label>Estoque mínimo</label><input name="estoque_minimo" type="number" min="0"></div><div class="field"><label>Observação</label><input name="observacao"></div><br><button class="btn primary">Aplicar movimentação</button></form>`);$('#stockForm').onsubmit=async e=>{e.preventDefault();try{const b=Object.fromEntries(new FormData(e.currentTarget));const delta=Number(b.delta);b.delta=delta;if(b.estoque_minimo!=='')b.estoque_minimo=Number(b.estoque_minimo);else delete b.estoque_minimo;closeModal();const row=document.querySelector(`button[onclick*="adjustStock('${id}')"]`)?.closest('tr');if(row){const availCell=row.querySelector('td:nth-child(4) strong');if(availCell){availCell.textContent=Number(availCell.textContent||0)+delta}row.classList.add('xv-flash-updated');setTimeout(()=>row.classList.remove('xv-flash-updated'),900)}toast('Estoque movimentado com sucesso!');Realtime.emit('stock_changed',{id,delta});await api('/api/stock/'+id,{method:'POST',body:JSON.stringify(b)});refreshCurrentViewSilently('stock_changed')}catch(x){toast(x.message,true);refreshCurrentViewSilently('stock_changed')}}}
+function updateStockModalUI(){const tipo=$('#stockTipoSelect')?.value||'ENTRADA';const opWrap=$('#stockOpWrap');const opSelect=$('#stockOpSelect');const lbl=$('#stockDeltaLabel');const input=$('#stockDeltaInput');const preview=$('#stockPreviewBox');const cur=Number($('#stockForm')?.dataset.currentStock||0);if(tipo==='ENTRADA'){if(opWrap)opWrap.style.display='none';if(lbl)lbl.textContent='Quantidade de entrada (somar ao estoque)';if(input){input.min='1';input.placeholder='Ex: 10'}}else if(tipo==='SAIDA'){if(opWrap)opWrap.style.display='none';if(lbl)lbl.textContent='Quantidade de saída / baixa (subtrair do estoque)';if(input){input.min='1';input.placeholder='Ex: 5'}}else if(tipo==='AJUSTE'){if(opWrap){opWrap.style.display='block';if(opSelect&&!['SAIDA','ENTRADA'].includes(opSelect.value))opSelect.innerHTML='<option value="SAIDA">Subtrair do estoque (-)</option><option value="ENTRADA">Somar ao estoque (+)</option>'}if(lbl)lbl.textContent='Quantidade do ajuste';if(input){input.removeAttribute('min');input.placeholder='Ex: 5'}}else if(tipo==='INVENTARIO'){if(opWrap){opWrap.style.display='block';if(opSelect&&!['SALDO','SAIDA','ENTRADA'].includes(opSelect.value))opSelect.innerHTML='<option value="SALDO">Definir novo saldo exato (contagem física)</option><option value="SAIDA">Subtrair diferença (-)</option><option value="ENTRADA">Somar diferença (+)</option>'}const mode=opSelect?.value||'SALDO';if(lbl)lbl.textContent=mode==='SALDO'?'Novo saldo físico em estoque (un)':'Quantidade a movimentar';if(input){input.min='0';input.placeholder=mode==='SALDO'?String(cur):'Ex: 5'}}const raw=Number(input?.value||0);let next=cur;if(input?.value!==''&&!Number.isNaN(raw)){if(tipo==='ENTRADA')next=cur+Math.abs(raw);else if(tipo==='SAIDA')next=cur-Math.abs(raw);else if(tipo==='AJUSTE'){const op=opSelect?.value||'SAIDA';next=raw<0?cur+raw:(op==='SAIDA'?cur-Math.abs(raw):cur+Math.abs(raw))}else if(tipo==='INVENTARIO'){const op=opSelect?.value||'SALDO';next=op==='SALDO'?Math.max(0,raw):(op==='SAIDA'?cur-Math.abs(raw):cur+Math.abs(raw))}}if(preview){preview.innerHTML=`Saldo atual: <strong>${cur} un</strong> → Novo saldo: <strong style="color:${next<0?'#b42318':'var(--xv-brand-navy,#061a4f)'}">${next} un</strong> (${next-cur>=0?'+'+(next-cur):(next-cur)} un)`}}
+function adjustStock(id){const row=document.querySelector(`button[onclick*="adjustStock('${id}')"]`)?.closest('tr');const curAvail=Number(row?.querySelector('td:nth-child(4) strong')?.textContent||0);const curMin=Number(row?.querySelector('td:nth-child(6)')?.textContent||0);modal('Movimentar estoque',`<form id="stockForm" data-current-stock="${curAvail}"><div class="field"><label>Tipo de movimentação</label><select id="stockTipoSelect" name="tipo" onchange="const op=$('#stockOpSelect');if(op){if(this.value==='AJUSTE')op.innerHTML='<option value=\\'SAIDA\\'>Subtrair do estoque (-)</option><option value=\\'ENTRADA\\'>Somar ao estoque (+)</option>';else if(this.value==='INVENTARIO')op.innerHTML='<option value=\\'SALDO\\'>Definir novo saldo exato (contagem física)</option><option value=\\'SAIDA\\'>Subtrair diferença (-)</option><option value=\\'ENTRADA\\'>Somar diferença (+)</option>';}updateStockModalUI()"><option value="ENTRADA">ENTRADA (+ Somar ao estoque)</option><option value="SAIDA">SAÍDA (- Subtrair do estoque)</option><option value="AJUSTE">AJUSTE (+ / - Correção de saldo)</option><option value="INVENTARIO">INVENTÁRIO (Contagem física)</option></select></div><div class="field" id="stockOpWrap" style="display:none"><label>Operação</label><select id="stockOpSelect" name="operacao" onchange="updateStockModalUI()"><option value="SAIDA">Subtrair do estoque (-)</option><option value="ENTRADA">Somar ao estoque (+)</option></select></div><div class="field"><label id="stockDeltaLabel">Quantidade de entrada (somar ao estoque)</label><input id="stockDeltaInput" name="delta" type="number" required oninput="updateStockModalUI()"></div><div id="stockPreviewBox" style="padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;margin:8px 0">Saldo atual: <strong>${curAvail} un</strong></div><div class="field"><label>Estoque mínimo</label><input name="estoque_minimo" type="number" min="0" value="${curMin}"></div><div class="field"><label>Observação</label><input name="observacao" placeholder="Motivo ou referência da movimentação"></div><br><button class="btn primary">Aplicar movimentação</button></form>`);updateStockModalUI();$('#stockForm').onsubmit=async e=>{e.preventDefault();try{const b=Object.fromEntries(new FormData(e.currentTarget));const tipo=String(b.tipo||'ENTRADA').toUpperCase();const op=String(b.operacao||'').toUpperCase();const raw=Number(b.delta);if(tipo==='ENTRADA'){b.delta=Math.abs(raw);b.operacao='ENTRADA'}else if(tipo==='SAIDA'){b.delta=-Math.abs(raw);b.operacao='SAIDA'}else if(tipo==='AJUSTE'){b.delta=raw<0?raw:(op==='SAIDA'?-Math.abs(raw):Math.abs(raw));b.operacao=b.delta<0?'SAIDA':'ENTRADA'}else if(tipo==='INVENTARIO'){if(op==='SALDO'||!op){b.novo_saldo=Math.max(0,raw);b.delta=b.novo_saldo-curAvail;b.operacao='SALDO'}else{b.delta=op==='SAIDA'?-Math.abs(raw):Math.abs(raw)}}if(b.estoque_minimo!=='')b.estoque_minimo=Number(b.estoque_minimo);else delete b.estoque_minimo;const res=await api('/api/stock/'+id,{method:'POST',body:JSON.stringify(b)});closeModal();if(row&&res?.item){const availCell=row.querySelector('td:nth-child(4) strong');if(availCell)availCell.textContent=res.item.quantidade_disponivel;row.classList.add('xv-flash-updated');setTimeout(()=>row.classList.remove('xv-flash-updated'),900)}toast('Estoque movimentado com sucesso!');Realtime.emit('stock_changed',{id,delta:b.delta});refreshCurrentViewSilently('stock_changed')}catch(x){toast(x.message,true);refreshCurrentViewSilently('stock_changed')}}}
 window.openCrmWhatsApp = function(phone, clientName, days, topProductsJson) {
   const cleanPhone = String(phone||'').replace(/\D/g, '');
   if (!cleanPhone) return toast('Cliente sem telefone cadastrado.');
@@ -1205,26 +1243,91 @@ window.crmInteractionsModal = async function(clientId, clientName) {
   }
 };
 
+window.onClientsSellerFilterChange=function(val){
+  window._selectedClientSellerFilter = val !== undefined ? String(val || '') : (document.getElementById('clientsSellerFilter')?.value || '');
+  window.currentCrmRfmFilter = 'ALL';
+  const sel = document.getElementById('clientsSellerFilter');
+  if (sel && sel.value !== window._selectedClientSellerFilter) sel.value = window._selectedClientSellerFilter;
+  renderClientsUI();
+};
+
 window.renderClientsUI=function(){
   const tab = window.currentClientTab || 'crm';
   const sq = document.getElementById('clientsSearch')?.value.toLowerCase().trim() || '';
-  const sellerFilter = document.getElementById('clientsSellerFilter')?.value || '';
+  const sellerFilterEl = document.getElementById('clientsSellerFilter');
+  const sellerFilter = sellerFilterEl ? sellerFilterEl.value : (window._selectedClientSellerFilter || '');
+  window._selectedClientSellerFilter = sellerFilter;
+
+  const sellersList = window._clientsSellers || [];
+  const sellerById = new Map(sellersList.map(s => [String(s.id), s.nome]));
+  const selectedSellerName = sellerFilter === '__SEM_VENDEDOR__'
+    ? 'Sem Vendedor (Web / Direto)'
+    : (sellerById.get(String(sellerFilter)) || sellerFilter || '');
+
+  const rawClients = (window._clientsData || []).filter(x => x.id !== 'CLIENTE-BALCAO');
+  const clientById = new Map(rawClients.map(c => [String(c.id), c]));
+
+  const matchesSellerFilter = (x) => {
+    const vid = String(x.vendedor_id || clientById.get(String(x.id))?.vendedor_id || '');
+    const vnome = String(x.vendedor_nome || clientById.get(String(x.id))?.vendedor_nome || sellerById.get(vid) || '');
+    if (sellerFilter === '__SEM_VENDEDOR__') return !vid;
+    if (!sellerFilter) return true;
+    return vid === String(sellerFilter) || (selectedSellerName && vnome.toLowerCase() === selectedSellerName.toLowerCase());
+  };
 
   if (tab === 'crm') {
     const crm = window._crmData || { summary: {}, items: [] };
     const rfmFilter = window.currentCrmRfmFilter || 'ALL';
-    let filtered = crm.items || [];
+    const crmMap = new Map();
+    for (const item of (crm.items || [])) {
+      if (item.id === 'CLIENTE-BALCAO') continue;
+      const cRef = clientById.get(String(item.id));
+      const vid = item.vendedor_id || cRef?.vendedor_id || null;
+      const vnome = item.vendedor_nome || cRef?.vendedor_nome || (vid ? sellerById.get(String(vid)) : null) || null;
+      crmMap.set(String(item.id), { ...item, vendedor_id: vid, vendedor_nome: vnome });
+    }
+    for (const c of rawClients) {
+      if (!crmMap.has(String(c.id))) {
+        const vid = c.vendedor_id || null;
+        const vnome = c.vendedor_nome || (vid ? sellerById.get(String(vid)) : null) || null;
+        crmMap.set(String(c.id), {
+          ...c,
+          vendedor_id: vid,
+          vendedor_nome: vnome,
+          total_pedidos: 0,
+          faturamento_total: 0,
+          ticket_medio: 0,
+          dias_sem_comprar: null,
+          status_rfm: 'NOVO',
+          top_produtos: [],
+          ultima_interacao: null
+        });
+      }
+    }
+    let baseItems = [...crmMap.values()].filter(matchesSellerFilter);
 
+    const totalConcluidos = baseItems.reduce((a, b) => a + Number(b.total_pedidos || 0), 0);
+    const totalFaturamento = baseItems.reduce((a, b) => a + Number(b.faturamento_total || 0), 0);
+    const ativosCount = baseItems.filter(x => x.status_rfm === 'ATIVO' || x.status_rfm === 'VIP').length;
+    const s = sellerFilter ? {
+      total_clientes: baseItems.length,
+      ativos: ativosCount,
+      vips: baseItems.filter(x => x.status_rfm === 'VIP').length,
+      em_risco: baseItems.filter(x => x.status_rfm === 'EM_RISCO').length,
+      inativos: baseItems.filter(x => x.status_rfm === 'INATIVO').length,
+      novos: baseItems.filter(x => x.status_rfm === 'NOVO').length,
+      ticket_medio: totalConcluidos > 0 ? (totalFaturamento / totalConcluidos) : 0,
+      faturamento_total: totalFaturamento,
+      taxa_saude_carteira: baseItems.length > 0 ? Math.round((ativosCount / baseItems.length) * 100) : 0
+    } : (crm.summary || {});
+
+    let filtered = baseItems;
     if (rfmFilter !== 'ALL') {
       if (rfmFilter === 'EM_RISCO') filtered = filtered.filter(x => x.status_rfm === 'EM_RISCO');
       else if (rfmFilter === 'VIP') filtered = filtered.filter(x => x.status_rfm === 'VIP');
       else if (rfmFilter === 'ATIVO') filtered = filtered.filter(x => x.status_rfm === 'ATIVO');
       else if (rfmFilter === 'INATIVO') filtered = filtered.filter(x => x.status_rfm === 'INATIVO');
       else if (rfmFilter === 'NOVO') filtered = filtered.filter(x => x.status_rfm === 'NOVO');
-    }
-
-    if (sellerFilter) {
-      filtered = filtered.filter(x => x.vendedor_id === sellerFilter || x.vendedor_nome === sellerFilter);
     }
 
     if (sq) {
@@ -1238,9 +1341,20 @@ window.renderClientsUI=function(){
         (x.vendedor_nome || '').toLowerCase().includes(sq)
       );
     }
-
-    const s = crm.summary || {};
+    const sellerBanner = sellerFilter ? `
+      <div style="margin-bottom:14px;padding:12px 16px;background:rgba(2,29,96,0.06);border:1px solid rgba(2,29,96,0.18);border-left:4px solid var(--xv-orange,#fd5e02);border-radius:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <div>
+          <strong>👤 Carteira Selecionada: ${esc(selectedSellerName)}</strong>
+          <span class="badge" style="margin-left:8px;background:#021d60;color:#fff;">${baseItems.length} cliente(s) na carteira</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          ${sellerFilter !== '__SEM_VENDEDOR__' ? `<button type="button" class="btn primary" style="padding:6px 12px;font-size:12px;" onclick="newClient('${esc(sellerFilter)}')">+ Novo Cliente nesta Carteira</button>` : ''}
+          <button type="button" class="btn" style="padding:6px 12px;font-size:12px;" onclick="onClientsSellerFilterChange('')">✕ Mostrar Todos os Vendedores</button>
+        </div>
+      </div>
+    ` : '';
     const html = `
+      ${sellerBanner}
       <div class="grid" style="margin-bottom:16px;">
         <div class="card kpi" style="border-top:4px solid var(--xv-navy);">
           <div style="font-size:13px;color:#8193a9;margin-bottom:4px;">👥 Carteira de Clientes</div>
@@ -1355,10 +1469,11 @@ window.renderClientsUI=function(){
     if (host) host.innerHTML = html;
   } else {
     // Tab Listagem Geral Clássica
-    let filtered = window._clientsData || [];
-    if (sellerFilter) {
-      filtered = filtered.filter(x => x.vendedor_id === sellerFilter || x.vendedor_nome === sellerFilter);
-    }
+    let filtered = rawClients.map(x => ({
+      ...x,
+      vendedor_nome: x.vendedor_nome || (x.vendedor_id ? sellerById.get(String(x.vendedor_id)) : null) || null
+    })).filter(matchesSellerFilter);
+    const sellerTotalCount = filtered.length;
     if (sq) {
       filtered = filtered.filter(x =>
         (x.razao_social || '').toLowerCase().includes(sq) ||
@@ -1367,10 +1482,27 @@ window.renderClientsUI=function(){
         (x.telefone || '').toLowerCase().includes(sq) ||
         (x.bairro || '').toLowerCase().includes(sq) ||
         (x.cidade || '').toLowerCase().includes(sq) ||
-        (x.email || '').toLowerCase().includes(sq)
+        (x.email || '').toLowerCase().includes(sq) ||
+        (x.vendedor_nome || '').toLowerCase().includes(sq)
       );
     }
+    const sellerBanner = sellerFilter ? `
+      <div style="margin-bottom:14px;padding:12px 16px;background:rgba(2,29,96,0.06);border:1px solid rgba(2,29,96,0.18);border-left:4px solid var(--xv-orange,#fd5e02);border-radius:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <div>
+          <strong>👤 Carteira Selecionada: ${esc(selectedSellerName)}</strong>
+          <span class="badge" style="margin-left:8px;background:#021d60;color:#fff;">${sellerTotalCount} cliente(s) na carteira</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          ${sellerFilter !== '__SEM_VENDEDOR__' ? `<button type="button" class="btn primary" style="padding:6px 12px;font-size:12px;" onclick="newClient('${esc(sellerFilter)}')">+ Novo Cliente nesta Carteira</button>` : ''}
+          <button type="button" class="btn" style="padding:6px 12px;font-size:12px;" onclick="onClientsSellerFilterChange('')">✕ Mostrar Todos os Vendedores</button>
+        </div>
+      </div>
+    ` : '';
     const html = `
+      ${sellerBanner}
+      <div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <span class="badge" style="font-size:12px;">👥 ${filtered.length} cliente(s) exibido(s)</span>
+      </div>
       <div class="tablewrap">
         <table class="table">
           <thead>
@@ -1379,7 +1511,7 @@ window.renderClientsUI=function(){
               <th>CNPJ/CPF</th>
               <th>Telefone</th>
               <th>Bairro</th>
-              <th>Vendedor</th>
+              <th>Carteira / Vendedor</th>
               <th style="text-align:right;">Ações</th>
             </tr>
           </thead>
@@ -1390,7 +1522,7 @@ window.renderClientsUI=function(){
                 <td>${esc(x.cnpj_cpf||'-')}</td>
                 <td>${esc(x.telefone||'-')}</td>
                 <td>${esc(x.bairro||'-')}</td>
-                <td>${esc(x.vendedor_nome||'-')}</td>
+                <td>${x.vendedor_nome ? `<span class="badge" style="background:rgba(34,197,94,0.12);color:#15803d;border:1px solid rgba(34,197,94,0.3)">👤 ${esc(x.vendedor_nome)}</span>` : '<span class="muted">Sem vendedor</span>'}</td>
                 <td style="text-align:right;">
                   <button class="btn" onclick="crmInteractionsModal('${x.id}', parseJsonArg('${jsonArg(x.razao_social||x.nome_fantasia)}'))">📝 CRM</button>
                   <button class="btn" onclick="editClient(parseJsonArg('${jsonArg(x)}'))">Editar</button>
@@ -1409,7 +1541,8 @@ window.renderClientsUI=function(){
 window.refreshCrmData = async function() {
   try {
     const [c, crm] = await Promise.all([api('/api/clients'), api('/api/crm/dashboard')]);
-    window._clientsData = c.items || [];
+    window._clientsData = (c.items || []).filter(x => x.id !== 'CLIENTE-BALCAO');
+    if (crm && Array.isArray(crm.items)) crm.items = crm.items.filter(x => x.id !== 'CLIENTE-BALCAO');
     window._crmData = crm;
     renderClientsUI();
   } catch(e) {}
@@ -1421,11 +1554,24 @@ async function clients(v){
     api('/api/crm/dashboard').catch(() => ({ summary: {}, items: [] })),
     api('/api/users').catch(() => ({ items: [] }))
   ]);
-  window._clientsData = c.items || [];
+  window._clientsData = (c.items || []).filter(x => x.id !== 'CLIENTE-BALCAO');
+  if (crm && Array.isArray(crm.items)) crm.items = crm.items.filter(x => x.id !== 'CLIENTE-BALCAO');
   window._crmData = crm;
   window.currentClientTab = window.currentClientTab || 'crm';
   window.currentCrmRfmFilter = window.currentCrmRfmFilter || 'ALL';
   const sellers = (usersRes.items || []).filter(u => u.role === 'seller' && u.ativo);
+  window._clientsSellers = sellers;
+  const curSeller = window._selectedClientSellerFilter || '';
+  const countBySeller = new Map();
+  let noSellerCount = 0;
+  for (const cl of window._clientsData) {
+    if (cl.vendedor_id) {
+      const k = String(cl.vendedor_id);
+      countBySeller.set(k, (countBySeller.get(k) || 0) + 1);
+    } else {
+      noSellerCount++;
+    }
+  }
 
   v.innerHTML = `
     <div class="panel">
@@ -1444,11 +1590,12 @@ async function clients(v){
       </div>
 
       <div class="actions" style="margin-bottom:16px;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-        <div style="display:flex;gap:10px;align-items:center;flex:1;max-width:680px;">
-          <input type="text" id="clientsSearch" class="field-input search" style="flex:1;" placeholder="Buscar por cliente, documento, telefone, bairro..." oninput="renderClientsUI()">
-          <select id="clientsSellerFilter" class="field-input search" style="width:200px;" onchange="renderClientsUI()">
-            <option value="">Todos os vendedores</option>
-            ${sellers.map(s => `<option value="${s.id}">${esc(s.nome)}</option>`).join('')}
+        <div style="display:flex;gap:10px;align-items:center;flex:1;max-width:780px;flex-wrap:wrap;">
+          <input type="text" id="clientsSearch" class="field-input search" style="flex:1;min-width:220px;" placeholder="Buscar por cliente, documento, telefone, bairro..." oninput="renderClientsUI()">
+          <select id="clientsSellerFilter" class="field-input search" style="width:280px;" onchange="onClientsSellerFilterChange(this.value)">
+            <option value="" ${!curSeller?'selected':''}>Todas as carteiras (${window._clientsData.length} clientes)</option>
+            ${sellers.map(s => `<option value="${s.id}" ${curSeller===s.id?'selected':''}>👤 ${esc(s.nome)} (${countBySeller.get(String(s.id)) || 0} clientes)</option>`).join('')}
+            <option value="__SEM_VENDEDOR__" ${curSeller==='__SEM_VENDEDOR__'?'selected':''}>🏢 Sem Vendedor / Web (${noSellerCount} clientes)</option>
           </select>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
@@ -1461,10 +1608,10 @@ async function clients(v){
   `;
   renderClientsUI();
 }
-async function newClient(){const t=await api('/api/price-tables');modal('Novo cliente',`<form id="clientNewForm" class="form"><div class="field"><label>Nome fantasia</label><input name="nome_fantasia"></div><div class="field"><label>Razão social</label><input name="razao_social" required></div><div class="field"><label>CNPJ/CPF</label><input name="cnpj_cpf"></div><div class="field"><label>Email</label><input name="email" type="email"></div><div class="field"><label>Telefone</label><input name="telefone"></div><div class="field"><label>Endereço</label><input name="endereco" required></div><div class="field"><label>Bairro</label><input name="bairro" required></div><div class="field"><label>Cidade</label><input name="cidade"></div><div class="field"><label>Estado</label><input name="estado"></div><div class="field"><label>CEP</label><input name="cep"></div><div class="field"><label>Tabela de Preços</label><select name="tabela_preco_id" class="field-input"><option value="">(Preço base - Padrão)</option>${t.items.map(p=>`<option value="${p.id}">${esc(p.nome)}</option>`).join('')}</select></div><div class="actions" style="grid-column:1/-1"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary">Criar cliente</button></div></form>`);$('#clientNewForm').onsubmit=async e=>{e.preventDefault();try{await api('/api/clients',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});closeModal();toast('Cliente criado');show('clients')}catch(z){toast(z.message)}}}
+async function newClient(defaultSellerId){const [t,uRes]=await Promise.all([api('/api/price-tables'),api('/api/users').catch(()=>({items:[]}))]);const sellers=(uRes.items||[]).filter(u=>u.role==='seller'&&u.ativo);const preSel=defaultSellerId||(window._selectedClientSellerFilter&&window._selectedClientSellerFilter!=='__SEM_VENDEDOR__'?window._selectedClientSellerFilter:'');modal('Novo cliente',`<form id="clientNewForm" class="form"><div class="field"><label>Nome fantasia</label><input name="nome_fantasia"></div><div class="field"><label>Razão social</label><input name="razao_social" required></div><div class="field"><label>CNPJ/CPF</label><input name="cnpj_cpf"></div><div class="field"><label>Email</label><input name="email" type="email"></div><div class="field"><label>Telefone</label><input name="telefone"></div><div class="field"><label>Endereço</label><input name="endereco" required></div><div class="field"><label>Bairro</label><input name="bairro" required></div><div class="field"><label>Cidade</label><input name="cidade"></div><div class="field"><label>Estado</label><input name="estado"></div><div class="field"><label>CEP</label><input name="cep"></div><div class="field"><label>Vendedor Responsável (Carteira)</label><select name="vendedor_id" class="field-input"><option value="">(Sem vendedor atribuído / Geral)</option>${sellers.map(s=>`<option value="${s.id}" ${preSel===s.id?'selected':''}>👤 ${esc(s.nome)}</option>`).join('')}</select></div><div class="field"><label>Tabela de Preços</label><select name="tabela_preco_id" class="field-input"><option value="">(Preço base - Padrão)</option>${t.items.map(p=>`<option value="${p.id}">${esc(p.nome)}</option>`).join('')}</select></div><div class="actions" style="grid-column:1/-1"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary">Criar cliente</button></div></form>`);$('#clientNewForm').onsubmit=async e=>{e.preventDefault();try{await api('/api/clients',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});closeModal();toast('Cliente criado');if(location.hash==='#sellers'&&window._currentSellerDashboardId){renderSellerDashboard(window._currentSellerDashboardId,window._currentSellerDashboardNome,window._currentSellerDashboardFilter)}else{show('clients')}}catch(z){toast(z.message)}}}
 
-async function editClient(x){const t=await api('/api/price-tables');modal('Editar cliente',`<form id="clientEditForm" class="form"><div class="field"><label>Nome fantasia</label><input name="nome_fantasia" value="${esc(x.nome_fantasia||'')}"></div><div class="field"><label>Razão social</label><input name="razao_social" required value="${esc(x.razao_social||'')}"></div><div class="field"><label>CNPJ/CPF</label><input name="cnpj_cpf" value="${esc(x.cnpj_cpf||'')}"></div><div class="field"><label>Email</label><input name="email" type="email" value="${esc(x.email||'')}"></div><div class="field"><label>Telefone</label><input name="telefone" value="${esc(x.telefone||'')}"></div><div class="field"><label>Endereço</label><input name="endereco" required value="${esc(x.endereco||'')}"></div><div class="field"><label>Bairro</label><input name="bairro" required value="${esc(x.bairro||'')}"></div><div class="field"><label>Cidade</label><input name="cidade" value="${esc(x.cidade||'')}"></div><div class="field"><label>Estado</label><input name="estado" value="${esc(x.estado||'')}"></div><div class="field"><label>CEP</label><input name="cep" value="${esc(x.cep||'')}"></div><div class="field"><label>Tabela de Preços</label><select name="tabela_preco_id" class="field-input"><option value="">(Preço base - Padrão)</option>${t.items.map(p=>`<option value="${p.id}" ${x.tabela_preco_id===p.id?'selected':''}>${esc(p.nome)}</option>`).join('')}</select></div><div class="actions" style="grid-column:1/-1"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar alterações</button></div></form>`);$('#clientEditForm').onsubmit=async e=>{e.preventDefault();try{await api('/api/clients/'+x.id,{method:'PUT',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});closeModal();toast('Cliente atualizado');show('clients')}catch(z){toast(z.message)}}}
-async function clientProfile(id){const x=await api('/api/clients/'+id+'/profile');modal('Perfil completo do cliente',`<div class="grid"><div class="card"><small>Pedidos</small><h2>${x.summary?.pedidos||0}</h2></div><div class="card"><small>Faturado</small><h2>${brl(x.summary?.faturado||0)}</h2></div><div class="card"><small>Em aberto</small><h2>${brl(x.summary?.em_aberto||0)}</h2></div></div><h3>${esc(x.client.razao_social)}</h3><p>${esc(x.client.endereco)} · ${esc(x.client.cidade||'')} · Tabela: ${esc(x.client.tabela_preco_nome||'Preço base')}</p><div class="actions"><button class="btn primary" onclick="repeatClient('${id}')">↻ Repetir último pedido</button><button class="btn" onclick="crmInteractionsModal('${id}', parseJsonArg('${jsonArg(x.client.razao_social||x.client.nome_fantasia)}'))">📝 Linha do Tempo CRM</button></div><h4>Produtos mais comprados</h4><div class="tablewrap"><table class="table"><thead><tr><th>Produto</th><th>Qtd.</th><th>Faturamento</th><th>Última compra</th></tr></thead><tbody>${x.topProdutos.map(p=>`<tr><td>${esc(p.nome)}</td><td>${p.quantidade}</td><td>${brl(p.faturamento)}</td><td>${p.ultima_compra?new Date(p.ultima_compra).toLocaleDateString('pt-BR'):'-'}</td></tr>`).join('')||'<tr><td colspan=4>Nenhum histórico concluído.</td></tr>'}</tbody></table></div><h4>Histórico de pedidos</h4><div class="tablewrap"><table class="table"><thead><tr><th>Pedido</th><th>Origem</th><th>Status</th><th>Total</th><th>Documento</th></tr></thead><tbody>${x.orders.map(o=>`<tr><td><button class="btn" onclick="orderDetail('${o.id}')">${esc(o.numero)}</button></td><td>${esc(o.origem)}</td><td>${esc(o.status)}</td><td>${brl(o.total)}</td><td><button class="btn" onclick="downloadAuthFile('/api/orders/${o.id}/pdf','pedido-${o.numero}.pdf')">PDF</button></td></tr>`).join('')}</tbody></table></div>`)}
+async function editClient(x){const [t,uRes]=await Promise.all([api('/api/price-tables'),api('/api/users').catch(()=>({items:[]}))]);const sellers=(uRes.items||[]).filter(u=>u.role==='seller'&&u.ativo);modal('Editar cliente',`<form id="clientEditForm" class="form"><div class="field"><label>Nome fantasia</label><input name="nome_fantasia" value="${esc(x.nome_fantasia||'')}"></div><div class="field"><label>Razão social</label><input name="razao_social" required value="${esc(x.razao_social||'')}"></div><div class="field"><label>CNPJ/CPF</label><input name="cnpj_cpf" value="${esc(x.cnpj_cpf||'')}"></div><div class="field"><label>Email</label><input name="email" type="email" value="${esc(x.email||'')}"></div><div class="field"><label>Telefone</label><input name="telefone" value="${esc(x.telefone||'')}"></div><div class="field"><label>Endereço</label><input name="endereco" required value="${esc(x.endereco||'')}"></div><div class="field"><label>Bairro</label><input name="bairro" required value="${esc(x.bairro||'')}"></div><div class="field"><label>Cidade</label><input name="cidade" value="${esc(x.cidade||'')}"></div><div class="field"><label>Estado</label><input name="estado" value="${esc(x.estado||'')}"></div><div class="field"><label>CEP</label><input name="cep" value="${esc(x.cep||'')}"></div><div class="field"><label>Vendedor Responsável (Carteira)</label><select name="vendedor_id" class="field-input"><option value="">(Sem vendedor atribuído / Geral)</option>${sellers.map(s=>`<option value="${s.id}" ${x.vendedor_id===s.id?'selected':''}>👤 ${esc(s.nome)}</option>`).join('')}</select></div><div class="field"><label>Tabela de Preços</label><select name="tabela_preco_id" class="field-input"><option value="">(Preço base - Padrão)</option>${t.items.map(p=>`<option value="${p.id}" ${x.tabela_preco_id===p.id?'selected':''}>${esc(p.nome)}</option>`).join('')}</select></div><div class="actions" style="grid-column:1/-1"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar alterações</button></div></form>`);$('#clientEditForm').onsubmit=async e=>{e.preventDefault();try{await api('/api/clients/'+x.id,{method:'PUT',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});closeModal();toast('Cliente atualizado');if(location.hash==='#sellers'&&window._currentSellerDashboardId){renderSellerDashboard(window._currentSellerDashboardId,window._currentSellerDashboardNome,window._currentSellerDashboardFilter)}else{show('clients')}}catch(z){toast(z.message)}}}
+async function clientProfile(id){const x=await api('/api/clients/'+id+'/profile');modal('Perfil completo do cliente',`<div class="grid"><div class="card"><small>Pedidos</small><h2>${x.summary?.pedidos||0}</h2></div><div class="card"><small>Faturado</small><h2>${brl(x.summary?.faturado||0)}</h2></div><div class="card"><small>Em aberto</small><h2>${brl(x.summary?.em_aberto||0)}</h2></div></div><h3>${esc(x.client.razao_social)}</h3><p>${esc(x.client.endereco)} · ${esc(x.client.cidade||'')} · Carteira: <strong>${esc(x.client.vendedor_nome||'Sem vendedor atribuído')}</strong> · Tabela: ${esc(x.client.tabela_preco_nome||'Preço base')}</p><div class="actions"><button class="btn primary" onclick="repeatClient('${id}')">↻ Repetir último pedido</button><button class="btn" onclick="crmInteractionsModal('${id}', parseJsonArg('${jsonArg(x.client.razao_social||x.client.nome_fantasia)}'))">📝 Linha do Tempo CRM</button></div><h4>Produtos mais comprados</h4><div class="tablewrap"><table class="table"><thead><tr><th>Produto</th><th>Qtd.</th><th>Faturamento</th><th>Última compra</th></tr></thead><tbody>${x.topProdutos.map(p=>`<tr><td>${esc(p.nome)}</td><td>${p.quantidade}</td><td>${brl(p.faturamento)}</td><td>${p.ultima_compra?new Date(p.ultima_compra).toLocaleDateString('pt-BR'):'-'}</td></tr>`).join('')||'<tr><td colspan=4>Nenhum histórico concluído.</td></tr>'}</tbody></table></div><h4>Histórico de pedidos</h4><div class="tablewrap"><table class="table"><thead><tr><th>Pedido</th><th>Origem</th><th>Status</th><th>Total</th><th>Documento</th></tr></thead><tbody>${x.orders.map(o=>`<tr><td><button class="btn" onclick="orderDetail('${o.id}')">${esc(o.numero)}</button></td><td>${esc(o.origem)}</td><td>${esc(o.status)}</td><td>${brl(o.total)}</td><td><button class="btn" onclick="downloadAuthFile('/api/orders/${o.id}/pdf','pedido-${o.numero}.pdf')">PDF</button></td></tr>`).join('')}</tbody></table></div>`)}
 async function repeatClient(id){try{const x=await api('/api/clients/'+id+'/repeat-last',{method:'POST',body:'{}'});modal('Repetir pedido',`<p>O último pedido foi recuperado. Revise as quantidades antes de emitir.</p><div class="tablewrap"><table class="table"><tbody>${x.itens.map(i=>`<tr><td>${esc(i.produto_id)}</td><td>${i.quantidade}</td></tr>`).join('')}</tbody></table></div><button class="btn primary" onclick="closeModal();toast('Itens recuperados. Abra o emissor para revisar.')">Continuar</button>`)}catch(e){toast(e.message)}}
 async function orderDetail(id){
  const x=await api('/api/orders/'+id+'/detail');
@@ -2356,7 +2503,7 @@ window.adminSaveAboutCards = async function(){
 
 async function prices(v){
   const [x, cl, usrs]=await Promise.all([api('/api/price-tables'),api('/api/clients'),api('/api/users')]);
-  window._pricesClients=cl.items;
+  window._pricesClients=(cl.items||[]).filter(c=>c.id!=='CLIENTE-BALCAO');
   const vendedores=usrs.items.filter(u=>u.role==='seller'&&u.ativo);
   v.innerHTML=`<div class="panel"><div class="panel-title"><h3>Governança de preços</h3><button class="btn primary" onclick="newPriceTable()">+ Nova tabela</button></div><p style="color:#91a1b4">Preços por cliente são resolvidos no servidor e aplicados a todos os canais.</p></div>
 
@@ -2365,15 +2512,16 @@ async function prices(v){
   <div class="panel"><h3>Aplicar tabela individualmente</h3><form id="applyIndivForm" style="display:grid;gap:12px;align-items:end;"><div class="field" style="position:relative"><label>Buscar Cliente (Nome/CNPJ)</label><input id="applyIndivSearch" class="field-input search" autocomplete="off" required placeholder="Digite o nome ou cnpj..." oninput="pricesSearchClient(this.value)"><input type="hidden" id="applyIndivId" required><div id="applyIndivResults" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ccc;border-radius:4px;max-height:200px;overflow-y:auto;z-index:99;display:none;box-shadow:0 4px 12px rgba(0,0,0,.15)"></div></div><div class="field"><label>Tabela</label><select id="applyIndivTid" class="field-input" required><option value="">Selecione a tabela...</option>${x.items.map(t=>`<option value="${t.id}">${esc(t.nome)}</option>`).join('')}</select></div><button class="btn primary" type="submit" style="width:100%">Aplicar ao cliente</button></form></div></div>
 
   <div class="tablewrap"><table class="table"><thead><tr><th>Nome</th><th>Itens</th><th>Status</th><th>Ações</th></tr></thead><tbody>${x.items.map(t=>`<tr><td style="font-weight:bold;font-size:1.15em;color:var(--xv-primary)">${esc(t.nome)}</td><td>${t.itens}</td><td><div style="display:flex;align-items:center;gap:8px"><span class="badge ${t.ativo?'ok':''}">${t.ativo?'Ativa':'Inativa'}</span><button class="btn" style="padding:4px 9px;font-size:12px;display:inline-flex;align-items:center;gap:4px" onclick="priceTableDetails('${t.id}','${esc(t.nome)}')">📊 Detalhes</button></div></td><td><button class="btn" onclick="priceTableItems('${t.id}','${esc(t.nome)}')">Ver preços</button> <button class="btn danger" onclick="deletePriceTable('${t.id}','${esc(t.nome)}')">Excluir tabela de preço</button></td></tr>`).join('')}</tbody></table></div>`;
-  $('#applyTableForm').onsubmit=async e=>{e.preventDefault();const target=$('#applyTarget').value;const vid=target==='VENDEDOR'?$('#applySellerId').value:null;const targetLabel=target==='VENDEDOR'&&vid?`clientes do vendedor "${$('#applySellerId').options[$('#applySellerId').selectedIndex]?.text}"`:'clientes escolhidos';if(!confirm(`Deseja aplicar a tabela selecionada aos ${targetLabel}? Isso substituirá a tabela atual deles.`))return;toast('Aplicando tabela em massa...');try{await api('/api/price-tables/apply',{method:'POST',body:JSON.stringify({tabela_id:$('#applyTid').value,target,vendedor_id:vid||undefined})});toast('Tabela aplicada em massa com sucesso');Realtime.emit('prices_changed');Realtime.emit('products_changed');refreshCurrentViewSilently('prices_changed')}catch(z){toast(z.message,true)}}
+  $('#applyTableForm').onsubmit=async e=>{e.preventDefault();const target=$('#applyTarget').value;const vid=target==='VENDEDOR'?$('#applySellerId').value:null;const targetLabel=target==='VENDEDOR'&&vid?`clientes do vendedor "${$('#applySellerId').options[$('#applySellerId').selectedIndex]?.text}"`:'clientes escolhidos';if(!confirm(`Deseja aplicar a tabela selecionada aos ${targetLabel}?\n\nNota: Clientes que possuem tabela aplicada individualmente manterão sua tabela individual.`))return;toast('Aplicando tabela em massa...');try{await api('/api/price-tables/apply',{method:'POST',body:JSON.stringify({tabela_id:$('#applyTid').value,target,vendedor_id:vid||undefined})});toast('Tabela aplicada em massa com sucesso (respeitando tabelas individuais)');Realtime.emit('prices_changed');Realtime.emit('products_changed');refreshCurrentViewSilently('prices_changed')}catch(z){toast(z.message,true)}}
   $('#applyIndivForm').onsubmit=async e=>{e.preventDefault();if(!$('#applyIndivId').value)return toast('Selecione um cliente na lista');toast('Aplicando tabela ao cliente...');try{await api('/api/price-tables/apply',{method:'POST',body:JSON.stringify({tabela_id:$('#applyIndivTid').value,target:'INDIVIDUAL',cliente_id:$('#applyIndivId').value})});toast('Tabela aplicada ao cliente com sucesso');$('#applyIndivId').value='';$('#applyIndivSearch').value='';Realtime.emit('prices_changed');Realtime.emit('products_changed');refreshCurrentViewSilently('prices_changed')}catch(z){toast(z.message,true)}}
 }
+window.filterPriceTableModalProducts=function(q){const sq=(q||'').toLowerCase().trim();document.querySelectorAll('#priceItemsForm tbody tr[data-pt-prod]').forEach(tr=>{tr.style.display=!sq||tr.dataset.ptProd.includes(sq)?'':'none'})};
 async function priceTableItems(id,name){
  const x=await api('/api/price-tables/'+id+'/items');
  let page=1,total=Infinity,items=[];
  while(items.length<total){const p=await api('/api/products?limit=100&page='+page);items.push(...p.items);total=p.total;if(!p.items.length)break;page++}
- modal('Tabela: '+esc(name),`<form id="priceItemsForm"><div class="tablewrap"><table class="table"><thead><tr><th>Produto</th><th>Preço</th><th>Qtd. Mínima</th></tr></thead><tbody>${items.map(pr=>{const it=x.items.find(i=>i.produto_id===pr.id);return `<tr><td>${esc(pr.nome)}</td><td><input data-price-product="${pr.id}" value="${it?Number(it.preco).toFixed(2):''}" type="number" step="0.01" min="0" style="width:100px"></td><td><input data-qty-product="${pr.id}" value="${it?Number(it.quantidade_minima||1):1}" type="number" step="1" min="1" style="width:80px"></td></tr>`}).join('')}</tbody></table></div><br><button class="btn primary">Salvar preços</button></form>`);
- $('#priceItemsForm').onsubmit=async e=>{e.preventDefault();const itens=[...document.querySelectorAll('[data-price-product]')].filter(i=>i.value!=='').map(i=>{const q=document.querySelector(`[data-qty-product="${i.dataset.priceProduct}"]`);return {produto_id:i.dataset.priceProduct,preco:Number(i.value),quantidade_minima:q?Number(q.value||1):1};});try{await api('/api/price-tables/'+id,{method:'PUT',body:JSON.stringify({itens})});closeModal();toast('Tabela atualizada');show('prices')}catch(z){toast(z.message)}}
+ modal('Tabela: '+esc(name),`<form id="priceItemsForm"><div style="position:sticky;top:0;z-index:10;background:#ffffff;padding:8px 0 12px;margin-bottom:12px;border-bottom:2px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div style="flex:1;min-width:220px"><input type="text" class="search" placeholder="🔍 Filtrar produto por nome ou SKU..." oninput="filterPriceTableModalProducts(this.value)" style="width:100%;padding:8px 12px"><small class="muted" style="display:block;margin-top:4px">Defina o preço diferenciado e a <strong>Quantidade Mínima</strong> (em unidades) para que o preço da tabela seja aplicado ao pedido.</small></div><div style="display:flex;gap:8px;align-items:center"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button type="submit" class="btn primary" style="padding:10px 18px;font-weight:800">💾 Salvar tabela</button></div></div><div class="tablewrap" style="max-height:62vh;overflow:auto"><table class="table"><thead><tr><th>Produto</th><th>Preço Base</th><th>Preço na Tabela (R$)</th><th>Qtd. Mínima (un)</th></tr></thead><tbody>${items.map(pr=>{const it=x.items.find(i=>i.produto_id===pr.id);return `<tr data-pt-prod="${esc((pr.nome+' '+(pr.sku||'')).toLowerCase())}"><td><strong>${esc(pr.nome)}</strong>${pr.sku?`<br><small class="muted">SKU: ${esc(pr.sku)}</small>`:''}</td><td><span class="muted">${brl(pr.preco_base)}</span></td><td><input class="field-input" data-price-product="${pr.id}" value="${it?Number(it.preco).toFixed(2):''}" placeholder="${Number(pr.preco_base||0).toFixed(2)}" type="number" step="0.01" min="0" style="width:120px"></td><td><div style="display:flex;align-items:center;gap:6px"><input class="field-input" data-qty-product="${pr.id}" value="${it?Math.max(1,Number(it.quantidade_minima||1)):1}" type="number" step="1" min="1" style="width:90px"><small class="muted">un.</small></div></td></tr>`}).join('')}</tbody></table></div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button type="submit" class="btn primary">💾 Salvar tabela</button></div></form>`,'860px');
+ $('#priceItemsForm').onsubmit=async e=>{e.preventDefault();const itens=[...document.querySelectorAll('[data-price-product]')].filter(i=>String(i.value).trim()!==''&&Number(i.value)>0).map(i=>{const q=document.querySelector(`[data-qty-product="${i.dataset.priceProduct}"]`);return {produto_id:i.dataset.priceProduct,preco:Number(i.value),quantidade_minima:Math.max(1,parseInt(q?.value,10)||1)};});try{await api('/api/price-tables/'+id,{method:'PUT',body:JSON.stringify({itens,replace_all:true})});closeModal();toast('Tabela de preços salva com sucesso!');show('prices')}catch(z){toast(z.message,true)}}
 }
 async function deletePriceTable(id,nome='esta tabela'){
   if(!confirm(`Excluir a tabela de preço "${nome}"?\n\nOs itens e vínculos associados a esta tabela serão removidos e os clientes voltarão ao preço base.`))return;
@@ -2829,26 +2977,135 @@ window.removeAllClientsFromPriceTable=async function(tableId,tableName){
 window.priceTableDetails=priceTableDetails;
 function newPriceTable(){modal('Nova tabela de preço',`<form id="priceForm"><div class="field"><label>Nome</label><input name="nome" required></div><button class="btn primary">Criar tabela</button></form>`);$('#priceForm').onsubmit=async e=>{e.preventDefault();try{await api('/api/price-tables',{method:'POST',body:JSON.stringify({nome:new FormData(e.currentTarget).get('nome'),itens:[]})});closeModal();show('prices')}catch(x){toast(x.message)}}}
 async function sellers(v) {
-  const x=await api('/api/users');
-  const vendedores=x.items.filter(u=>u.role==='seller'&&u.ativo);
+  const [x, clRes, ordRes] = await Promise.all([
+    api('/api/users'),
+    api('/api/clients').catch(()=>({items:[]})),
+    api('/api/orders').catch(()=>({items:[]}))
+  ]);
+  const vendedores = x.items.filter(u=>u.role==='seller'&&u.ativo);
+  const allClients = (clRes.items||[]).filter(c=>c.id!=='CLIENTE-BALCAO');
+  const allOrders = (ordRes.items||[]).filter(o=>!o.cancelled_at && o.status!=='CANCELADO' && o.cliente_id!=='CLIENTE-BALCAO');
+
+  // Calcula resultados de vendas por vendedor (pedidos onde o vendedor é o operador ou dono da carteira do cliente)
+  const clientSellerMap = new Map(allClients.map(c=>[c.id, c.vendedor_id]));
+  const sellerStatsMap = new Map();
+  vendedores.forEach(u => {
+    sellerStatsMap.set(u.id, { pedidos: 0, valor_total: 0, concluidos: 0, valor_concluido: 0 });
+  });
+  allOrders.forEach(o => {
+    const sid = (sellerStatsMap.has(o.operador_id) ? o.operador_id : null) || clientSellerMap.get(o.cliente_id);
+    if (sid && sellerStatsMap.has(sid)) {
+      const st = sellerStatsMap.get(sid);
+      const val = Number(o.total || 0);
+      st.pedidos += 1;
+      st.valor_total += val;
+      if (o.status === 'CONCLUIDO') {
+        st.concluidos += 1;
+        st.valor_concluido += val;
+      }
+    }
+  });
+
   window.renderSellersDashboard=function(){
     window._currentSellerDashboardId=null;
     window._currentSellerDashboardNome=null;
-    v.innerHTML=`<div class="panel"><div class="panel-title"><div><h3>Vendedores</h3><p class="muted">Desempenho e painel do mês de cada vendedor.</p></div><button class="btn primary" onclick="show('sellers')">↻ Atualizar</button></div></div><div class="grid" style="margin-top:14px">${vendedores.map(u=>`<div class="card" style="cursor:pointer" onclick="renderSellerDashboard('${u.id}','${esc(u.nome)}')"><h3 style="margin-top:0;display:flex;align-items:center;gap:8px"><span class="client-icon" style="width:30px;height:30px;font-size:14px">👤</span>${esc(u.nome)}</h3><p class="muted" style="margin:0">${esc(u.email)}</p></div>`).join('')||'<div class="empty-state">Nenhum vendedor ativo encontrado.</div>'}</div>`;
+    let teamPedidos = 0, teamValor = 0, teamConcluido = 0;
+    sellerStatsMap.forEach(st => {
+      teamPedidos += st.pedidos;
+      teamValor += st.valor_total;
+      teamConcluido += st.valor_concluido;
+    });
+    v.innerHTML=`
+      <div class="panel">
+        <div class="panel-title">
+          <div>
+            <h3>Vendedores · Resultados de Vendas & Carteiras</h3>
+            <p class="muted">Acompanhe o resultado das vendas, faturamento e carteira exclusiva de clientes de cada vendedor.</p>
+          </div>
+          <button class="btn primary" onclick="show('sellers')">↻ Atualizar</button>
+        </div>
+      </div>
+      <div class="sellers-kpi-grid">
+        <div class="card" style="border-top:4px solid #061a4f">
+          <small class="muted">Vendedores Ativos</small>
+          <h2 style="color:#061a4f;margin:8px 0 4px">${vendedores.length}</h2>
+          <p class="muted" style="margin:4px 0 0">${allClients.filter(c=>c.vendedor_id).length} cliente(s) em carteira</p>
+        </div>
+        <div class="card" style="border-top:4px solid #061a4f">
+          <small class="muted">Total de Pedidos (Equipe)</small>
+          <h2 style="color:#061a4f;margin:8px 0 4px">${teamPedidos}</h2>
+          <p class="muted" style="margin:4px 0 0">Pedidos ativos emitidos pelos vendedores</p>
+        </div>
+        <div class="card" style="border-top:4px solid #fd5e02">
+          <small class="muted">Resultado Total de Vendas</small>
+          <h2 class="orange" style="margin:8px 0 4px">${brl(teamValor)}</h2>
+          <p class="muted" style="margin:4px 0 0">Soma de todos os pedidos válidos da equipe</p>
+        </div>
+        <div class="card" style="border-top:4px solid #061a4f">
+          <small class="muted">Faturamento Concluído</small>
+          <h2 style="color:#061a4f;margin:8px 0 4px">${brl(teamConcluido)}</h2>
+          <p class="muted" style="margin:4px 0 0">Pedidos entregues / concluídos</p>
+        </div>
+      </div>
+      <div class="sellers-section-grid">
+        ${vendedores.map(u=>{
+          const count = allClients.filter(c=>c.vendedor_id===u.id).length;
+          const st = sellerStatsMap.get(u.id) || { pedidos: 0, valor_total: 0, concluidos: 0, valor_concluido: 0 };
+          return `<div class="card seller-dashboard-card" onclick="renderSellerDashboard('${u.id}','${esc(u.nome)}')">
+            <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+              <div class="seller-dashboard-card-head">
+                <span class="seller-dashboard-avatar">👤</span>
+                <div class="seller-dashboard-title-wrap">
+                  <h3>${esc(u.nome)}</h3>
+                  <p>${esc(u.email)}</p>
+                </div>
+              </div>
+              <span class="seller-portfolio-badge-navy">👥 ${count} cliente(s) na carteira</span>
+            </div>
+            <div class="seller-metrics-row">
+              <div class="seller-metric-box orange-box">
+                <small>Total Vendido (${st.pedidos} ped.)</small>
+                <strong style="color:#ea580c">${brl(st.valor_total)}</strong>
+              </div>
+              <div class="seller-metric-box navy-box">
+                <small>Concluído (${st.concluidos} ped.)</small>
+                <strong style="color:#061a4f">${brl(st.valor_concluido)}</strong>
+              </div>
+            </div>
+            <div class="seller-card-action-link">Ver resultados & carteira →</div>
+          </div>`;
+        }).join('')||'<div class="empty-state">Nenhum vendedor ativo encontrado.</div>'}
+      </div>`;
+  };
+  window.filterSellerPortfolioTable=function(q){
+    const sq=(q||'').toLowerCase().trim();
+    let count=0;
+    document.querySelectorAll('#sellerPortfolioTable tbody tr[data-search]').forEach(tr=>{
+      const ok=!sq||tr.dataset.search.includes(sq);
+      tr.style.display=ok?'':'none';
+      if(ok)count++;
+    });
+    const badge=document.getElementById('sellerPortfolioCountBadge');
+    if(badge)badge.textContent=`${count} cliente(s)`;
   };
   window.renderSellerDashboard=async function(id,nome,filterYm){
     window._currentSellerDashboardId=id;
     window._currentSellerDashboardNome=nome;
     if(filterYm!==undefined) window._currentSellerDashboardFilter=filterYm;
     else if(!window._currentSellerDashboardFilter) window._currentSellerDashboardFilter='';
-    v.innerHTML='<div class="panel">Carregando painel do mês...</div>';
+    v.innerHTML='<div class="panel">Carregando painel de vendas e carteira do vendedor...</div>';
     try{
       let url='/api/seller/dashboard/monthly?vendedor_id='+encodeURIComponent(id);
       if(window._currentSellerDashboardFilter){
         url+='&mes='+encodeURIComponent(window._currentSellerDashboardFilter);
       }
-      const d=await api(url);
-      const ymParts=(d.ano_mes||new Date().toISOString().slice(0,7)).split('-').map(Number);
+      const [d, crmData, clData] = await Promise.all([
+        api(url),
+        api('/api/crm/dashboard?vendedor_id='+encodeURIComponent(id)).catch(()=>({summary:{},items:[]})),
+        api('/api/clients?vendedor_id='+encodeURIComponent(id)).catch(()=>({items:[]}))
+      ]);
+      const isAllTime = d.ano_mes === 'TODOS' || window._currentSellerDashboardFilter === 'TODOS';
+      const ymParts=(!isAllTime && d.ano_mes ? d.ano_mes : new Date().toISOString().slice(0,7)).split('-').map(Number);
       const curYear=ymParts[0]||new Date().getFullYear();
       const curMonth=ymParts[1]||(new Date().getMonth()+1);
 
@@ -2868,7 +3125,148 @@ async function sellers(v) {
       ];
       const anos=[2024, 2025, 2026, 2027, 2028, 2029, 2030];
 
-      v.innerHTML=`<div class="panel"><div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px"><div style="display:flex;align-items:center;gap:12px"><button class="btn" onclick="renderSellersDashboard()">← Voltar</button><div><h3 style="margin:0">${esc(nome)} · Painel do mês</h3><p class="muted" style="margin-top:4px">${esc(d.mes||'Mês atual')}</p></div></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:13px;font-weight:700;color:var(--text)">📅 Escolher Mês / Ano:</span><select id="sellerFilterMonth" class="search" style="padding:7px 10px;font-size:13px;border-radius:8px;background:#fff;color:#000;border:1px solid #cbd5e1" onchange="renderSellerDashboard(window._currentSellerDashboardId, window._currentSellerDashboardNome, $('#sellerFilterYear').value+'-'+String(this.value).padStart(2,'0'))">${meses.map(m=>`<option value="${m.v}" ${m.v===curMonth?'selected':''}>${m.l}</option>`).join('')}</select><select id="sellerFilterYear" class="search" style="padding:7px 10px;font-size:13px;border-radius:8px;background:#fff;color:#000;border:1px solid #cbd5e1" onchange="renderSellerDashboard(window._currentSellerDashboardId, window._currentSellerDashboardNome, this.value+'-'+String($('#sellerFilterMonth').value).padStart(2,'0'))">${anos.map(y=>`<option value="${y}" ${y===curYear?'selected':''}>${y}</option>`).join('')}</select><button class="btn" style="padding:7px 12px;font-size:13px" onclick="renderSellerDashboard(window._currentSellerDashboardId, window._currentSellerDashboardNome, '')">Mês Atual</button><button class="btn primary" onclick="renderSellerDashboard(window._currentSellerDashboardId, window._currentSellerDashboardNome, window._currentSellerDashboardFilter)">↻ Atualizar</button></div></div></div><div class="grid" style="margin-top:14px"><div class="card"><small class="muted">Pedidos no mês (${esc(d.mes)})</small><h2>${Number(d.pedidos||0)}</h2></div><div class="card"><small class="muted">Valor total dos pedidos (${esc(d.mes)})</small><h2 class="orange">${brl(d.valor_total||0)}</h2><p class="muted" style="font-size:16px">Valor dos pedidos emitidos, não apenas pagamentos recebidos.</p></div></div>`;
+      const portfolioClients = (clData.items || []).filter(c => c.id !== 'CLIENTE-BALCAO' && c.vendedor_id === id);
+      const crmMap = new Map(((crmData.items || []).filter(c => c.id !== 'CLIENTE-BALCAO' && c.vendedor_id === id)).map(c => [c.id, c]));
+      const crmSum = crmData.summary || {};
+      const sellerOrders = d.pedidos_lista || [];
+
+      v.innerHTML=`
+        <div class="panel">
+          <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+            <div style="display:flex;align-items:center;gap:12px">
+              <button class="btn" onclick="renderSellersDashboard()">← Voltar</button>
+              <div>
+                <h3 style="margin:0">${esc(nome)} · Resultados de Vendas & Carteira</h3>
+                <p class="muted" style="margin-top:4px">${esc(d.mes||'Período selecionado')} · ${portfolioClients.length} cliente(s) vinculado(s) a este vendedor</p>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="font-size:13px;font-weight:700;color:var(--text)">📅 Período:</span>
+              <select id="sellerFilterMonth" class="search" style="padding:7px 10px;font-size:13px;border-radius:8px;background:#fff;color:#000;border:1px solid #cbd5e1" onchange="renderSellerDashboard(window._currentSellerDashboardId, window._currentSellerDashboardNome, $('#sellerFilterYear').value+'-'+String(this.value).padStart(2,'0'))">${meses.map(m=>`<option value="${m.v}" ${!isAllTime && m.v===curMonth?'selected':''}>${m.l}</option>`).join('')}</select>
+              <select id="sellerFilterYear" class="search" style="padding:7px 10px;font-size:13px;border-radius:8px;background:#fff;color:#000;border:1px solid #cbd5e1" onchange="renderSellerDashboard(window._currentSellerDashboardId, window._currentSellerDashboardNome, this.value+'-'+String($('#sellerFilterMonth').value).padStart(2,'0'))">${anos.map(y=>`<option value="${y}" ${!isAllTime && y===curYear?'selected':''}>${y}</option>`).join('')}</select>
+              <button class="btn ${!isAllTime && !window._currentSellerDashboardFilter ? 'primary' : ''}" style="padding:7px 12px;font-size:13px" onclick="renderSellerDashboard(window._currentSellerDashboardId, window._currentSellerDashboardNome, '')">Último Mês Ativo</button>
+              <button class="btn ${isAllTime ? 'primary' : ''}" style="padding:7px 12px;font-size:13px" onclick="renderSellerDashboard(window._currentSellerDashboardId, window._currentSellerDashboardNome, 'TODOS')">📊 Todo o Período</button>
+              <button class="btn" onclick="renderSellerDashboard(window._currentSellerDashboardId, window._currentSellerDashboardNome, window._currentSellerDashboardFilter)">↻ Atualizar</button>
+            </div>
+          </div>
+        </div>
+        <div class="sellers-kpi-grid">
+          <div class="card" style="border-top:4px solid #061a4f">
+            <small class="muted">Pedidos no Período (${esc(d.mes)})</small>
+            <h2 style="color:#061a4f;margin:8px 0 4px">${Number(d.pedidos||0)}</h2>
+            <p class="muted" style="font-size:13px;margin:4px 0 0">Concluídos no período: <strong>${Number(d.pedidos_concluidos||0)}</strong></p>
+          </div>
+          <div class="card" style="border-top:4px solid #fd5e02">
+            <small class="muted">Resultado das Vendas (${esc(d.mes)})</small>
+            <h2 class="orange" style="margin:8px 0 4px">${brl(d.valor_total||0)}</h2>
+            <p class="muted" style="font-size:13px;margin:4px 0 0">Concluído no período: <strong>${brl(d.valor_concluido||0)}</strong></p>
+          </div>
+          <div class="card" style="border-top:4px solid #061a4f">
+            <small class="muted">Resultado Acumulado Geral</small>
+            <h2 style="color:#061a4f;margin:8px 0 4px">${brl(d.valor_total_geral||0)}</h2>
+            <p class="muted" style="font-size:13px;margin:4px 0 0">${Number(d.pedidos_geral||0)} pedido(s) no histórico · ${brl(d.valor_concluido_geral||0)} concluído(s)</p>
+          </div>
+          <div class="card" style="border-top:4px solid #061a4f">
+            <small class="muted">Carteira de Clientes</small>
+            <h2 style="color:#061a4f;margin:8px 0 4px">${portfolioClients.length}</h2>
+            <p class="muted" style="font-size:13px;margin:4px 0 0">${crmSum.taxa_saude_carteira||0}% ativos · Ticket médio: ${brl(crmSum.ticket_medio||0)}</p>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:16px">
+          <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:12px">
+            <div>
+              <h3 style="margin:0">📦 Resultado de Vendas — Pedidos de ${esc(nome)} (${sellerOrders.length})</h3>
+              <p class="muted" style="margin:4px 0 0;font-size:12px">Pedidos emitidos pelo vendedor ou para clientes da sua carteira em ${esc(d.mes)}.</p>
+            </div>
+          </div>
+          <div class="tablewrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Nº Pedido</th>
+                  <th>Data</th>
+                  <th>Cliente</th>
+                  <th>Pagamento</th>
+                  <th>Status</th>
+                  <th style="text-align:right">Valor Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${sellerOrders.map(o => `
+                  <tr>
+                    <td><strong>${esc(o.numero)}</strong></td>
+                    <td>${o.created_at ? new Date(o.created_at).toLocaleString('pt-BR') : '-'}</td>
+                    <td><strong>${esc(o.nome_fantasia || o.razao_social || '-')}</strong></td>
+                    <td>${esc(o.forma_pagamento || '-')}</td>
+                    <td><span class="badge">${esc(o.status)}</span></td>
+                    <td style="text-align:right"><strong>${brl(o.total || 0)}</strong></td>
+                  </tr>
+                `).join('') || '<tr><td colspan="6" class="empty-state">Nenhum pedido encontrado neste período para este vendedor.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:16px">
+          <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:12px">
+            <div>
+              <h3 style="margin:0">👥 Carteira Exclusiva de Clientes — ${esc(nome)} (<span id="sellerPortfolioCountBadge">${portfolioClients.length} cliente(s)</span>)</h3>
+              <p class="muted" style="margin:4px 0 0;font-size:12px">Apenas clientes vinculados diretamente a este vendedor aparecem em sua carteira.</p>
+            </div>
+            <div class="actions" style="display:flex;gap:8px;flex-wrap:wrap">
+              <input type="text" class="search" style="min-width:240px;padding:7px 12px;font-size:13px" placeholder="🔍 Filtrar cliente na carteira..." oninput="filterSellerPortfolioTable(this.value)">
+              <button class="btn" onclick="window._selectedClientSellerFilter='${id}';show('clients')">📊 Ver no CRM Completo</button>
+              <button class="btn primary" onclick="newClient('${id}')">+ Novo Cliente na Carteira</button>
+            </div>
+          </div>
+          <div class="tablewrap">
+            <table class="table" id="sellerPortfolioTable">
+              <thead>
+                <tr>
+                  <th>Cliente / Razão Social</th>
+                  <th>CNPJ/CPF</th>
+                  <th>Telefone</th>
+                  <th>Bairro / Cidade</th>
+                  <th>Status RFM</th>
+                  <th>Faturamento & Última Compra</th>
+                  <th style="text-align:right">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${portfolioClients.map(c => {
+                  const crmItem = crmMap.get(c.id) || {};
+                  const rfm = crmItem.status_rfm || 'NOVO';
+                  let rfmLabel = '🆕 Novo';
+                  let rfmClass = 'crm-badge-novo';
+                  if (rfm === 'VIP') { rfmLabel = '⭐ VIP'; rfmClass = 'crm-badge-vip'; }
+                  else if (rfm === 'ATIVO') { rfmLabel = '🟢 Ativo'; rfmClass = 'crm-badge-ativo'; }
+                  else if (rfm === 'EM_RISCO') { rfmLabel = '⚠️ Em Risco'; rfmClass = 'crm-badge-risco'; }
+                  else if (rfm === 'INATIVO') { rfmLabel = '🔴 Inativo'; rfmClass = 'crm-badge-inativo'; }
+                  const searchStr = ((c.razao_social||'')+' '+(c.nome_fantasia||'')+' '+(c.cnpj_cpf||'')+' '+(c.telefone||'')+' '+(c.bairro||'')+' '+(c.cidade||'')).toLowerCase();
+                  return `
+                    <tr data-search="${esc(searchStr)}">
+                      <td>
+                        <button class="btn" onclick="clientProfile('${c.id}')"><b>${esc(c.razao_social||c.nome_fantasia)}</b></button>
+                      </td>
+                      <td>${esc(c.cnpj_cpf||'-')}</td>
+                      <td>${esc(c.telefone||'-')}</td>
+                      <td>${esc([c.bairro,c.cidade].filter(Boolean).join(' · ')||'-')}</td>
+                      <td><span class="crm-badge-rfm ${rfmClass}">${rfmLabel}</span></td>
+                      <td>
+                        <strong>${brl(crmItem.faturamento_total||0)}</strong>
+                        <div class="muted" style="font-size:11px">${c.ultima_compra ? 'Última: '+new Date(c.ultima_compra).toLocaleDateString('pt-BR') : 'Sem compras'}</div>
+                      </td>
+                      <td style="text-align:right">
+                        <button class="btn" onclick="crmInteractionsModal('${c.id}', parseJsonArg('${jsonArg(c.razao_social||c.nome_fantasia)}'))">📝 CRM</button>
+                        <button class="btn" onclick="editClient(parseJsonArg('${jsonArg(c)}'))">Editar</button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('') || '<tr><td colspan="7" class="empty-state">Nenhum cliente vinculado à carteira deste vendedor.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
     }catch(e){
       v.innerHTML=`<div class="panel"><div class="panel-title"><div style="display:flex;align-items:center;gap:12px"><button class="btn" onclick="renderSellersDashboard()">← Voltar</button><div><h3 style="margin:0">Erro</h3></div></div></div><div class="empty-state" style="margin-top:14px">Erro ao carregar dados: ${esc(e.message)}</div></div>`;
     }
@@ -2893,10 +3291,10 @@ async function logistics(v){
   const depotLat=sMap['deposito_latitude']||sMap['depot.latitude']||'';
   const depotLng=sMap['deposito_longitude']||sMap['depot.longitude']||'';
   const ds=drivers.items.filter(x=>x.role==='driver'),sellers=drivers.items.filter(x=>x.role==='seller');
-  const groups=o.grupos||[];
+  const groups=(o.grupos||[]).map(g=>({...g, subgrupos:(g.subgrupos||[]).map(sg=>({...sg, pedidos:(sg.pedidos||[]).filter(p=>!p.cancelled_at && p.status!=='CANCELADO')})).filter(sg=>sg.pedidos.length>0)}));
   window._logisticsGroups=groups;
   window._logisticsSellers=sellers;
-  const returnedOrders = ret?.items || [];
+  const returnedOrders = (ret?.items || []).filter(p => !p.cancelled_at && p.status !== 'CANCELADO' && p.pedido_status !== 'CANCELADO');
   window._returnedOrders = returnedOrders;
 
   window.renderLogisticsModality=function(grupoKey, vendedorFiltro=''){
@@ -2983,7 +3381,7 @@ async function logistics(v){
   window.refreshReturnedOrders = async function(){
     try{
       const data = await api('/api/logistics/returned-orders');
-      window._returnedOrders = data.items || [];
+      window._returnedOrders = (data.items || []).filter(p => !p.cancelled_at && p.status !== 'CANCELADO' && p.pedido_status !== 'CANCELADO');
       const badgeCount = document.getElementById('returnedOrdersCountBadge');
       if(badgeCount) {
         badgeCount.textContent = window._returnedOrders.length;
@@ -3180,7 +3578,7 @@ async function logistics(v){
     }).join('');
   };
 
-  window._ordersInRoute = o.em_rota || [];
+  window._ordersInRoute = (o.em_rota || []).filter(p => !p.cancelled_at && p.status !== 'CANCELADO');
 
   window.openLogisticsInRoute = function(){
     const mw = document.getElementById('logisticsMainWrapper');
@@ -3214,7 +3612,7 @@ async function logistics(v){
   window.refreshLogisticsInRoute = async function(){
     try{
       const data = await api('/api/logistics/grouped-orders');
-      window._ordersInRoute = data.em_rota || [];
+      window._ordersInRoute = (data.em_rota || []).filter(p => !p.cancelled_at && p.status !== 'CANCELADO');
       const inRouteBadge = document.getElementById('ordersInRouteCountBadge');
       if(inRouteBadge) {
         inRouteBadge.textContent = window._ordersInRoute.length;
@@ -5244,7 +5642,34 @@ async function askAI(){
 }
 function filterTable(input,id){const q=input.value.toLowerCase();document.querySelectorAll(`#${id} tbody tr`).forEach(r=>r.style.display=r.innerText.toLowerCase().includes(q)?'':'none')}
 function modal(title,body,width='700px'){const x=document.createElement('div');x.id='modal';x.style='position:fixed;inset:0;background:#000b;display:grid;place-items:center;z-index:100';x.innerHTML=`<div class="panel" style="width:min(${width},94vw);max-height:90vh;overflow:auto"><div class="top"><h2>${title}</h2><button class="btn" onclick="closeModal()">×</button></div>${body}</div>`;document.body.appendChild(x)}function closeModal(){window.inboundBarcodeActive=false;window.ptdCurrentTableId=null;document.querySelector('#modal')?.remove()}
-function roleLoginPage(role){document.body.innerHTML=`<div class="login"><div class="loginbox"><img class="xv-logo" src="/assets/institucional/01_Logo_Xiquim_Vargas_HD.png" alt="Xiquim Vargas"><h1>${role}</h1><p style="color:var(--muted)">Entre com suas credenciais.</p><form onsubmit="login(event)"><div class="field"><label>Email</label><input name="email" type="email" required></div><br><div class="field"><label>Senha</label><div style="display:flex;gap:6px"><input name="password" type="password" required style="flex:1"><button type="button" class="btn" tabindex="-1" onclick="const x=this.previousElementSibling; x.type=x.type==='password'?'text':'password'">👁</button></div></div><br><button class="btn primary" style="width:100%">Entrar</button></form><p style="color:var(--muted);font-size:16px">Servidor local: ${location.origin}</p></div></div><div id="toast" class="toast"></div>`}
+function roleLoginPage(role){
+  const srvUrl = (typeof API !== 'undefined' && API) ? API : (window.location.origin || 'https://xiquim-vargas-erp.onrender.com');
+  const hasAppConfig = typeof window !== 'undefined' && window.AndroidApp && typeof window.AndroidApp.openConfig === 'function';
+  document.body.innerHTML=`<div class="login"><div class="loginbox">
+    <img class="xv-logo" src="/assets/institucional/01_Logo_Xiquim_Vargas_HD.png" alt="Xiquim Vargas">
+    <h1>${role}</h1>
+    <p style="color:#ffffff">Entre com suas credenciais de acesso.</p>
+    <form onsubmit="login(event)">
+      <div class="field">
+        <label>E-mail, Usuário ou Telefone</label>
+        <input name="email" type="text" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Seu e-mail ou usuário" required>
+      </div><br>
+      <div class="field">
+        <label>Senha</label>
+        <div style="display:flex;gap:6px">
+          <input name="password" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Sua senha" required style="flex:1">
+          <button type="button" class="btn" tabindex="-1" onclick="const x=this.previousElementSibling; x.type=x.type==='password'?'text':'password'">👁</button>
+        </div>
+      </div><br>
+      <button class="btn primary" type="submit" style="width:100%;padding:13px;font-weight:700">Entrar na Torre</button>
+    </form>
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.1);text-align:center;">
+      <small style="color:#94a3b8;font-size:12px;display:block">Servidor conectado:</small>
+      <code style="color:#38bdf8;font-size:11px;word-break:break-all">${srvUrl}</code>
+      ${hasAppConfig ? `<div style="margin-top:8px"><button type="button" class="btn" style="padding:6px 14px;font-size:12px;background:rgba(255,255,255,0.08);color:#e2e8f0;border:1px solid rgba(255,255,255,0.15);" onclick="window.AndroidApp.openConfig()">⚙ Trocar Endereço do Servidor</button></div>` : ''}
+    </div>
+  </div></div><div id="toast" class="toast"></div>`;
+}
 boot();
 
 
@@ -5262,7 +5687,7 @@ function pricesSearchClient(q){
     (x.email||'').toLowerCase().includes(sq)
   );
   if(!items.length){r.innerHTML='<div style="padding:10px;color:#888">Nenhum cliente encontrado.</div>';r.style.display='block';return}
-  r.innerHTML=items.slice(0,50).map(x=>`<div style="padding:10px;border-bottom:1px solid #eee;cursor:pointer" onclick="$('#applyIndivSearch').value='${esc(x.razao_social||x.nome_fantasia)}';$('#applyIndivId').value='${x.id}';$('#applyIndivResults').style.display='none'"><strong>${esc(x.razao_social||x.nome_fantasia)}</strong><br><small style="color:#666">${esc(x.cnpj_cpf||'Sem documento')}${x.telefone?' · '+esc(x.telefone):''}${x.bairro?' · '+esc(x.bairro):''}</small></div>`).join('');
+  r.innerHTML=items.slice(0,50).map(x=>`<div style="padding:10px;border-bottom:1px solid #eee;cursor:pointer" onclick="$('#applyIndivSearch').value='${esc(x.razao_social||x.nome_fantasia)}';$('#applyIndivId').value='${x.id}';$('#applyIndivResults').style.display='none'"><strong>${esc(x.razao_social||x.nome_fantasia)}</strong><br><small style="color:#666">${esc(x.cnpj_cpf||'Sem documento')}${x.telefone?' · '+esc(x.telefone):''}${x.bairro?' · '+esc(x.bairro):''}${x.vendedor_nome?' · 👤 Carteira: '+esc(x.vendedor_nome):''}</small></div>`).join('');
   r.style.display='block';
 }
 document.addEventListener('click', e => {

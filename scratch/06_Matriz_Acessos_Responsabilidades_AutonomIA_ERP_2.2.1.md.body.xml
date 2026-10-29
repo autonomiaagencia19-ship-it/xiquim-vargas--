@@ -1,0 +1,2915 @@
+<w:p><w:pPr><w:pStyle w:val="Heading1"/><w:spacing w:before="280" w:after="120"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="32"/></w:rPr><w:t xml:space="preserve">AUTONOMIA SYSTEMS — MATRIZ DE ACESSOS E RESPONSABILIDADES</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Governança de Perfis, Controle Granular de Permissões (RBAC) e Matriz RACI</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Versão:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> 2.2.1 / 1.8.2 Delivery Hardened | </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Data:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Outubro de 2026</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/><w:spacing w:before="220" w:after="100"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="26"/></w:rPr><w:t xml:space="preserve">1. MAPEAMENTO DE PERFIS E APLICATIVOS DEDICADOS</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">O sistema adota o modelo de Controle de Acesso Baseado em Papéis (RBAC - Role-Based Access Control) estritamente integrado aos 4 aplicativos nativos e interfaces web. Cada colaborador atua sob um perfil delimitado, sem interferência em dados fora de sua alçada operacional:</w:t></w:r>
+</w:p>
+<w:tbl>
+<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="0" w:type="auto"/><w:tblLook w:val="04A0"/></w:tblPr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="061A4F"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/>
+</w:rPr>
+<w:t xml:space="preserve">Perfil Operacional (role)</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="061A4F"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/>
+</w:rPr>
+<w:t xml:space="preserve">Interface Web Dedicada</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="061A4F"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/>
+</w:rPr>
+<w:t xml:space="preserve">Aplicativo Android Nativo Dedicado</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="061A4F"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/>
+</w:rPr>
+<w:t xml:space="preserve">Escopo e Responsabilidades Principais</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Administrador (admin)</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">/admin.html</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">XiquimVargas-TorreControle-1.8.3.apk</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Gestão executiva irrestrita, auditoria, precificação, liberação de rotas, compras, usuários e IA.</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Vendedor Externo (seller)</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">/vendedor.html</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">XiquimVargas-Vendedor-1.8.3.apk</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Emissão de pedidos em campo, catálogo, metas do mês, clientes da carteira e outbox offline.</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Operador de Caixa (cashier)</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">/pdv.html</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">XiquimVargas-PDV-1.8.3.apk *(ou Caixa)*</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Venda expressa de balcão, bipagem de código de barras, múltiplos pagamentos e impressão térmica.</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Motorista (driver)</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">/motorista.html</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">XiquimVargas-Motorista-1.8.3.apk</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Fila de paradas do dia, contato direto WhatsApp/fone, registro de comprovantes e insucessos.</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Expedidor / Estoquista</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">/admin.html (Logística)</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">XiquimVargas-TorreControle-1.8.3.apk</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Separação física de mercadorias, conferência de romaneio, carregamento e conferência de doca.</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Cliente Web (web_client)</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">/loja.html</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Navegador Mobile / PWA</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Autoatendimento para consulta de catálogo, compras digitais e acompanhamento de entregas.</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+</w:tbl>
+<w:p><w:pPr><w:spacing w:after="120"/></w:pPr></w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading3"/><w:spacing w:before="180" w:after="80"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">1.1 Como Funciona Cada Perfil Operacional (Role) no Dia a Dia</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading4"/><w:spacing w:before="140" w:after="60"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="333333"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">A. Perfil Administrador (`admin`)</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Propósito:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> É a autoridade executiva e supervisora global do sistema.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Acesso &amp; Interface:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Acessa a Torre de Controle via </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">admin.html</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> ou pelo APK </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">XiquimVargas-TorreControle-1.8.3.apk</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Como Opera:</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Gerencia o catálogo mestre de produtos, criação de categorias, subcategorias e uploads de fotos.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Define políticas de precificação, margens e tabelas de preço por canal ou volume.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Acompanha o Kanban de pedidos em tempo real via Server-Sent Events (SSE).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Supervisiona a expedição, monta rotas logísticas e atribui motoristas às cargas do dia.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Realiza compras de fornecedores (inbound) e confere entradas físicas na doca.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Monitora o painel de pedidos retornados (insucessos logísticos) e decide sobre reembarque.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Possui exclusividade para cancelamento de pedidos com estorno automático de estoque.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Consulta logs de auditoria transacional (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">audit_logs</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">) e interage com o assistente Groq AI.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading4"/><w:spacing w:before="140" w:after="60"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="333333"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">B. Perfil Vendedor Externo (`seller`)</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Propósito:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Força de vendas em campo (representantes comerciais e televendas).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Acesso &amp; Interface:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Opera pelo aplicativo nativo </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">XiquimVargas-Vendedor-1.8.3.apk</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> ou </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">vendedor.html</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Como Opera:</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Visualiza exclusivamente os clientes vinculados à sua carteira comercial.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Consulta o catálogo completo com fotos, descrições e estoque disponível em tempo real.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Aplica automaticamente as tabelas de preço associadas ao cliente selecionado.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Emite novos pedidos diretamente no cliente. Caso esteja em área rural ou sem sinal, o pedido é salvo na outbox local em IndexedDB (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">xv-offline-v1-...</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">) e sincronizado automaticamente assim que a conexão retornar.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Acompanha suas metas comerciais do mês e o volume faturado em dashboard privativo.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading4"/><w:spacing w:before="140" w:after="60"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="333333"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">C. Perfil Operador de Caixa / Frente de Loja (`cashier`)</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Propósito:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Atendimento presencial ágil no balcão e faturamento de loja física.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Acesso &amp; Interface:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Terminal PDV em </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">pdv.html</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> ou aplicativo nativo </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">XiquimVargas-PDV-1.8.3.apk</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> (também distribuído como </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">XiquimVargas-Caixa-1.8.3.apk</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Como Opera:</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Opera com foco em velocidade de atendimento, bipando códigos de barras diretamente via leitor óptico.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Utiliza o cliente padrão pré-cadastrado </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">CLIENTE-BALCAO</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> (Consumidor Final) para dispensar cadastros morosos em vendas de balcão.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Seleciona múltiplos meios de pagamento: Dinheiro (com cálculo automático de troco em tela), Débito, Crédito (à vista ou parcelado de 2x a 12x) e PIX.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Dispara a impressão de cupons térmicos diretamente para mini-impressoras térmicas conectadas.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Funciona 100% offline em contingência caso haja oscilação no link de internet da loja.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading4"/><w:spacing w:before="140" w:after="60"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="333333"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">D. Perfil Motorista / Entregador (`driver`)</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Propósito:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Distribuição física, transporte e entrega de mercadorias aos clientes.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Acesso &amp; Interface:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Aplicativo nativo móvel </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">XiquimVargas-Motorista-1.8.3.apk</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> ou </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">motorista.html</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Como Opera:</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Visualiza apenas as rotas e paradas atribuídas a ele pela expedição no dia vigente.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Acessa botões de discagem rápida e WhatsApp em 1 clique para alinhar o recebimento com o cliente antes de estacionar.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Ao realizar a entrega, fotografa o comprovante/canhoto assinado via câmera do app e conclui a parada, baixando o estoque reservado definitivamente.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Em caso de cliente ausente, recusa ou estabelecimento fechado, aciona o botão </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">&quot;Registrar Retorno&quot;</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">, informando o motivo. O pedido reverte automaticamente para o status </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">SEPARACAO</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> e alerta a Torre de Controle sem travar o restante da rota.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading4"/><w:spacing w:before="140" w:after="60"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="333333"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">E. Perfil Expedidor / Estoquista (Operação de Galpão)</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Propósito:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Separação física de itens no depósito, conferência de romaneios e carregamento.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Acesso &amp; Interface:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Módulo de Logística e Estoque na Torre de Controle (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">admin.html</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Como Opera:</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Imprime as listas de separação consolidadas (PDF de Romaneio de Carga).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Retira as caixas e fardos no depósito físico e realiza a conferência na doca de expedição.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Carrega os veículos conforme a ordem viária definida no sistema.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Realiza a conferência de entrada física de compras de fornecedores (inbound).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading4"/><w:spacing w:before="140" w:after="60"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="333333"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">F. Perfil Cliente Web (`web_client`)</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Propósito:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Autoatendimento digital para clientes finais e pessoas jurídicas (B2B/B2C).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Acesso &amp; Interface:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Loja Online E-Commerce em </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">loja.html</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> acessível via navegador desktop ou celular.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Como Opera:</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Navega pelo catálogo dinâmico de produtos com busca inteligente e filtros por categoria.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Adiciona itens ao carrinho com validação instantânea de disponibilidade de estoque.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">O sistema calcula automaticamente o frete de entrega baseado no bairro de destino do cliente.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Valida o valor mínimo de compra parametrizado pela empresa antes do fechamento.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Acompanha o status de evolução do seu pedido (Pendente -&gt; Separação -&gt; Em Rota -&gt; Entregue).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/><w:spacing w:before="220" w:after="100"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="26"/></w:rPr><w:t xml:space="preserve">2. MATRIZ DE PERMISSÕES POR RECURSO DA API</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">A tabela abaixo define os privilégios de acesso aos módulos do sistema:</w:t></w:r>
+</w:p>
+<w:tbl>
+<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="0" w:type="auto"/><w:tblLook w:val="04A0"/></w:tblPr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="061A4F"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/>
+</w:rPr>
+<w:t xml:space="preserve">Módulo / Recurso do Sistema</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="061A4F"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/>
+</w:rPr>
+<w:t xml:space="preserve">Admin</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="061A4F"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/>
+</w:rPr>
+<w:t xml:space="preserve">Vendedor</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="061A4F"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/>
+</w:rPr>
+<w:t xml:space="preserve">Caixa (PDV)</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="061A4F"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/>
+</w:rPr>
+<w:t xml:space="preserve">Motorista</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="061A4F"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/>
+</w:rPr>
+<w:t xml:space="preserve">Cliente Web</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Consulta de Catálogo de Produtos</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Total</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Total</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Total</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Visual</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Total</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Cadastro e Edição de Produtos/Preços</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Total</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Ajuste Manual de Estoque</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Total</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Emissão de Pedidos</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Total</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Carteira</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Balcão</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Próprios</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Cancelamento de Pedidos</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Total</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Frente de Caixa (PDV) e Baixa Balcão</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Total</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Total</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Criação e Despacho de Rotas</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Total</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Visualização de Rotas Atribuídas</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Total</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Próprias</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Baixa de Entrega e Upload de Canhoto</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Total</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Próprias</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Registro de Insucesso (Devolução)</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Total</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Próprias</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Doca de Compras e Recebimento</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Total</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Auditoria e Histórico de Transações</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Total</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Gestão de Usuários e Acessos</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Total</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Assistente Executivo de IA Groq</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Total</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Não</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+</w:tbl>
+<w:p><w:pPr><w:spacing w:after="120"/></w:pPr></w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/><w:spacing w:before="220" w:after="100"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="26"/></w:rPr><w:t xml:space="preserve">3. MATRIZ RACI DAS OPERAÇÕES EMPRESARIAIS</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Convenção: </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">R</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> = Responsável pela execução; </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">A</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> = Aprovador final; </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">C</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> = Consultado; </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">I</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> = Informado.</w:t></w:r>
+</w:p>
+<w:tbl>
+<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="0" w:type="auto"/><w:tblLook w:val="04A0"/></w:tblPr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="061A4F"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/>
+</w:rPr>
+<w:t xml:space="preserve">Processo Operacional</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="061A4F"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/>
+</w:rPr>
+<w:t xml:space="preserve">Direção / Admin</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="061A4F"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/>
+</w:rPr>
+<w:t xml:space="preserve">Vendedor</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="061A4F"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/>
+</w:rPr>
+<w:t xml:space="preserve">Caixa</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="061A4F"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/>
+</w:rPr>
+<w:t xml:space="preserve">Motorista</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="061A4F"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/>
+</w:rPr>
+<w:t xml:space="preserve">Expedição</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="061A4F"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/>
+</w:rPr>
+<w:t xml:space="preserve">Cliente</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">1. Parametrização de Preços e Margens</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">R / A</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">2. Cadastro e Homologação de SKUs</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">R / A</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">3. Prospecção e Cadastro de Clientes</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">A</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">R</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">C</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">4. Emissão de Pedido Externo</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">R / A</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">C</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">5. Compra via Loja Online</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">R / A</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">6. Venda Balcão no PDV</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">R / A</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">C</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">7. Separação Física no Depósito</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">R / A</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">8. Montagem e Otimização de Rotas</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">A</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">C</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">R</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">9. Transporte e Entrega ao Destino</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">R</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">A</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">C</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">10. Registro de Insucesso / Retorno</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">R</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">A</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">11. Recebimento de Compras na Doca</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">A</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">R</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">12. Fechamento de Caixa Diário</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">A</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">R</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">13. Execução e Validação de Backups</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">R / A</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">I</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+</w:tbl>
+<w:p><w:pPr><w:spacing w:after="120"/></w:pPr></w:p>

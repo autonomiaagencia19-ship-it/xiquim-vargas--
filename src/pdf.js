@@ -3,9 +3,9 @@ import { one } from './db.js';
 const CP1252={'€':'\x80','‚':'\x82','ƒ':'\x83','„':'\x84','…':'\x85','†':'\x86','‡':'\x87','ˆ':'\x88','‰':'\x89','Š':'\x8A','‹':'\x8B','Œ':'\x8C','Ž':'\x8E','‘':'\x91','’':'\x92','“':'\x93','”':'\x94','•':'\x95','–':'\x96','—':'\x97','˜':'\x98','™':'\x99','š':'\x9A','›':'\x9B','œ':'\x9C','ž':'\x9E','Ÿ':'\x9F'};
 function win1252(s){return String(s??'').normalize('NFC').replace(/[€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ]/g,c=>CP1252[c]).replace(/[\u0100-\uFFFF]/g,'?')}
 function esc(s){return win1252(s).replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)')}
-function wrap(s,n=94){const str=String(s??'');if(str.length<=n)return [str];const words=str.split(/\s+/);const out=[];let line='';for(const w of words){if((line+' '+w).trim().length>n){if(line)out.push(line);line=w}else line=(line+' '+w).trim()}if(line)out.push(line);return out.length?out:['']}
-function buildPdf(pages,file){const objs=[];const add=x=>{objs.push(x);return objs.length};const font=add('<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>');const pageRefs=[],contentRefs=[];for(const pg of pages){const content=['BT','/F1 9.5 Tf','40 800 Td'];pg.forEach((l,i)=>{if(i)content.push('0 -16 Td');content.push(`(${esc(l)}) Tj`)});content.push('ET');const stream=content.join('\n');contentRefs.push(add(`<< /Length ${Buffer.byteLength(stream,'latin1')} >>\nstream\n${stream}\nendstream`));pageRefs.push(add('PLACEHOLDER'))}const pagesObj=objs.length+1,catalogObj=pagesObj+1;for(let i=0;i<pageRefs.length;i++)objs[pageRefs[i]-1]=`<< /Type /Page /Parent ${pagesObj} 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ${font} 0 R >> >> /Contents ${contentRefs[i]} 0 R >>`;objs.push(`<< /Type /Pages /Kids [${pageRefs.map(x=>x+' 0 R').join(' ')}] /Count ${pageRefs.length} >>`);objs.push(`<< /Type /Catalog /Pages ${pagesObj} 0 R >>`);let out='%PDF-1.4\n',offs=[0];for(let i=0;i<objs.length;i++){offs.push(Buffer.byteLength(out,'latin1'));out+=`${i+1} 0 obj\n${objs[i]}\nendobj\n`}const xref=Buffer.byteLength(out,'latin1');out+=`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`;for(let i=1;i<=objs.length;i++)out+=String(offs[i]).padStart(10,'0')+' 00000 n \n';out+=`trailer\n<< /Size ${objs.length+1} /Root ${catalogObj} 0 R >>\nstartxref\n${xref}\n%%EOF`;fs.writeFileSync(file,Buffer.from(out,'latin1'))}
-function paginate(lines){const pages=[];let page=[];for(const l of lines.flatMap(x=>wrap(x))){if(page.length>=39){pages.push(page);page=[]}page.push(l)}if(page.length)pages.push(page);return pages}
+function wrap(s,n=116){const str=String(s??'');if(str.length<=n)return [str];const words=str.split(/\s+/);const out=[];let line='';for(let w of words){while(w.length>n){if(line){out.push(line);line=''}out.push(w.slice(0,n));w=w.slice(n)}if((line?(line+' '+w):w).length>n){if(line)out.push(line);line=w}else line=line?(line+' '+w):w}if(line)out.push(line);return out.length?out:['']}
+function buildPdf(pages,file){const objs=[];const add=x=>{objs.push(x);return objs.length};const font=add('<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>');const pageRefs=[],contentRefs=[];for(const pg of pages){const content=['BT','/F1 8 Tf','14 824 Td'];pg.forEach((l,i)=>{if(i)content.push('0 -11 Td');content.push(`(${esc(l)}) Tj`)});content.push('ET');const stream=content.join('\n');contentRefs.push(add(`<< /Length ${Buffer.byteLength(stream,'latin1')} >>\nstream\n${stream}\nendstream`));pageRefs.push(add('PLACEHOLDER'))}const pagesObj=objs.length+1,catalogObj=pagesObj+1;for(let i=0;i<pageRefs.length;i++)objs[pageRefs[i]-1]=`<< /Type /Page /Parent ${pagesObj} 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ${font} 0 R >> >> /Contents ${contentRefs[i]} 0 R >>`;objs.push(`<< /Type /Pages /Kids [${pageRefs.map(x=>x+' 0 R').join(' ')}] /Count ${pageRefs.length} >>`);objs.push(`<< /Type /Catalog /Pages ${pagesObj} 0 R >>`);let out='%PDF-1.4\n',offs=[0];for(let i=0;i<objs.length;i++){offs.push(Buffer.byteLength(out,'latin1'));out+=`${i+1} 0 obj\n${objs[i]}\nendobj\n`}const xref=Buffer.byteLength(out,'latin1');out+=`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`;for(let i=1;i<=objs.length;i++)out+=String(offs[i]).padStart(10,'0')+' 00000 n \n';out+=`trailer\n<< /Size ${objs.length+1} /Root ${catalogObj} 0 R >>\nstartxref\n${xref}\n%%EOF`;fs.writeFileSync(file,Buffer.from(out,'latin1'))}
+function paginate(lines){const pages=[];let page=[];for(const l of lines.flatMap(x=>wrap(x,116))){if(page.length>=72){pages.push(page);page=[]}page.push(l)}if(page.length)pages.push(page);return pages}
 function buildThermalPdf(lines,file){const objs=[];const add=x=>{objs.push(x);return objs.length};const font=add('<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>');const lineHeight=13;const pageHeight=Math.max(260,(lines.length*lineHeight)+50);const pageWidth=226;const content=['BT','/F1 8.5 Tf',`10 ${pageHeight-20} Td`];lines.forEach((l,i)=>{if(i)content.push(`0 -${lineHeight} Td`);content.push(`(${esc(l)}) Tj`)});content.push('ET');const stream=content.join('\n');const contentRef=add(`<< /Length ${Buffer.byteLength(stream,'latin1')} >>\nstream\n${stream}\nendstream`);const pageRef=add('PLACEHOLDER');const pagesObj=objs.length+1,catalogObj=pagesObj+1;objs[pageRef-1]=`<< /Type /Page /Parent ${pagesObj} 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 ${font} 0 R >> >> /Contents ${contentRef} 0 R >>`;objs.push(`<< /Type /Pages /Kids [${pageRef} 0 R] /Count 1 >>`);objs.push(`<< /Type /Catalog /Pages ${pagesObj} 0 R >>`);let out='%PDF-1.4\n',offs=[0];for(let i=0;i<objs.length;i++){offs.push(Buffer.byteLength(out,'latin1'));out+=`${i+1} 0 obj\n${objs[i]}\nendobj\n`}const xref=Buffer.byteLength(out,'latin1');out+=`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`;for(let i=1;i<=objs.length;i++)out+=String(offs[i]).padStart(10,'0')+' 00000 n \n';out+=`trailer\n<< /Size ${objs.length+1} /Root ${catalogObj} 0 R >>\nstartxref\n${xref}\n%%EOF`;fs.writeFileSync(file,Buffer.from(out,'latin1'))}
 function formatOrderAddress(order){
   let endereco = order?.endereco;
@@ -43,8 +43,8 @@ function makeThermalOrderPdf(order,items,file){
     '----------------------------------------',
     `EMISSAO: ${new Date(order.created_at).toLocaleString('pt-BR')}`,
     '----------------------------------------',
-    `CLIENTE: ${(order.cliente_nome||'Cliente Balcao').slice(0,31)}`,
-    `ENDERECO: ${addr.slice(0,30)}`,
+    ...wrap(`CLIENTE: ${order.cliente_nome||'Cliente Balcao'}`,40),
+    ...wrap(`ENDERECO: ${addr}`,40),
     '----------------------------------------',
     'ITENS:',
     'QTD  DESCRICAO           UNIT      TOTAL',
@@ -54,10 +54,14 @@ function makeThermalOrderPdf(order,items,file){
   for(const x of items){
     totalQtd+=Number(x.quantidade||0);
     const qStr=String(x.quantidade).padStart(3);
-    const desc=String(x.produto_nome||'').slice(0,18).padEnd(18);
+    const descLines=wrap(String(x.produto_nome||'').trim(),18);
+    const firstDesc=(descLines[0]||'').padEnd(18);
     const unitStr=Number(x.preco_unitario_aplicado).toFixed(2).padStart(7);
     const subStr=Number(x.subtotal).toFixed(2).padStart(8);
-    lines.push(`${qStr}  ${desc} ${unitStr} ${subStr}`);
+    lines.push(`${qStr}  ${firstDesc} ${unitStr} ${subStr}`);
+    for(let i=1;i<descLines.length;i++){
+      lines.push(`     ${descLines[i]}`);
+    }
   }
   const subtotal=Number(order.subtotal_bruto??order.total);
   const descVal=Number(order.desconto_tipo==='PERCENTUAL'?(subtotal*Number(order.desconto_valor||0)/100):(order.desconto_valor||0));
@@ -72,7 +76,9 @@ function makeThermalOrderPdf(order,items,file){
   }
   if(order.observacoes){
     lines.push('----------------------------------------');
-    lines.push(`OBS: ${order.observacoes.slice(0,35)}`);
+    for(const obsLine of wrap(`OBS: ${order.observacoes}`,40)){
+      lines.push(obsLine);
+    }
   }
   lines.push(
     '----------------------------------------',
@@ -91,6 +97,7 @@ function makeThermalOrderPdf(order,items,file){
 
 export function makeOrderPdf(order,items,file){
   if(order.origem==='BALCAO')return makeThermalOrderPdf(order,items,file);
+  const sep = '-'.repeat(116);
   const lines=[
     'XIQUIM VARGAS - DISTRIBUIDORA DE BEBIDAS',
     '',
@@ -99,16 +106,20 @@ export function makeOrderPdf(order,items,file){
     `Endereço: ${formatOrderAddress(order)}`,
     '',
     'ITENS',
-    'QTD  DESCRIÇÃO                         UNITÁRIO        SUBTOTAL',
-    '--------------------------------------------------------------------------------'
+    `QTD   ${'DESCRIÇÃO'.padEnd(76,' ')}${'UNITÁRIO'.padStart(16,' ')}${'SUBTOTAL'.padStart(18,' ')}`,
+    sep
   ];
   for(const x of items){
-    const desc=String(x.produto_nome||'').slice(0,32).padEnd(32,' ');
-    lines.push(`${String(x.quantidade).padStart(3)}  ${desc}${`R$ ${Number(x.preco_unitario_aplicado).toFixed(2)}`.padStart(13)}${`R$ ${Number(x.subtotal).toFixed(2)}`.padStart(14)}`);
+    const descLines=wrap(String(x.produto_nome||'').trim(),76);
+    const firstDesc=(descLines[0]||'').padEnd(76,' ');
+    lines.push(`${String(x.quantidade).padStart(4)}  ${firstDesc}${`R$ ${Number(x.preco_unitario_aplicado).toFixed(2)}`.padStart(16)}${`R$ ${Number(x.subtotal).toFixed(2)}`.padStart(18)}`);
+    for(let i=1;i<descLines.length;i++){
+      lines.push(`      ${descLines[i]}`);
+    }
   }
   lines.push(
     '',
-    '--------------------------------------------------------------------------------',
+    sep,
     `SUBTOTAL: R$ ${Number(order.subtotal_bruto??order.total).toFixed(2)}`,
     `DESCONTO ${order.desconto_tipo==='PERCENTUAL'?`(${Number(order.desconto_valor||0).toFixed(2)}%)`:'(R$)'}: R$ ${Number(order.desconto_tipo==='PERCENTUAL'?(Number(order.subtotal_bruto||0)*Number(order.desconto_valor||0)/100):(order.desconto_valor||0)).toFixed(2)}`,
     `TOTAL DO PEDIDO: R$ ${Number(order.total).toFixed(2)}`,
@@ -125,10 +136,11 @@ export function makeOrderPdf(order,items,file){
   buildPdf(paginate(lines.filter(l=>l!==null&&l!==undefined)),file);
 }
 
-export function makeCatalogPdf(items,file){const lines=['XIQUIM VARGAS','CATÁLOGO DE PRODUTOS',`Gerado em: ${new Date().toLocaleString('pt-BR')}`,`Total de produtos: ${items.length}`,'','PRODUTO | SKU | CATEGORIA | SUBCATEGORIA | PREÇO | PROMOÇÃO','--------------------------------------------------------------------------------'];for(const x of items)lines.push(`${String(x.nome||'').slice(0,26)} | ${String(x.sku||'').slice(0,16)} | ${String(x.categoria_nome||'-').slice(0,18)} | ${String(x.subcategoria_nome||'-').slice(0,18)} | R$ ${Number(x.preco_base||0).toFixed(2)} | ${x.promocao_preco==null?'-':'R$ '+Number(x.promocao_preco).toFixed(2)}`);buildPdf(paginate(lines),file)}
-export function makeStockPdf(items,file){const lines=['XIQUIM VARGAS','RELATÓRIO DE ESTOQUE INTELIGENTE',`Gerado em: ${new Date().toLocaleString('pt-BR')}`,`Total de produtos: ${items.length}`,'','PRODUTO | SKU | DISPONÍVEL | RESERVADO | MÍNIMO | STATUS','--------------------------------------------------------------------------------'];for(const x of items)lines.push(`${String(x.nome||'').slice(0,28)} | ${String(x.sku||'').slice(0,15)} | ${x.quantidade_disponivel} | ${x.quantidade_reservada} | ${x.estoque_minimo} | ${x.status||'-'}`);buildPdf(paginate(lines),file)}
+export function makeCatalogPdf(items,file){const sep='-'.repeat(116);const lines=['XIQUIM VARGAS','CATÁLOGO DE PRODUTOS',`Gerado em: ${new Date().toLocaleString('pt-BR')}`,`Total de produtos: ${items.length}`,'','PRODUTO                                          | SKU              | CATEGORIA        | SUBCATEGORIA     | PREÇO | PROMOÇÃO',sep];for(const x of items)lines.push(`${String(x.nome||'').slice(0,48).padEnd(48)} | ${String(x.sku||'').slice(0,16).padEnd(16)} | ${String(x.categoria_nome||'-').slice(0,16).padEnd(16)} | ${String(x.subcategoria_nome||'-').slice(0,16).padEnd(16)} | R$ ${Number(x.preco_base||0).toFixed(2)} | ${x.promocao_preco==null?'-':'R$ '+Number(x.promocao_preco).toFixed(2)}`);buildPdf(paginate(lines),file)}
+export function makeStockPdf(items,file){const sep='-'.repeat(116);const lines=['XIQUIM VARGAS','RELATÓRIO DE ESTOQUE INTELIGENTE',`Gerado em: ${new Date().toLocaleString('pt-BR')}`,`Total de produtos: ${items.length}`,'','PRODUTO                                                  | SKU             | DISPONÍVEL | RESERVADO | MÍNIMO | STATUS',sep];for(const x of items)lines.push(`${String(x.nome||'').slice(0,56).padEnd(56)} | ${String(x.sku||'').slice(0,15).padEnd(15)} | ${String(x.quantidade_disponivel).padStart(10)} | ${String(x.quantidade_reservada).padStart(9)} | ${String(x.estoque_minimo).padStart(6)} | ${x.status||'-'}`);buildPdf(paginate(lines),file)}
 
 export function makeLoadingListPdf(data, file) {
+  const sep = '-'.repeat(116);
   const lines=[
     'XIQUIM VARGAS - DISTRIBUIDORA DE BEBIDAS',
     'LISTA DE CARREGAMENTO LOGÍSTICO',
@@ -138,7 +150,7 @@ export function makeLoadingListPdf(data, file) {
     `Total de volumes: ${data.total_produtos || 0}`,
     '',
     'QUANTIDADE          DESCRIÇÃO DO PRODUTO',
-    '--------------------------------------------------------------------------------'
+    sep
   ];
   for(const p of data.produtos||[]){
     const qtdStr = `${p.quantidade_total} un`.padEnd(12, ' ');
@@ -147,7 +159,7 @@ export function makeLoadingListPdf(data, file) {
     lines.push(`${qtdStr}${espaco}${nome}`);
   }
   lines.push(
-    '--------------------------------------------------------------------------------',
+    sep,
     '',
     `TOTAL GERAL DE VOLUMES: ${data.total_produtos || 0}`,
     `VARIEDADE DE PRODUTOS: ${(data.produtos||[]).length}`,
@@ -158,6 +170,7 @@ export function makeLoadingListPdf(data, file) {
 }
 export function makeBulkOrderPdf(ordersData, file) {
   const allPages = [];
+  const sep = '-'.repeat(116);
   for (const {order, items} of ordersData) {
     const lines=[
       'XIQUIM VARGAS - DISTRIBUIDORA DE BEBIDAS',
@@ -167,16 +180,20 @@ export function makeBulkOrderPdf(ordersData, file) {
       `Endereço: ${formatOrderAddress(order)}`,
       '',
       'ITENS',
-      'QTD  DESCRIÇÃO                         UNITÁRIO        SUBTOTAL',
-      '--------------------------------------------------------------------------------'
+      `QTD   ${'DESCRIÇÃO'.padEnd(76,' ')}${'UNITÁRIO'.padStart(16,' ')}${'SUBTOTAL'.padStart(18,' ')}`,
+      sep
     ];
     for(const x of items){
-      const desc=String(x.produto_nome||'').slice(0,32).padEnd(32,' ');
-      lines.push(`${String(x.quantidade).padStart(3)}  ${desc}${`R$ ${Number(x.preco_unitario_aplicado).toFixed(2)}`.padStart(13)}${`R$ ${Number(x.subtotal).toFixed(2)}`.padStart(14)}`);
+      const descLines=wrap(String(x.produto_nome||'').trim(),76);
+      const firstDesc=(descLines[0]||'').padEnd(76,' ');
+      lines.push(`${String(x.quantidade).padStart(4)}  ${firstDesc}${`R$ ${Number(x.preco_unitario_aplicado).toFixed(2)}`.padStart(16)}${`R$ ${Number(x.subtotal).toFixed(2)}`.padStart(18)}`);
+      for(let i=1;i<descLines.length;i++){
+        lines.push(`      ${descLines[i]}`);
+      }
     }
     lines.push(
       '',
-      '--------------------------------------------------------------------------------',
+      sep,
       `SUBTOTAL: R$ ${Number(order.subtotal_bruto??order.total).toFixed(2)}`,
       `DESCONTO ${order.desconto_tipo==='PERCENTUAL'?`(${Number(order.desconto_valor||0).toFixed(2)}%)`:'(R$)'}: R$ ${Number(order.desconto_tipo==='PERCENTUAL'?(Number(order.subtotal_bruto||0)*Number(order.desconto_valor||0)/100):(order.desconto_valor||0)).toFixed(2)}`,
       `TOTAL DO PEDIDO: R$ ${Number(order.total).toFixed(2)}`,

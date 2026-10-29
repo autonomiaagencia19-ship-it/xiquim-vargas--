@@ -1,4 +1,4 @@
-const CACHE = 'xv-shell-v1-8-30';
+﻿const CACHE = 'xv-shell-v1-8-35';
 const SHELL = [
   '/',
   '/admin.html',
@@ -7,11 +7,11 @@ const SHELL = [
   '/loja.html',
   '/motorista.html',
   '/styles.css',
-  '/styles.css?v=1.8.30',
+  '/styles.css?v=1.8.35',
   '/app.js',
-  '/app.js?v=1.8.30',
+  '/app.js?v=1.8.35',
   '/role.js',
-  '/role.js?v=1.8.30',
+  '/role.js?v=1.8.35',
   '/assets/institucional/01_Logo_Xiquim_Vargas_HD.png',
   '/assets/brand/logo-online.jpg',
   '/assets/brand/logo-pdv.jpg',

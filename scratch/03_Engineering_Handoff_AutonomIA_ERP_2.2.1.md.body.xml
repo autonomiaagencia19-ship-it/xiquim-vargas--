@@ -1,0 +1,221 @@
+<w:p><w:pPr><w:pStyle w:val="Heading1"/><w:spacing w:before="280" w:after="120"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="32"/></w:rPr><w:t xml:space="preserve">AUTONOMIA SYSTEMS — ENGINEERING HANDOFF</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Arquitetura de Software, Componentes Técnicos, Invariantes e Sustentação de Engenharia</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Versão:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> 2.2.1 / 1.8.2 Delivery Hardened | </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">APKs Nativos:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> v1.8.3</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Produção:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> https://xiquim-vargas-erp.onrender.com | </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Data:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Outubro de 2026</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/><w:spacing w:before="220" w:after="100"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="26"/></w:rPr><w:t xml:space="preserve">1. ARQUITETURA GERAL E PILARES TÉCNICOS</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">O ERP AutonomIA foi projetado sob o padrão de </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">alta eficiência, zero-bloat runtime, segurança transacional estrita e latência sub-milissegundo</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">:</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Backend Runtime:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Node.js 22 LTS em ESM nativo (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">import/export</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">), sem intermediários como Express ou frameworks pesados. O servidor HTTP nativo (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">server.js</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">) entrega rotas REST e streaming em tempo real com consumo mínimo de memória RAM (~65MB em repouso).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Camada de Dados Transacional:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> SQLite nativo (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">node:sqlite</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> - </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">DatabaseSync</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">) operando com </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">PRAGMA journal_mode=WAL</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">, </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">PRAGMA foreign_keys=ON</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> e </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">PRAGMA busy_timeout=5000</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">. Todas as mutações multi-entidade são empacotadas na função transacional </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">tx(() =&gt; { ... })</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">, assegurando isolamento ACID absoluto.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Camada de Apresentação:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Vanilla HTML5, CSS3 moderno e JavaScript ES6+ modular (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">app.js</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> e </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">role.js</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">). Zero tempo de compilação no deploy e renderização instantânea no navegador.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Barramento em Tempo Real:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Motor Server-Sent Events (SSE) nativo (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">/api/events</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">) com autenticação via ticket criptográfico, heartbeat a cada 25 segundos e controle de vazamento de memória (máximo de 3 conexões simultâneas por usuário).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Motor de PDF Vetorial Puro:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Implementação em JavaScript puro (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">src/pdf.js</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">) que constrói documentos PDF vetoriais em milissegundos sem necessidade de instâncias pesadas de Chromium ou bibliotecas binárias externas.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Inteligência Artificial Administrativa:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Módulo </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">src/ai.js</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> conectado à API Groq (modelo </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">openai/gpt-oss-120b</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">) com ferramentas estritas de leitura parametrizada do banco de dados para assistência analítica executiva.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/><w:spacing w:before="220" w:after="100"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="26"/></w:rPr><w:t xml:space="preserve">2. ARQUITETURA MOBILE DOS 4 APKS NATIVOS (100% OFFLINE)</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">A suíte mobile nativa localiza-se no diretório </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">mobile/</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">:</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">mobile/seller-native</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> (Vendedor Externo)</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">mobile/driver-native</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> (Motorista de Entregas)</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">mobile/pdv-native</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> (Frente de Caixa e Balcão)</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">mobile/tower-native</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> (Torre de Controle Móvel)</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading3"/><w:spacing w:before="180" w:after="80"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">2.1 Mecanismo de Interceptação Local de Assets</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Cada aplicativo Android implementa no </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">MainActivity.kt</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> o interceptador de requisições de rede:</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:shd w:val="clear" w:color="auto" w:fill="F1F5F9"/><w:spacing w:before="100" w:after="100"/></w:pPr>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="0F172A"/><w:sz w:val="18"/></w:rPr><w:t xml:space="preserve">webView.webViewClient = object : WebViewClient() {
+    override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
+        val uri = request?.url ?: return null
+        return interceptAsset(uri) ?: super.shouldInterceptRequest(view, request)
+    }
+}</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Mapeamento de Assets:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> A função </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">interceptAsset</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> mapeia rotas estáticas para a pasta interna </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">app/src/main/assets/www/</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Desempenho Offline:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Caso o celular esteja sem sinal ou em Modo Avião, o WebView carrega os scripts, estilos e interfaces HTML locais em menos de 0.05s, sem emitir </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">ERR_NAME_NOT_RESOLVED</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Ponte Nativa (`AndroidAppBridge`):</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> O aplicativo expõe interfaces nativas para o JavaScript:</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">AndroidApp.openPdf(url, filename)</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Abre documentos PDF no visualizador nativo do Android.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">AndroidApp.printWebPage()</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Aciona a fila de impressão térmica nativa do sistema operacional.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">AndroidApp.getBaseUrl()</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Retorna a URL base do servidor ERP (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">https://xiquim-vargas-erp.onrender.com</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">AndroidApp.getRole()</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Retorna o papel operacional fixo do aplicativo (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">seller</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">, </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">driver</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">, </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">cashier</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">, </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">admin</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">AndroidApp.getAppVersion()</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Retorna a versão de compilação (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">1.8.3</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading3"/><w:spacing w:before="180" w:after="80"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">2.2 Monitoramento Dinâmico de Rede</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">MainActivity.kt</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> registra um callback contínuo (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">ConnectivityManager.NetworkCallback</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">). Quando a conectividade é reestabelecida, o app comuta automaticamente </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">cacheMode = WebSettings.LOAD_DEFAULT</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> e dispara o evento JavaScript </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">window.dispatchEvent(new Event(&apos;online&apos;))</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">, disparando </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">syncOfflineQueue()</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> para enviar vendas e comprovantes pendentes.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/><w:spacing w:before="220" w:after="100"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="26"/></w:rPr><w:t xml:space="preserve">3. SEGURANÇA E INVARIANTES DE ENGENHARIA</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">1. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Armazenamento de Senhas:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Hashing criptográfico </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">scrypt</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> com salt pseudoaleatório de 16 bytes e derivação de chave de 64 bytes (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">scrypt$salt$hash</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">). Senhas nunca são salvas em texto claro.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">2. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Tokens JWT:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Assinatura HMAC-SHA256 com segredo persistente (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">JWT_SECRET</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">), tempo de expiração de 30 dias (2.592.000 segundos) e sanitização estrita de payload.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">3. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Proteção Contra Força Bruta e DoS:</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Limite de 20 tentativas de login por IP a cada 60 segundos (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">LOGIN_MAX = 20</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Limite de 600 requisições gerais por IP a cada 60 segundos (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">API_MAX = 600</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">4. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Precisão Financeira em Centavos:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Cálculos de pedidos, itens e descontos são operados em centavos inteiros antes da gravação no banco de dados, prevenindo imprecisões de ponto flutuante IEEE 754.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">5. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Auditoria Contínua:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Todas as mutações de pedidos, estoque, preços, clientes, rotas e compras geram registros imediatos na tabela </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">audit_logs</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">.</w:t></w:r>
+</w:p>

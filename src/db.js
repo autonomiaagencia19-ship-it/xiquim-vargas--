@@ -132,6 +132,9 @@ if(!hasColumn('pedidos','cancel_reason')) db.exec("ALTER TABLE pedidos ADD COLUM
 if(!hasColumn('pedidos','cancelled_snapshot_json')) db.exec("ALTER TABLE pedidos ADD COLUMN cancelled_snapshot_json TEXT");
 if(!hasColumn('audit_logs','integrity_hash')) db.exec("ALTER TABLE audit_logs ADD COLUMN integrity_hash TEXT");
 if(!hasColumn('tabela_preco_itens','quantidade_minima')) db.exec("ALTER TABLE tabela_preco_itens ADD COLUMN quantidade_minima INTEGER NOT NULL DEFAULT 1");
+if(!hasColumn('clientes','tabela_preco_individual_id')) db.exec("ALTER TABLE clientes ADD COLUMN tabela_preco_individual_id TEXT REFERENCES tabelas_preco(id)");
+if(!hasColumn('clientes','tabela_preco_massa_id')) db.exec("ALTER TABLE clientes ADD COLUMN tabela_preco_massa_id TEXT REFERENCES tabelas_preco(id)");
+db.exec("DELETE FROM rota_pedidos WHERE pedido_id IN (SELECT id FROM pedidos WHERE cancelled_at IS NOT NULL)");
 for(const [table,column] of [['pedidos','pdf_path'],['comprovantes_entrega','arquivo_path'],['produto_imagens','arquivo_path']]){for(const row of all(`SELECT id,${column} value FROM ${table} WHERE ${column} IS NOT NULL`)){if(path.isAbsolute(String(row.value))){const relative=path.relative(STORAGE,String(row.value));if(relative&&relative!=='..'&&!relative.startsWith('..'+path.sep))run(`UPDATE ${table} SET ${column}=? WHERE id=?`,[relative.split(path.sep).join('/'),row.id])}}}
 if(!hasColumn('produtos','esgotado')) db.exec("ALTER TABLE produtos ADD COLUMN esgotado INTEGER NOT NULL DEFAULT 0");
 if(!hasColumn('produtos','preco_custo')) db.exec("ALTER TABLE produtos ADD COLUMN preco_custo REAL NOT NULL DEFAULT 0");
@@ -258,6 +261,23 @@ CREATE TABLE IF NOT EXISTS cliente_interacoes(
 
 CREATE INDEX IF NOT EXISTS idx_cliente_interacoes_cliente ON cliente_interacoes(cliente_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_cliente_interacoes_tipo ON cliente_interacoes(tipo);
+
+UPDATE clientes SET vendedor_id = NULL WHERE id = 'CLIENTE-BALCAO' AND vendedor_id IS NOT NULL;
+UPDATE clientes
+SET vendedor_id = (
+  SELECT p.operador_id FROM pedidos p
+  JOIN usuarios u ON u.id = p.operador_id AND u.role = 'seller'
+  WHERE p.cliente_id = clientes.id AND p.origem = 'VENDEDOR' AND p.operador_id IS NOT NULL
+  ORDER BY p.created_at DESC LIMIT 1
+)
+WHERE vendedor_id IS NULL
+  AND id != 'CLIENTE-BALCAO'
+  AND id NOT IN (SELECT cliente_id FROM usuario_clientes)
+  AND EXISTS (
+    SELECT 1 FROM pedidos p
+    JOIN usuarios u ON u.id = p.operador_id AND u.role = 'seller'
+    WHERE p.cliente_id = clientes.id AND p.origem = 'VENDEDOR' AND p.operador_id IS NOT NULL
+  );
 `);
 
 

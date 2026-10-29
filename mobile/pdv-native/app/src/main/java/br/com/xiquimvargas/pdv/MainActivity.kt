@@ -25,7 +25,7 @@ import kotlin.concurrent.thread
 class MainActivity : Activity() {
 
     private val targetPath = "/pdv.html"
-    private val appTitle = "Xiquim Vargas\nFrente de Loja / PDV"
+    private val appTitle = "Caixa"
     private val appSubtitle = "Emissão ágil de cupons, bipagem de código de barras e vendas em contingência 100% offline."
 
     private var currentWebView: WebView? = null
@@ -213,7 +213,7 @@ class MainActivity : Activity() {
         box.addView(label)
 
         val input = EditText(this).apply {
-            hint = "https://seu-erp.onrender.com"
+            hint = "https://xiquim-vargas-erp.onrender.com"
             setHintTextColor(Color.DKGRAY)
             setTextColor(Color.WHITE)
             if (Api.isConfigured()) {
@@ -533,6 +533,8 @@ class MainActivity : Activity() {
                 databaseEnabled = true
                 allowFileAccess = true
                 allowContentAccess = true
+                allowFileAccessFromFileURLs = true
+                allowUniversalAccessFromFileURLs = true
                 mediaPlaybackRequiresUserGesture = false
                 javaScriptCanOpenWindowsAutomatically = true
                 setSupportMultipleWindows(true)
@@ -601,6 +603,27 @@ class MainActivity : Activity() {
             }
 
             webChromeClient = object : WebChromeClient() {
+                override fun onJsAlert(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
+                    android.app.AlertDialog.Builder(this@MainActivity)
+                        .setTitle("Aviso")
+                        .setMessage(message ?: "")
+                        .setPositiveButton("OK") { _, _ -> result?.confirm() }
+                        .setOnCancelListener { result?.cancel() }
+                        .show()
+                    return true
+                }
+
+                override fun onJsConfirm(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
+                    android.app.AlertDialog.Builder(this@MainActivity)
+                        .setTitle("Confirmação")
+                        .setMessage(message ?: "")
+                        .setPositiveButton("OK") { _, _ -> result?.confirm() }
+                        .setNegativeButton("Cancelar") { _, _ -> result?.cancel() }
+                        .setOnCancelListener { result?.cancel() }
+                        .show()
+                    return true
+                }
+
                 override fun onGeolocationPermissionsShowPrompt(origin: String?, callback: GeolocationPermissions.Callback?) {
                     callback?.invoke(origin, true, false)
                 }
@@ -752,6 +775,13 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun getAppVersion(): String {
             return BuildConfig.VERSION_NAME
+        }
+
+        @JavascriptInterface
+        fun openConfig() {
+            runOnUiThread {
+                configScreen()
+            }
         }
     }
 }

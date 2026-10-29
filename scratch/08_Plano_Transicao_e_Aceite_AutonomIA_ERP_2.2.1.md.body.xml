@@ -1,0 +1,116 @@
+<w:p><w:pPr><w:pStyle w:val="Heading1"/><w:spacing w:before="280" w:after="120"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="32"/></w:rPr><w:t xml:space="preserve">AUTONOMIA SYSTEMS — PLANO DE TRANSIÇÃO E ACEITE FORMAL</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Roteiro de Transição, Operação Assistida, Homologação e Termo de Aceite</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Versão:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> 2.2.1 / 1.8.2 Delivery Hardened | </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Data:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Outubro de 2026</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/><w:spacing w:before="220" w:after="100"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="26"/></w:rPr><w:t xml:space="preserve">1. ROTEIRO DE TRANSIÇÃO E GO-LIVE</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">O processo de entrada em produção plena (Go-Live) obedece ao cronograma estruturado abaixo:</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">1. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Fase 1 — Infraestrutura e Persistência em Nuvem (Concluída):</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Publicação do ambiente oficial no Render sob HTTPS: </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">https://xiquim-vargas-erp.onrender.com</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Montagem e homologação do disco persistente de 10GB em </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">/var/data</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">2. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Fase 2 — Base de Dados e Auditoria (Concluída):</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Homologação dos 620 SKUs comerciais com fotos HD oficiais e estoque inicial ativo (1.236.986 unidades).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Validação de todos os perfis operacionais, credenciais de acesso e cadastros de clientes da carteira.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">3. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Fase 3 — Distribuição dos 4 Aplicativos Nativos (Em Execução):</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Instalação dos APKs v1.8.3 nos smartphones e terminais da equipe de vendas, caixa, logística e diretoria.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">4. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Fase 4 — Operação Assistida (15 Dias):</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Acompanhamento presencial e remoto dos turnos operacionais, conferência de doca e validação do fluxo de retornos.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">5. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Fase 5 — Transferência Definitiva e Aceite:</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Entrega dos códigos-fonte, credenciais e termo de aceite formal assinado.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/><w:spacing w:before="220" w:after="100"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="26"/></w:rPr><w:t xml:space="preserve">2. CRITÉRIOS DE ACEITAÇÃO CONTRATUAL</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Para a emissão do aceite formal, o sistema cumpriu rigorosamente os requisitos:</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">[X] Plataforma acessível via web e aplicativo nativo com latência adequada e zero travamentos.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">[X] 4 APKs Android nativos compilados com sucesso e com funcionamento 100% offline atestado.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">[X] Transações de venda com cálculo em centavos e proteção contra saldo negativo de estoque.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">[X] Sincronização em tempo real (SSE) operando sem a necessidade de recarregamento manual (F5).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">[X] Rotina de devoluções com reversão automática de pedidos e desacoplamento de rotas.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">[X] Doca de compras com conferência por código de barras e alimentação de estoque.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">[X] Política de backup automatizada com verificação de integridade e retenção de 7 dias.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/><w:spacing w:before="220" w:after="100"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="26"/></w:rPr><w:t xml:space="preserve">3. TERMO DE ACEITE FORMAL DE ENTREGA DE SOFTWARE</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Pelo presente instrumento, a empresa </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Xiquim Vargas</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> declara que recebeu da </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">AutonomIA Systems</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> a entrega formal da release definitiva do </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">ERP AutonomIA (Versão 2.2.1 / 1.8.2 Delivery Hardened)</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">, acompanhada de toda a documentação técnica, manuais operacionais e a suíte de 4 aplicativos nativos Android v1.8.3.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Declara-se que todos os fluxos comerciais, de frente de caixa, estoque, compras, loja online e expedição logística foram testados e homologados, encontrando-se em plena conformidade com as especificações contratadas.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Data de Homologação: 27 de Outubro de 2026.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">_______________________________________________</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Xiquim Vargas — Direção Geral</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">_______________________________________________</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">AutonomIA Systems — Engenharia de Software</w:t></w:r>
+</w:p>

@@ -35,9 +35,10 @@
         android:fullBackupContent="@xml/backup_rules"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:theme="@style/AppTheme"
-        android:label="Xiquim Vargas — Vendedor">
+        android:label="Vendedor">
         <activity
             android:name=".MainActivity"
+            android:label="Vendedor"
             android:exported="true"
             android:configChanges="orientation|screenSize|keyboardHidden">
             <intent-filter>

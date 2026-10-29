@@ -1,0 +1,721 @@
+<w:p><w:pPr><w:pStyle w:val="Heading1"/><w:spacing w:before="280" w:after="120"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="32"/></w:rPr><w:t xml:space="preserve">AUTONOMIA SYSTEMS — MANUAL COMPLETO DA SUÍTE DE APLICATIVOS ANDROID NATIVOS (100% OFFLINE)</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Guia Oficial de Instalação, Arquitetura Kotlin, Operação Offline e Distribuição dos 4 APKs</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Versão da Release:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> 2.2.1 / 1.8.2 Delivery Hardened | </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Versão dos APKs:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> v1.8.3 (Build 5)</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Ambiente Oficial de Produção:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> https://xiquim-vargas-erp.onrender.com | </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Data:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Outubro de 2026</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/><w:spacing w:before="220" w:after="100"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="26"/></w:rPr><w:t xml:space="preserve">1. APRESENTAÇÃO DA SUÍTE MOBILE NATIVA</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">A operação comercial, logística e de frente de caixa do </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Xiquim Vargas</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> é potencializada por uma suíte dedicada de </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">4 Aplicativos Nativos para o sistema operacional Android</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Cada aplicativo foi especialmente projetado e customizado para o fluxo de trabalho de cada função na empresa, eliminando telas desnecessárias e garantindo </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">alta velocidade de trabalho, confiabilidade extrema e funcionamento 100% offline</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">:</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:shd w:val="clear" w:color="auto" w:fill="F1F5F9"/><w:spacing w:before="100" w:after="100"/></w:pPr>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="0F172A"/><w:sz w:val="18"/></w:rPr><w:t xml:space="preserve">graph TD
+    subgraph Suite_Mobile_Nativa [4 APKs Nativos Android v1.8.3 - 100% Offline]
+        direction TB
+        A1[XiquimVargas-Vendedor-1.8.3.apk&lt;br/&gt;Perfil: Vendedor Externo / Representante]
+        A2[XiquimVargas-Motorista-1.8.3.apk&lt;br/&gt;Perfil: Motorista / Entregador]
+        A3[XiquimVargas-PDV-1.8.3.apk / Caixa&lt;br/&gt;Perfil: Operador de Caixa / Frente de Loja]
+        A4[XiquimVargas-TorreControle-1.8.3.apk&lt;br/&gt;Perfil: Gestor / Expedição / Fiscal]
+    end
+
+    subgraph Core_Nativo_Android [Arquitetura Nativa em Cada APK]
+        ASSETS[Assets HTML5/CSS/JS/Imagens Embutidos em assets/www/]
+        INTERCEPT[Interceptor shouldInterceptRequest / WebViewAssetLoader]
+        BRIDGE[Ponte Nativa AndroidAppBridge: PDF, Print, Versão, Role]
+        IDB[Banco Local IndexedDB: Cache de Produtos e Fila Outbox]
+    end
+
+    subgraph Nuvem_Render [Servidor em Nuvem Render - Produção]
+        PROD[https://xiquim-vargas-erp.onrender.com]
+        API_REST[API RESTful e Autenticação JWT]
+        SSE_LIVE[Server-Sent Events /api/events]
+    end
+
+    A1 &amp; A2 &amp; A3 &amp; A4 --&gt; ASSETS &amp; INTERCEPT &amp; BRIDGE &amp; IDB
+    INTERCEPT --&gt;|Sem Internet: Resposta em 0.05s| ASSETS
+    INTERCEPT --&gt;|Com Internet: Sincronização Automática| PROD
+    BRIDGE --&gt;|Impressão Térmica / Câmera / WhatsApp| A1 &amp; A2 &amp; A3 &amp; A4
+    IDB --&gt;|Ressincronização de Pedidos| API_REST</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/><w:spacing w:before="220" w:after="100"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="26"/></w:rPr><w:t xml:space="preserve">2. INVENTÁRIO COMPLETO DOS ARQUIVOS APK</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Todos os aplicativos encontram-se compilados, assinados e prontos para distribuição direta na pasta </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">/dist-apks/</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> (bem como em </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">/mobile/apks/</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">, </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">/apks versao final/</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> e na raiz do projeto):</w:t></w:r>
+</w:p>
+<w:tbl>
+<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="0" w:type="auto"/><w:tblLook w:val="04A0"/></w:tblPr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="061A4F"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/>
+</w:rPr>
+<w:t xml:space="preserve">Arquivo APK</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="061A4F"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/>
+</w:rPr>
+<w:t xml:space="preserve">Pacote (Application ID)</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="061A4F"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/>
+</w:rPr>
+<w:t xml:space="preserve">Label / Ícone</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="061A4F"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/>
+</w:rPr>
+<w:t xml:space="preserve">Tela Inicial Padrão</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="061A4F"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/>
+</w:rPr>
+<w:t xml:space="preserve">Tamanho Aprox.</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">XiquimVargas-Vendedor-1.8.3.apk</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">br.com.xiquimvargas.seller</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Vendedor</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">/vendedor.html</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">~28 MB</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">XiquimVargas-Motorista-1.8.3.apk</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">br.com.xiquimvargas.driver</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Motorista</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">/motorista.html</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">~28 MB</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">XiquimVargas-PDV-1.8.3.apk *(Caixa)*</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">br.com.xiquimvargas.pdv</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Caixa</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">/pdv.html</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">~28 MB</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+<w:tr>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">XiquimVargas-TorreControle-1.8.3.apk</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">br.com.xiquimvargas.tower</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">Torre de Controle</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">/admin.html</w:t>
+</w:r></w:p>
+</w:tc>
+<w:tc>
+<w:tcPr>
+<w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/>
+<w:tcMar><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="160" w:type="dxa"/></w:tcMar>
+</w:tcPr>
+<w:p><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr>
+<w:color w:val="333333"/><w:sz w:val="19"/>
+</w:rPr>
+<w:t xml:space="preserve">~28 MB</w:t>
+</w:r></w:p>
+</w:tc>
+</w:tr>
+</w:tbl>
+<w:p><w:pPr><w:spacing w:after="120"/></w:pPr></w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">*Nota sobre tamanho:* O tamanho de aproximadamente 28 MB de cada arquivo decorre da inclusão de todos os recursos de interface gráfica, fontes institucionais e logos em altíssima definição (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">01_Logo_Xiquim_Vargas_HD.png</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">, etc.) dentro do arquivo binário, garantindo autonomia completa de exibição sem requerer downloads posteriores pela internet.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/><w:spacing w:before="220" w:after="100"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="26"/></w:rPr><w:t xml:space="preserve">3. GUIA PASSO A PASSO DE INSTALAÇÃO NO DISPOSITIVO ANDROID</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">A instalação nos smartphones e tablets corporativos da equipe é realizada de forma direta (sideloading sem dependência da Google Play Store):</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading3"/><w:spacing w:before="180" w:after="80"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">3.1 Preparação do Dispositivo:</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">1. </w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Conecte o smartphone Android ao computador via cabo USB, ou acerte o envio dos arquivos APK por WhatsApp Web, Google Drive ou servidor local.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">2. </w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Acesse as </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Configurações</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> do Android:</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Vá em </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Segurança</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> (ou </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Privacidade e Segurança</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Localize a opção </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">&quot;Instalar aplicativos de fontes desconhecidas&quot;</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> (ou </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">&quot;Fontes Desconhecidas&quot;</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Marque permissão para o navegador ou gerenciador de arquivos que você usará para abrir o APK.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading3"/><w:spacing w:before="180" w:after="80"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">3.2 Execução da Instalação:</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">1. </w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Abra o arquivo do APK correspondente à função do colaborador (exemplo: </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">XiquimVargas-Vendedor-1.8.3.apk</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> para o vendedor).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">2. </w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">O instalador do pacote do Android solicitará a confirmação: clique em </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">&quot;Instalar&quot;</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">3. </w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Ao finalizar, clique em </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">&quot;Abrir&quot;</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">4. </w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">O aplicativo solicitará permissões operacionais necessárias:</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Câmera:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> para o motorista fotografar comprovantes de entrega e canhoto assinado.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Localização:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> para apoio à roteirização e cálculo viário.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Rede / Internet:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> para comunicação com a nuvem quando houver conexão.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Clique em </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">&quot;Permitir durante o uso do app&quot;</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> em todas.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading3"/><w:spacing w:before="180" w:after="80"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">3.3 Acesso Instantâneo e Zero Configuração:</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">O aplicativo abre </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">no mesmo segundo</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> exibindo a interface oficial do Xiquim Vargas.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">O colaborador NÃO precisa configurar nada:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> a URL oficial de produção (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">https://xiquim-vargas-erp.onrender.com</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">) já está pré-gravada no código do aplicativo.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Se o colaborador estiver sem sinal (na estrada, galpão fechado ou áreas rurais), o aplicativo abre da mesma forma, sem travar nem exibir telas de erro.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/><w:spacing w:before="220" w:after="100"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="26"/></w:rPr><w:t xml:space="preserve">4. COMO FUNCIONA A ABERTURA 100% OFFLINE</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Tradicionalmente, aplicativos que utilizam WebView tentam carregar a página pela rede. Se não houver internet, o Android exibe uma tela branca feia com o erro </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">ERR_NAME_NOT_RESOLVED</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> ou </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">ERR_INTERNET_DISCONNECTED</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">A engenharia da AutonomIA Systems implementou uma arquitetura diferenciada no </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">MainActivity.kt</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">:</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">1. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Assets Locais Empacotados:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Todos os arquivos (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">styles.css</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">, </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">app.js</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">, </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">role.js</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">, </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">vendedor.html</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">, </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">motorista.html</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">, etc.) foram gravados na pasta interna </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">app/src/main/assets/www/</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> dentro do APK durante a compilação.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">2. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Interceptação Nativa de Requisições:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> O método </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">shouldInterceptRequest</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> intercepta as requisições destinadas ao domínio do ERP:</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Se for um arquivo estático (HTML, CSS, JavaScript, imagem ou fonte), o aplicativo entrega o arquivo </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">diretamente da memória flash do aparelho</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Esse carregamento ocorre na velocidade da memória local (~0.05 segundos).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">3. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Desativação de Telas de Bloqueio:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> O código legado </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">showOfflineScreen()</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> foi desativado para garantir que o colaborador tenha acesso instantâneo à interface sem interrupções.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">4. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Fila Outbox em IndexedDB:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Quando o operador realiza ações (lançar pedido, registrar baixa), os dados são salvos no banco local IndexedDB do navegador interno (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">xv-offline-v1-...</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">). Assim que a conexão de dados retornar, a função nativa </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">syncOfflineQueue()</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> despacha as requisições pendentes de forma silenciosa para o servidor na nuvem.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/><w:spacing w:before="220" w:after="100"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="26"/></w:rPr><w:t xml:space="preserve">5. GUIA OPERACIONAL POR APLICATIVO</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading3"/><w:spacing w:before="180" w:after="80"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">5.1 App Vendedor (`XiquimVargas-Vendedor-1.8.3.apk`)</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Catálogo de 620 Produtos:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Exibição ágil com imagens oficiais, códigos SKU, embalagens e preços.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Tabelas de Preço Dinâmicas:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Ao selecionar um cliente, o aplicativo calcula automaticamente os preços diferenciados e descontos por quantidade da tabela vinculada.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Emissão de Pedidos no Cliente:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> O vendedor monta o carrinho de compras. Ao clicar em </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">&quot;Finalizar Pedido&quot;</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">, se estiver sem internet, o pedido é armazenado com segurança no celular com o status de fila pendente.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Identidade Visual:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Textos operacionais e subtítulos no tom institucional Laranja (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">#FD5E02</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">) e tipografia 700.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading3"/><w:spacing w:before="180" w:after="80"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">5.2 App Motorista (`XiquimVargas-Motorista-1.8.3.apk`)</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Listagem da Rota do Dia:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> O motorista abre o app e vê os pedidos ordenados por bairro e prioridade viária.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Ação Direta de Comunicação:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Dois botões dedicados ao lado de cada parada:</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Botão </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">WhatsApp:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> abre diretamente a conversa com o cliente no WhatsApp do celular, com mensagem pré-formatada.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Botão </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Ligar:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> abre o discador do celular com o telefone do cliente preenchido.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Comprovante de Entrega:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> O motorista toca em </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">&quot;Fotografar Comprovante&quot;</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">, a câmera do aparelho abre para captura do canhoto assinado ou mercadoria entregue. Ao confirmar, o pedido é concluído.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Registro de Insucesso / Retorno:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Caso o cliente não esteja ou o local esteja fechado, o motorista toca em </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">&quot;Registrar Retorno&quot;</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">, escolhe o motivo (ex: &quot;Cliente Ausente&quot;) e confirma. O pedido reverte automaticamente para separação na Torre.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading3"/><w:spacing w:before="180" w:after="80"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">5.3 App Caixa e PDV (`XiquimVargas-PDV-1.8.3.apk` / `XiquimVargas-Caixa-1.8.3.apk`)</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Bipagem Contínua:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Compatível com leitores de código de barras USB ou Bluetooth, bem como digitação rápida de SKU.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Cliente Balcão Padrão:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Pré-seleciona </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">CLIENTE-BALCAO</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> para atendimento express.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Múltiplos Meios de Pagamento:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Recebimento em Dinheiro (com cálculo automático de troco em tela), Cartão de Débito, Crédito (à vista ou parcelado de 2x a 12x) e PIX.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Impressão Térmica:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> O comando de imprimir comprovante conecta-se via </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">AndroidApp.printWebPage()</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> ao serviço de impressão do Android, acionando mini-impressoras térmicas de 58mm ou 80mm.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading3"/><w:spacing w:before="180" w:after="80"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">5.4 App Torre de Controle (`XiquimVargas-TorreControle-1.8.3.apk`)</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Painel Executivo Móvel:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Permite aos diretores e supervisores acompanhar o faturamento do dia, contadores em tempo real e gráficos de vendas.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Painel de Pedidos Retornados:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Exibe na hora qualquer insucesso reportado pelos motoristas, com motorista, cliente, bairro e motivo para contato imediato.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Liberação de Cargas e Separação:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Liberação de romaneios e pedidos diretamente do tablet ou smartphone.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/><w:spacing w:before="220" w:after="100"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="26"/></w:rPr><w:t xml:space="preserve">6. MANUTENÇÃO, COMPILAÇÃO E PIPELINE DE CI/CD</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading3"/><w:spacing w:before="180" w:after="80"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">6.1 Compilação Local de Todos os APKs:</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Para gerar novas versões dos 4 aplicativos na estação de desenvolvimento:</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:shd w:val="clear" w:color="auto" w:fill="F1F5F9"/><w:spacing w:before="100" w:after="100"/></w:pPr>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="0F172A"/><w:sz w:val="18"/></w:rPr><w:t xml:space="preserve"># Executar a esteira automatizada no PowerShell:
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build-all-apks.ps1</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Este script executa três etapas ordenadas:</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">1. </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">scripts/sync-mobile-assets.ps1</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Sincroniza os arquivos de </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">public/</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">styles.css</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">, </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">app.js</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">, </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">role.js</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">, </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">*.html</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> e fotos institucionais) para a pasta </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">assets/www/</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> de cada um dos 4 projetos nativos.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">2. </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">gradlew assembleDebug</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Compila os 4 projetos em Gradle 9.6.0 com Java 17 LTS.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">3. </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">scripts/update-dist-apks.ps1</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Copia e distribui os APKs compilados para </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">/dist-apks/</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">, </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">/mobile/apks/</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">, </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">/apks versao final/</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> e para a raiz.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading3"/><w:spacing w:before="180" w:after="80"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">6.2 Pipeline na Nuvem (GitHub Actions):</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">O repositório possui o fluxo </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">.github/workflows/android.yml</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> configurado. A cada atualização no diretório </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">mobile/**</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">, a nuvem compila os 4 APKs em ambiente Ubuntu limpo e disponibiliza o artefato compactado para download imediato.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/><w:spacing w:before="220" w:after="100"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="26"/></w:rPr><w:t xml:space="preserve">7. RESOLUÇÃO DE PROBLEMAS E DÚVIDAS FREQUENTES (FAQ)</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">P: O que fazer se o aplicativo abrir em tela de configuração pedindo URL?</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">R: Isso só acontece se o app for limpo ou se o arquivo de configuração interna for alterado. Basta tocar no botão &quot;Conectar e Acessar&quot; — o endereço oficial (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">https://xiquim-vargas-erp.onrender.com</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">) já vem pré-preenchido.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">P: Os pedidos feitos sem internet correm risco de se perder?</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">R: Não. Eles ficam salvos no banco local de alta durabilidade do smartphone (IndexedDB). Assim que o sinal de internet for detectado, o próprio app envia os pedidos em segundo plano.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">P: É possível alterar a URL de produção para um servidor de testes?</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">R: Sim. No código de </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">MainActivity.kt</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">, há a tela de configuração acessível ao limpar os dados do app ou via </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">configScreen()</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">, onde é possível digitar um novo endereço HTTPS ou IP de rede local.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">P: Como imprimir comprovantes em impressoras térmicas portáteis Bluetooth?</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">R: Instale o aplicativo de serviço de impressão da impressora (ex: RawBT, ESC/POS Service ou serviço oficial da fabricante) no Android. Ao clicar em &quot;Imprimir&quot; no app PDV/Caixa, selecione a impressora na tela padrão do sistema.</w:t></w:r>
+</w:p>

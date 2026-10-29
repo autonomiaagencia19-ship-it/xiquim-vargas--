@@ -1,0 +1,319 @@
+<w:p><w:pPr><w:pStyle w:val="Heading1"/><w:spacing w:before="280" w:after="120"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="32"/></w:rPr><w:t xml:space="preserve">RAIO-X DE ENGENHARIA COMPLETO — ERP AUTONOMIA (XIQUIM VARGAS)</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Arquitetura Profunda, Dicionário de Dados das 31 Tabelas, Máquinas de Estado e Invariantes</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Versão do Sistema:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> 2.2.1 / 1.8.2 Delivery Hardened | </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">APKs Nativos:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> v1.8.3 (100% Offline)</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Ambiente Oficial:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> https://xiquim-vargas-erp.onrender.com | </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Data:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Outubro de 2026</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/><w:spacing w:before="220" w:after="100"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="26"/></w:rPr><w:t xml:space="preserve">1. TOPOLOGIA DE SISTEMAS E ARQUITETURA DE CLIENTES</w:t></w:r></w:p>
+<w:p><w:pPr><w:shd w:val="clear" w:color="auto" w:fill="F1F5F9"/><w:spacing w:before="100" w:after="100"/></w:pPr>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="0F172A"/><w:sz w:val="18"/></w:rPr><w:t xml:space="preserve">graph TD
+    subgraph Apresentacao_e_Clientes [Camada de Apresentação e Clientes]
+        direction TB
+        TW[Torre de Controle Web / PWA Admin - admin.html]
+        LO[Loja Online E-Commerce / Web - loja.html]
+        PDV_WEB[Frente de Caixa Balcão / PDV Web - pdv.html]
+        
+        subgraph APKs_Android_Nativos_Offline [4 APKs Nativos Kotlin - 100% Offline]
+            APK_TW[XiquimVargas-TorreControle-1.8.3.apk]
+            APK_VEND[XiquimVargas-Vendedor-1.8.3.apk]
+            APK_MOT[XiquimVargas-Motorista-1.8.3.apk]
+            APK_PDV[XiquimVargas-PDV-1.8.3.apk / Caixa]
+        end
+    end
+
+    subgraph Borda_e_API [Borda HTTP e Sincronização - server.js]
+        GW[Node.js 22+ Native HTTP Server]
+        RATE[Rate Limiter: 20 logins/min, 600 reqs/min]
+        SSE_POOL[Pool de Conexões SSE / broadcastEvent]
+    end
+
+    subgraph Modulos_Centrais [Módulos Centrais de Negócio]
+        MOD_DB[src/db.js - SQLite WAL Engine]
+        MOD_ROUT[src/routing.js - Roteirização Geoespacial]
+        MOD_AI[src/ai.js - Groq Administrative AI ReadOnly]
+        MOD_PDF[src/pdf.js - Motor Vetorial PDF Puro]
+        MOD_AUTH[src/auth.js - scrypt + JWT HS256]
+    end
+
+    subgraph Persistencia_Render [Persistência em Disco /var/data]
+        SQLITE[(xiquim-vargas.db / 31 Tabelas Relacionais)]
+        MEDIA[Mídias: proofs / product-images / store-cover / pdfs]
+        BACKUPS[Snapshots /var/data/backups/]
+    end
+
+    TW &amp; LO &amp; PDV_WEB --&gt;|HTTP/REST &amp; SSE| GW
+    APK_TW &amp; APK_VEND &amp; APK_MOT &amp; APK_PDV --&gt;|100% Offline Local + Sync REST| GW
+    GW --&gt; RATE --&gt; SSE_POOL
+    GW --&gt; MOD_DB &amp; MOD_ROUT &amp; MOD_AI &amp; MOD_PDF &amp; MOD_AUTH
+    MOD_DB --&gt; SQLITE
+    MOD_PDF --&gt; MEDIA
+    MOD_DB --&gt; BACKUPS</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/><w:spacing w:before="220" w:after="100"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="26"/></w:rPr><w:t xml:space="preserve">2. DICIONÁRIO DE DADOS DAS 31 TABELAS RELACIONAIS (SQLITE WAL)</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="120" w:line="260" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">O banco de dados transacional conta com 31 tabelas normalizadas e protegidas por chaves estrangeiras ativas (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">PRAGMA foreign_keys = ON</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">):</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">1. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`usuarios`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Contas de operadores (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">id, nome, email, senha_hash, role, ativo, telefone, created_at</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">2. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`categorias`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Famílias de produtos (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">id, nome, descricao, ativo, created_at</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">3. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`subcategorias`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Subdivisões vinculadas a categorias (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">id, categoria_id, nome, descricao, ativo</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">4. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`produtos`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Catálogo mestre (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">id, nome, sku, codigo_barras, marca, sabor, tamanho, unidade, preco_base, preco_custo, categoria_id, subcategoria_id, ativo, esgotado, foto_url, created_at, updated_at</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">5. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`estoque`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Saldos centrais (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">produto_id, quantidade_disponivel, quantidade_reservada, estoque_minimo, updated_at</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">6. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`movimentacoes_estoque`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Ledger auditado (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">id, produto_id, tipo, quantidade, quantidade_anterior, quantidade_posterior, operador_id, observacao, created_at</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">7. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`tabelas_preco`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Políticas comerciais (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">id, nome, descricao, percentual_ajuste, ativo, created_at, updated_at</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">8. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`tabela_preco_itens`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Preços específicos por SKU (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">id, tabela_id, produto_id, preco, quantidade_minima</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">9. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`clientes`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Cadastro de clientes B2B/B2C (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">id, razao_social, nome_fantasia, cnpj_cpf, endereco, bairro, cidade, telefone, email, vendedor_id, tabela_preco_id, ativo, created_at, updated_at</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">10. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`usuario_clientes`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Vínculo entre credencial online e cadastro comercial.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">11. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`cliente_interacoes`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Histórico de atendimentos do CRM (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">id, cliente_id, usuario_id, tipo, resumo, detalhes, created_at</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">12. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`pedidos`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Ordens de venda (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">id, numero, cliente_id, operador_id, origem, status, subtotal_bruto, desconto_tipo, desconto_valor, total, observacoes, forma_pagamento, pagamento_status, valor_recebido, troco, cartao_modalidade, parcelas, modalidade_entrega, pdf_path, pdf_status, cancelled_at, cancelled_by, motivo_cancelamento, created_at, updated_at</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">13. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`pedido_itens`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Linhas do pedido (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">id, pedido_id, produto_id, quantidade, preco_unitario_aplicado, subtotal, custo_unitario_aplicado</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">14. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`pedido_retornos`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Log de ocorrências e devoluções (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">id, pedido_id, rota_id, motorista_id, motivo, descricao, created_at</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">15. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`rotas_logistica`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Rotas diárias despachadas (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">id, data, motorista_id, veiculo_placa, status, sequencia_json, created_at, updated_at</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">16. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`rota_pedidos`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Vínculo entre pedido e rota de transporte (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">rota_id, pedido_id</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">17. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`comprovantes_entrega`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Registro de fotos de canhoto/assinatura (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">id, pedido_id, motorista_id, arquivo_path, created_at</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">18. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`rotas_config`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Cronograma padrão semanal (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">id, nome, dia_semana, descricao, ativo</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">19. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`rota_bairros`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Mapeamento de bairros atendidos pela rota (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">rota_config_id, bairro</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">20. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`vendedor_rotas`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Escala de vendedores por rota semanal (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">vendedor_id, rota_config_id, dia_semana</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">21. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`fornecedores`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Fornecedores de suprimentos (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">id, razao_social, nome_fantasia, cnpj, telefone, email, contato, endereco, ativo, created_at</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">22. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`fornecedor_produtos`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Itens fornecidos por parceiro (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">id, fornecedor_id, produto_id, codigo_fornecedor, preco_custo, prazo_dias</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">23. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`compras`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Ordens de compra de mercadorias (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">id, numero, fornecedor_id, usuario_id, status, total, observacoes, created_at, updated_at</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">24. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`compra_itens`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Linhas da ordem de compra (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">id, compra_id, produto_id, quantidade, preco_custo_unitario, subtotal</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">25. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`produto_custos_historico`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Rastreabilidade de custo médio (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">id, produto_id, custo, tipo_ajuste, origem_id, motivo, data_inicio, data_fim, usuario_id</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">26. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`produto_imagens`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Fotos adicionais do catálogo (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">id, produto_id, arquivo_path, mime_type, tamanho_bytes, principal, ordem, created_at</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">27. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`promocoes`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Campanhas promocionais temporárias (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">id, produto_id, nome, preco_promocional, inicio, termino, ativo, created_at</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">28. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`configuracoes`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Chaves operacionais (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">chave, valor, updated_at</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">29. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`audit_logs`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Trilhas de auditoria administrativa (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">id, usuario_id, acao, entidade, entidade_id, antes_json, depois_json, metadata_json, created_at</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">30. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`idempotency_keys`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Prevenção de duplicidades (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">id, user_id, route, key_value, response_status, response_json, created_at</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">31. </w:t></w:r>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">`system_events`</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">: Telemetria interna e requisições (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">id, level, event, request_id, message, metadata_json, created_at</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">).</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/><w:spacing w:before="220" w:after="100"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="FD5E02"/><w:sz w:val="26"/></w:rPr><w:t xml:space="preserve">3. MÁQUINAS DE ESTADO E INVARIANTES TRANSACIONAIS</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading3"/><w:spacing w:before="180" w:after="80"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">3.1 Ciclo do Pedido</w:t></w:r></w:p>
+<w:p><w:pPr><w:shd w:val="clear" w:color="auto" w:fill="F1F5F9"/><w:spacing w:before="100" w:after="100"/></w:pPr>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="0F172A"/><w:sz w:val="18"/></w:rPr><w:t xml:space="preserve">stateDiagram-v2
+    [*] --&gt; PENDENTE: Criado (Web / Vendedor / PDV)
+    PENDENTE --&gt; SEPARACAO: Separação Iniciada
+    PENDENTE --&gt; CANCELADO: Cancelado (Estorno do Saldo)
+    SEPARACAO --&gt; ROTA: Rota Despachada para Veículo
+    SEPARACAO --&gt; CANCELADO: Cancelado pela Torre
+    ROTA --&gt; CONCLUIDO: Entrega com Sucesso + Comprovante
+    ROTA --&gt; SEPARACAO: Insucesso Registrado (/fail)
+    CONCLUIDO --&gt; [*]
+    CANCELADO --&gt; [*]</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading3"/><w:spacing w:before="180" w:after="80"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">3.2 Invariantes de Engenharia Atendidos</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Zero Negative Stock:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> O update de reserva de estoque (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">UPDATE estoque SET quantidade_disponivel = quantidade_disponivel - ? WHERE ... AND quantidade_disponivel &gt;= ?</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">) valida atomicamente o saldo no momento da inserção.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Cálculo Monetário Inteiro:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Totais e subtotais são convertidos para centavos (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">Math.round(preco * 100) * quantidade</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">) antes de operações aritméticas e divisões finais.</w:t></w:r>
+</w:p>
+<w:p><w:pPr><w:pStyle w:val="ListBullet"/><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr>
+<w:r><w:rPr><w:b/><w:color w:val="061A4F"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Fallback Instantâneo dos APKs:</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> Interceptação nativa de requisições web locais (</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:color w:val="C7254E"/><w:shd w:val="clear" w:color="auto" w:fill="F9F2F4"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">shouldInterceptRequest</w:t></w:r>
+<w:r><w:rPr><w:color w:val="333333"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">) garantindo abertura em ~0.05s em modo avião.</w:t></w:r>
+</w:p>

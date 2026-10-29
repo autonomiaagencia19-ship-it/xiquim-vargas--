@@ -35,9 +35,10 @@
         android:fullBackupContent="@xml/backup_rules"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:theme="@style/AppTheme"
-        android:label="Xiquim Vargas — PDV">
+        android:label="Caixa">
         <activity
             android:name=".MainActivity"
+            android:label="Caixa"
             android:exported="true"
             android:configChanges="orientation|screenSize|keyboardHidden">
             <intent-filter>

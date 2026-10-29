@@ -1,16 +1,123 @@
 # AUTONOMIA SYSTEMS — MATRIZ DE ACESSOS E RESPONSABILIDADES
-**Governança de Perfis, Controle Granular de Permissões e Matriz RACI**  
+**Governança de Perfis, Controle Granular de Permissões (RBAC) e Matriz RACI**  
 **Versão:** 2.2.1 / 1.8.2 Delivery Hardened | **Data:** Outubro de 2026
 
 ---
 
 ## 1. MAPEAMENTO DE PERFIS E APLICATIVOS DEDICADOS
+O sistema adota o modelo de Controle de Acesso Baseado em Papéis (RBAC - Role-Based Access Control) estritamente integrado aos 4 aplicativos nativos e interfaces web. Cada colaborador atua sob um perfil delimitado, sem interferência em dados fora de sua alçada operacional:
 
-| Papel Operacional | Interface / Aplicativo Dedicado | Escopo de Acesso e Permissões |
-| :--- | :--- | :--- |
-| **Administrador / Diretor** | Torre de Controle (`XiquimVargas-TorreControle-1.8.3.apk` / `admin.html`) | Acesso irrestrito a todos os módulos, relatórios gerenciais, cadastros e parametrizações. |
-| **Vendedor Externo** | App do Vendedor (`XiquimVargas-Vendedor-1.8.3.apk` / `vendedor.html`) | Consulta de catálogo com 626 produtos, emissão de pedidos para clientes de sua carteira. |
-| **Operador de Caixa (PDV)** | App do PDV (`XiquimVargas-PDV-1.8.3.apk` / `pdv.html`) | Venda expressa no balcão, leitor de código de barras, recebimento e emissão de comprovantes. |
-| **Motorista de Entregas** | App do Motorista (`XiquimVargas-Motorista-1.8.3.apk` / `motorista.html`) | Visualização das rotas atribuídas, contato com clientes via WhatsApp, registro de ocorrências. |
-| **Expedição e Estoquista** | Torre de Controle - Módulo Logística e Estoque | Separação física de mercadorias, conferência de doca (inbound) e despacho de rotas. |
-| **Cliente Web (B2B/B2C)** | Loja Online E-Commerce (`loja.html`) | Autoatendimento para consulta de catálogo e emissão de pedidos de compra digitais. |
+| Perfil Operacional (`role`) | Interface Web Dedicada | Aplicativo Android Nativo Dedicado | Escopo e Responsabilidades Principais |
+| :--- | :--- | :--- | :--- |
+| **Administrador (`admin`)** | `/admin.html` | `XiquimVargas-TorreControle-1.8.3.apk` | Gestão executiva irrestrita, auditoria, precificação, liberação de rotas, compras, usuários e IA. |
+| **Vendedor Externo (`seller`)** | `/vendedor.html` | `XiquimVargas-Vendedor-1.8.3.apk` | Emissão de pedidos em campo, catálogo, metas do mês, clientes da carteira e outbox offline. |
+| **Operador de Caixa (`cashier`)** | `/pdv.html` | `XiquimVargas-PDV-1.8.3.apk` *(ou Caixa)* | Venda expressa de balcão, bipagem de código de barras, múltiplos pagamentos e impressão térmica. |
+| **Motorista (`driver`)** | `/motorista.html` | `XiquimVargas-Motorista-1.8.3.apk` | Fila de paradas do dia, contato direto WhatsApp/fone, registro de comprovantes e insucessos. |
+| **Expedidor / Estoquista** | `/admin.html` (Logística) | `XiquimVargas-TorreControle-1.8.3.apk` | Separação física de mercadorias, conferência de romaneio, carregamento e conferência de doca. |
+| **Cliente Web (`web_client`)** | `/loja.html` | Navegador Mobile / PWA | Autoatendimento para consulta de catálogo, compras digitais e acompanhamento de entregas. |
+
+### 1.1 Como Funciona Cada Perfil Operacional (Role) no Dia a Dia
+
+#### A. Perfil Administrador (`admin`)
+* **Propósito:** É a autoridade executiva e supervisora global do sistema.
+* **Acesso & Interface:** Acessa a Torre de Controle via `admin.html` ou pelo APK `XiquimVargas-TorreControle-1.8.3.apk`.
+* **Como Opera:**
+  - Gerencia o catálogo mestre de produtos, criação de categorias, subcategorias e uploads de fotos.
+  - Define políticas de precificação, margens e tabelas de preço por canal ou volume.
+  - Acompanha o Kanban de pedidos em tempo real via Server-Sent Events (SSE).
+  - Supervisiona a expedição, monta rotas logísticas e atribui motoristas às cargas do dia.
+  - Realiza compras de fornecedores (inbound) e confere entradas físicas na doca.
+  - Monitora o painel de pedidos retornados (insucessos logísticos) e decide sobre reembarque.
+  - Possui exclusividade para cancelamento de pedidos com estorno automático de estoque.
+  - Consulta logs de auditoria transacional (`audit_logs`) e interage com o assistente Groq AI.
+
+#### B. Perfil Vendedor Externo (`seller`)
+* **Propósito:** Força de vendas em campo (representantes comerciais e televendas).
+* **Acesso & Interface:** Opera pelo aplicativo nativo `XiquimVargas-Vendedor-1.8.3.apk` ou `vendedor.html`.
+* **Como Opera:**
+  - Visualiza exclusivamente os clientes vinculados à sua carteira comercial.
+  - Consulta o catálogo completo com fotos, descrições e estoque disponível em tempo real.
+  - Aplica automaticamente as tabelas de preço associadas ao cliente selecionado.
+  - Emite novos pedidos diretamente no cliente. Caso esteja em área rural ou sem sinal, o pedido é salvo na outbox local em IndexedDB (`xv-offline-v1-...`) e sincronizado automaticamente assim que a conexão retornar.
+  - Acompanha suas metas comerciais do mês e o volume faturado em dashboard privativo.
+
+#### C. Perfil Operador de Caixa / Frente de Loja (`cashier`)
+* **Propósito:** Atendimento presencial ágil no balcão e faturamento de loja física.
+* **Acesso & Interface:** Terminal PDV em `pdv.html` ou aplicativo nativo `XiquimVargas-PDV-1.8.3.apk` (também distribuído como `XiquimVargas-Caixa-1.8.3.apk`).
+* **Como Opera:**
+  - Opera com foco em velocidade de atendimento, bipando códigos de barras diretamente via leitor óptico.
+  - Utiliza o cliente padrão pré-cadastrado `CLIENTE-BALCAO` (Consumidor Final) para dispensar cadastros morosos em vendas de balcão.
+  - Seleciona múltiplos meios de pagamento: Dinheiro (com cálculo automático de troco em tela), Débito, Crédito (à vista ou parcelado de 2x a 12x) e PIX.
+  - Dispara a impressão de cupons térmicos diretamente para mini-impressoras térmicas conectadas.
+  - Funciona 100% offline em contingência caso haja oscilação no link de internet da loja.
+
+#### D. Perfil Motorista / Entregador (`driver`)
+* **Propósito:** Distribuição física, transporte e entrega de mercadorias aos clientes.
+* **Acesso & Interface:** Aplicativo nativo móvel `XiquimVargas-Motorista-1.8.3.apk` ou `motorista.html`.
+* **Como Opera:**
+  - Visualiza apenas as rotas e paradas atribuídas a ele pela expedição no dia vigente.
+  - Acessa botões de discagem rápida e WhatsApp em 1 clique para alinhar o recebimento com o cliente antes de estacionar.
+  - Ao realizar a entrega, fotografa o comprovante/canhoto assinado via câmera do app e conclui a parada, baixando o estoque reservado definitivamente.
+  - Em caso de cliente ausente, recusa ou estabelecimento fechado, aciona o botão **"Registrar Retorno"**, informando o motivo. O pedido reverte automaticamente para o status `SEPARACAO` e alerta a Torre de Controle sem travar o restante da rota.
+
+#### E. Perfil Expedidor / Estoquista (Operação de Galpão)
+* **Propósito:** Separação física de itens no depósito, conferência de romaneios e carregamento.
+* **Acesso & Interface:** Módulo de Logística e Estoque na Torre de Controle (`admin.html`).
+* **Como Opera:**
+  - Imprime as listas de separação consolidadas (PDF de Romaneio de Carga).
+  - Retira as caixas e fardos no depósito físico e realiza a conferência na doca de expedição.
+  - Carrega os veículos conforme a ordem viária definida no sistema.
+  - Realiza a conferência de entrada física de compras de fornecedores (inbound).
+
+#### F. Perfil Cliente Web (`web_client`)
+* **Propósito:** Autoatendimento digital para clientes finais e pessoas jurídicas (B2B/B2C).
+* **Acesso & Interface:** Loja Online E-Commerce em `loja.html` acessível via navegador desktop ou celular.
+* **Como Opera:**
+  - Navega pelo catálogo dinâmico de produtos com busca inteligente e filtros por categoria.
+  - Adiciona itens ao carrinho com validação instantânea de disponibilidade de estoque.
+  - O sistema calcula automaticamente o frete de entrega baseado no bairro de destino do cliente.
+  - Valida o valor mínimo de compra parametrizado pela empresa antes do fechamento.
+  - Acompanha o status de evolução do seu pedido (Pendente -> Separação -> Em Rota -> Entregue).
+
+---
+
+## 2. MATRIZ DE PERMISSÕES POR RECURSO DA API
+A tabela abaixo define os privilégios de acesso aos módulos do sistema:
+
+| Módulo / Recurso do Sistema | Admin | Vendedor | Caixa (PDV) | Motorista | Cliente Web |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Consulta de Catálogo de Produtos** | Total | Total | Total | Visual | Total |
+| **Cadastro e Edição de Produtos/Preços**| Total | Não | Não | Não | Não |
+| **Ajuste Manual de Estoque** | Total | Não | Não | Não | Não |
+| **Emissão de Pedidos** | Total | Carteira | Balcão | Não | Próprios |
+| **Cancelamento de Pedidos** | Total | Não | Não | Não | Não |
+| **Frente de Caixa (PDV) e Baixa Balcão**| Total | Não | Total | Não | Não |
+| **Criação e Despacho de Rotas** | Total | Não | Não | Não | Não |
+| **Visualização de Rotas Atribuídas** | Total | Não | Não | Próprias | Não |
+| **Baixa de Entrega e Upload de Canhoto**| Total | Não | Não | Próprias | Não |
+| **Registro de Insucesso (Devolução)** | Total | Não | Não | Próprias | Não |
+| **Doca de Compras e Recebimento** | Total | Não | Não | Não | Não |
+| **Auditoria e Histórico de Transações** | Total | Não | Não | Não | Não |
+| **Gestão de Usuários e Acessos** | Total | Não | Não | Não | Não |
+| **Assistente Executivo de IA Groq** | Total | Não | Não | Não | Não |
+
+---
+
+## 3. MATRIZ RACI DAS OPERAÇÕES EMPRESARIAIS
+Convenção: **R** = Responsável pela execução; **A** = Aprovador final; **C** = Consultado; **I** = Informado.
+
+| Processo Operacional | Direção / Admin | Vendedor | Caixa | Motorista | Expedição | Cliente |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **1. Parametrização de Preços e Margens** | **R / A** | I | I | I | I | I |
+| **2. Cadastro e Homologação de SKUs** | **R / A** | I | I | I | I | I |
+| **3. Prospecção e Cadastro de Clientes** | A | **R** | I | I | I | C |
+| **4. Emissão de Pedido Externo** | I | **R / A** | I | I | I | C |
+| **5. Compra via Loja Online** | I | I | I | I | I | **R / A** |
+| **6. Venda Balcão no PDV** | I | I | **R / A** | I | I | C |
+| **7. Separação Física no Depósito** | I | I | I | I | **R / A** | I |
+| **8. Montagem e Otimização de Rotas** | A | I | I | C | **R** | I |
+| **9. Transporte e Entrega ao Destino** | I | I | I | **R** | A | C |
+| **10. Registro de Insucesso / Retorno** | I | I | I | **R** | **A** | I |
+| **11. Recebimento de Compras na Doca** | A | I | I | I | **R** | I |
+| **12. Fechamento de Caixa Diário** | A | I | **R** | I | I | I |
+| **13. Execução e Validação de Backups** | **R / A** | I | I | I | I | I |
