@@ -88,6 +88,7 @@ describe('Exhaustive Logistics & Delivery Lifecycle Test Suite', () => {
       });
     expect(res.status).toBe(201);
     expect(res.body.item.modalidade_entrega).toBe('ENTREGA');
+    expect(res.body.item.status).toBe('SEPARACAO');
     orders.push(res.body.item);
   });
 

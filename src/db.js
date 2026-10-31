@@ -72,10 +72,12 @@ CREATE INDEX IF NOT EXISTS idx_produtos_nome ON produtos(nome); CREATE INDEX IF 
 // Incremental, restart-safe migrations for the commercial hardening layer.
 function hasColumn(table, column){ return all(`PRAGMA table_info(${table})`).some(x=>x.name===column) }
 if(!hasColumn('clientes','bairro')) db.exec("ALTER TABLE clientes ADD COLUMN bairro TEXT");
-if(!hasColumn('pedidos','modalidade_entrega')) db.exec("ALTER TABLE pedidos ADD COLUMN modalidade_entrega TEXT NOT NULL DEFAULT 'RETIRADA' CHECK(modalidade_entrega IN ('ENTREGA','RETIRADA'))");
+if(!hasColumn('pedidos','modalidade_entrega')){
+  db.exec("ALTER TABLE pedidos ADD COLUMN modalidade_entrega TEXT NOT NULL DEFAULT 'RETIRADA' CHECK(modalidade_entrega IN ('ENTREGA','RETIRADA'))");
+  db.exec("UPDATE pedidos SET modalidade_entrega=CASE WHEN origem='BALCAO' THEN 'RETIRADA' ELSE 'ENTREGA' END WHERE modalidade_entrega='RETIRADA'");
+}
 db.exec("INSERT OR IGNORE INTO clientes(id,razao_social,nome_fantasia,cnpj_cpf,endereco,ativo) VALUES('CLIENTE-BALCAO','Cliente Balcão','Cliente Balcão','TEMP-CLIENTE-BALCAO','Atendimento no balcão',1)");
 db.exec("UPDATE clientes SET endereco='' WHERE id='CLIENTE-BALCAO' AND endereco='Atendimento no balcão'");
-db.exec("UPDATE pedidos SET modalidade_entrega=CASE WHEN origem='BALCAO' THEN 'RETIRADA' ELSE 'ENTREGA' END WHERE modalidade_entrega='RETIRADA'");
 
 function migrateProdutosSkuNullable(){
   const info=all('PRAGMA table_info(produtos)');
@@ -263,6 +265,7 @@ CREATE INDEX IF NOT EXISTS idx_cliente_interacoes_cliente ON cliente_interacoes(
 CREATE INDEX IF NOT EXISTS idx_cliente_interacoes_tipo ON cliente_interacoes(tipo);
 
 UPDATE clientes SET vendedor_id = NULL WHERE id = 'CLIENTE-BALCAO' AND vendedor_id IS NOT NULL;
+UPDATE clientes SET cidade = 'Governador Valadares', estado = 'MG' WHERE cidade IS NULL OR TRIM(cidade) = '' OR cidade != 'Governador Valadares' OR estado IS NULL OR TRIM(estado) = '' OR estado != 'MG';
 UPDATE clientes
 SET vendedor_id = (
   SELECT p.operador_id FROM pedidos p
@@ -288,6 +291,32 @@ export function one(sql,params=[]){return db.prepare(sql).get(...cleanParams(par
 export function all(sql,params=[]){return db.prepare(sql).all(...cleanParams(params))}
 export function run(sql,params=[]){return db.prepare(sql).run(...cleanParams(params))}
 export function tx(fn){db.exec('BEGIN IMMEDIATE');try{const v=fn();db.exec('COMMIT');return v}catch(e){try{db.exec('ROLLBACK')}catch{};throw e}}
+
+function migrateBalcaoPendingOrders(){
+  const pendingBalcao=all("SELECT id,numero,operador_id,COALESCE(modalidade_entrega,'RETIRADA') modalidade_entrega FROM pedidos WHERE origem='BALCAO' AND status='PENDENTE' AND cancelled_at IS NULL");
+  if(!pendingBalcao.length) return;
+  tx(()=>{
+    for(const o of pendingBalcao){
+      if(o.modalidade_entrega==='ENTREGA'){
+        run("UPDATE pedidos SET status='SEPARACAO',updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='PENDENTE'",[o.id]);
+      }else{
+        const changed=run("UPDATE pedidos SET status='CONCLUIDO',updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='PENDENTE'",[o.id]);
+        if(changed.changes===1){
+          const items=all('SELECT produto_id,quantidade FROM pedido_itens WHERE pedido_id=?',[o.id]);
+          for(const it of items){
+            const st=one('SELECT quantidade_disponivel,quantidade_reservada FROM estoque WHERE produto_id=?',[it.produto_id]);
+            if(st){
+              run('UPDATE estoque SET quantidade_reservada=MAX(0,quantidade_reservada-?),updated_at=CURRENT_TIMESTAMP WHERE produto_id=?',[it.quantidade,it.produto_id]);
+              run('INSERT INTO movimentacoes_estoque(id,produto_id,tipo,quantidade,quantidade_anterior,quantidade_posterior,operador_id,observacao) VALUES(?,?,?,?,?,?,?,?)',[id(),it.produto_id,'SAIDA_VENDA',-it.quantidade,st.quantidade_disponivel,st.quantidade_disponivel,o.operador_id||null,`Saída venda balcão (retirada) pedido ${o.numero}`]);
+            }
+          }
+        }
+      }
+    }
+  });
+}
+migrateBalcaoPendingOrders();
+
 let onAuditCallback = null;
 export function setAuditCallback(fn) { onAuditCallback = fn; }
 export function audit({userId,action,entity,entityId,before=null,after=null,ip='',ua=''}){

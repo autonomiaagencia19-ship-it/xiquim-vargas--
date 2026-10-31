@@ -278,12 +278,16 @@ async function refreshCurrentViewSilently(eventType,payload){
           const x=await api('/api/stock?limit=100000');
           if(!hasOpenModal){
             const searchVal=$('#stockSearch')?.value;
+            const statusVal=$('#stockStatusFilter')?.value;
             const tbody=$('#stockTable tbody');
             if(tbody){
-              tbody.innerHTML=x.items.map(stockRow).join('');
+              tbody.innerHTML=(x.items||[]).map(stockRow).join('');
+              const criticalCount = (x.items||[]).filter(i=>i.status==='CRITICO'||i.status==='SEM_ESTOQUE'||Number(i.quantidade_disponivel)<=Number(i.estoque_minimo)).length;
               const kpis=document.querySelector('.stock-kpis');
-              if(kpis)kpis.innerHTML=`<span><b>${x.total}</b> itens</span><span><b>${x.items.filter(i=>i.status==='CRITICO').length}</b> críticos</span><span><b>${x.items.reduce((a,i)=>a+Number(i.quantidade_reservada),0)}</b> reservados</span>`;
-              if(searchVal&&$('#stockSearch')){$('#stockSearch').value=searchVal;stockFilter($('#stockSearch'))}
+              if(kpis)kpis.innerHTML=`<span><b>${x.total}</b> itens</span><span style="cursor:pointer;border-bottom:1px dashed #f87171" onclick="toggleStockCriticalFilter(true)" title="Clique para filtrar apenas itens críticos"><b style="color:${criticalCount>0?'#ef4444':'inherit'}">${criticalCount}</b> críticos 🔍</span><span><b>${(x.items||[]).reduce((a,i)=>a+Number(i.quantidade_reservada||0),0)}</b> reservados</span>`;
+              if(searchVal&&$('#stockSearch')){$('#stockSearch').value=searchVal}
+              if(statusVal&&$('#stockStatusFilter')){$('#stockStatusFilter').value=statusVal}
+              stockFilter();
             }else{
               const v=$('#view');if(v)stock(v);
             }
@@ -497,10 +501,10 @@ async function boot(){
 }
 function setupPage(status){const q=new URLSearchParams(location.search);const setupToken=q.get('setup')||'';document.body.innerHTML=`<div class="login"><div class="loginbox"><img class="xv-logo" src="/assets/institucional/01_Logo_Xiquim_Vargas_HD.png" alt="Xiquim Vargas"><h1>Primeiro acesso</h1><p style="color:#ffffff">Este ERP ainda não foi configurado. Crie agora o administrador principal. Não existe uma senha fixa de fábrica.</p>${setupToken?`<form id="setupForm"><div class="field"><label>Nome do administrador</label><input name="nome" required maxlength="180"></div><br><div class="field"><label>E-mail</label><input name="email" type="email" required autocomplete="email"></div><br><div class="field"><label>Senha</label><div style="display:flex;gap:6px"><input name="password" type="password" minlength="10" required autocomplete="new-password" style="flex:1"><button type="button" class="btn" tabindex="-1" onclick="const x=this.previousElementSibling; x.type=x.type==='password'?'text':'password'">👁</button></div><small style="display:block;margin-top:6px;color:#e2e8f0">Use pelo menos 10 caracteres.</small></div><br><button class="btn primary" style="width:100%">Criar administrador e entrar</button></form>`:`<div class="panel" style="margin-top:18px"><strong>Configuração inicial protegida</strong><p style="color:#ffffff">Abra o link de primeiro acesso exibido nos logs do serviço no Render. Esse link é criado uma única vez e deixa de funcionar depois que o administrador é criado.</p></div>`}<div id="toast" class="toast"></div></div></div>`;if(setupToken){$('#setupForm').onsubmit=async e=>{e.preventDefault();const b=Object.fromEntries(new FormData(e.currentTarget));b.setup_token=setupToken;try{const x=await fetch('/api/setup/initialize',{method:'POST',headers:{'content-type':'application/json','x-setup-token':setupToken},body:JSON.stringify(b)});const out=await x.json();if(!x.ok)throw new Error(out.error||'Não foi possível concluir a configuração');token=out.token;localStorage.setItem('xv_token',token);history.replaceState({},'', '/admin');location.reload()}catch(err){toast(err.message)}}}}
 
-const menu=[['Visão Geral','home'],['Catálogo','products'],['Tabelas de preço','prices'],['Estoque Inteligente','stock'],['Clientes & CRM','clients'],['Pedidos','orders'],['Logística','logistics'],['Fornecedores','suppliers'],['Recebimento','inbound'],['Vendedores','sellers'],['Relatórios','reports'],['Auditoria','audit'],['Usuários','users'],['IA Administrativa','ai']];
-function shell(){const dot='•';const groups=[['Operação',[[dot,'Visão Geral','home'],[dot,'Pedidos','orders'],[dot,'Catálogo','products'],[dot,'Loja Online','store'],[dot,'Estoque Inteligente','stock'],[dot,'Clientes & CRM','clients'],[dot,'Logística','logistics']]],['Suprimentos',[[dot,'Fornecedores','suppliers'],[dot,'Recebimento de Mercadorias','inbound']]],['Gestão',[[dot,'Vendedores','sellers'],[dot,'Usuários','users'],[dot,'Tabelas de preço','prices'],[dot,'Relatórios','reports']]],['Governança',[[dot,'Auditoria','audit'],[dot,'IA Administrativa','ai']]]];return `<div class="app"><aside class="sidebar"><img class="xv-logo" src="/assets/institucional/01_Logo_Xiquim_Vargas_HD.png" alt="Xiquim Vargas ERP"><div class="group">Torre de Controle</div>${groups.map(([title,items])=>`<div class="group">${title}</div><div class="nav">${items.map(([i,l,k])=>`<button data-view="${k}"><span style="width:16px;text-align:center;font-size:16px;line-height:1;display:inline-block">${i}</span>${l}</button>`).join('')}</div>`).join('')}<div class="group">Sessão</div><div class="nav"><button onclick="logout()"><span style="width:16px;text-align:center;font-size:16px;line-height:1;display:inline-block">•</span>Sair</button></div></aside><main class="main"><div class="topbar"><div class="brand-dark"><button class="mobile-back-btn btn" onclick="window.showSidebar()">← Voltar</button><div><h1 id="title">Visão Geral</h1></div></div><div class="topbar-actions"><span id="offlineIndicator" style="display:${navigator.onLine?'none':'inline-flex'};background:#e11d48;color:#fff;font-weight:700;font-size:11px;padding:3px 8px;border-radius:12px;margin-right:6px">OFFLINE</span><span class="badge">${esc(ROLE_LABELS[me?.role]||me?.role||'Administrador')}</span></div></div><div id="view"></div></main></div><div id="toast" class="toast"></div>`}
+const menu=[['Visão Geral','home'],['Catálogo','products'],['Tabelas de preço','prices'],['Estoque Inteligente','stock'],['Clientes & CRM','clients'],['Pedidos','orders'],['Logística','logistics'],['Fornecedores','suppliers'],['Compra e Recebimento de Mercadorias','inbound'],['Vendedores','sellers'],['Relatórios','reports'],['Auditoria','audit'],['Usuários','users'],['IA Administrativa','ai']];
+function shell(){const dot='•';const groups=[['Operação',[[dot,'Visão Geral','home'],[dot,'Pedidos','orders'],[dot,'Catálogo','products'],[dot,'Loja Online','store'],[dot,'Estoque Inteligente','stock'],[dot,'Clientes & CRM','clients'],[dot,'Logística','logistics']]],['Suprimentos',[[dot,'Fornecedores','suppliers'],[dot,'Compra e Recebimento de Mercadorias','inbound']]],['Gestão',[[dot,'Vendedores','sellers'],[dot,'Usuários','users'],[dot,'Tabelas de preço','prices'],[dot,'Relatórios','reports']]],['Governança',[[dot,'Auditoria','audit'],[dot,'IA Administrativa','ai']]]];return `<div class="app"><aside class="sidebar"><img class="xv-logo" src="/assets/institucional/01_Logo_Xiquim_Vargas_HD.png" alt="Xiquim Vargas ERP"><div class="group">Torre de Controle</div>${groups.map(([title,items])=>`<div class="group">${title}</div><div class="nav">${items.map(([i,l,k])=>`<button data-view="${k}"><span style="width:16px;text-align:center;font-size:16px;line-height:1;display:inline-block">${i}</span>${l}</button>`).join('')}</div>`).join('')}<div class="group">Sessão</div><div class="nav"><button onclick="logout()"><span style="width:16px;text-align:center;font-size:16px;line-height:1;display:inline-block">•</span>Sair</button></div></aside><main class="main"><div class="topbar"><div class="brand-dark"><button class="mobile-back-btn btn" onclick="window.showSidebar()">← Voltar</button><div><h1 id="title">Visão Geral</h1></div></div><div class="topbar-actions"><span id="offlineIndicator" style="display:${navigator.onLine?'none':'inline-flex'};background:#e11d48;color:#fff;font-weight:700;font-size:11px;padding:3px 8px;border-radius:12px;margin-right:6px">OFFLINE</span><span class="badge">${esc(ROLE_LABELS[me?.role]||me?.role||'Administrador')}</span></div></div><div id="view"></div></main></div><div id="toast" class="toast"></div>`}
 async function render(){if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});Realtime.init((type,payload)=>refreshCurrentViewSilently(type,payload));document.body.innerHTML=shell();window.showSidebar=()=>document.querySelector('.app').classList.remove('view-open');document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{document.querySelector('.app').classList.add('view-open');show(b.dataset.view)});const h=location.hash.slice(1);if(h&&window.innerWidth<=800)document.querySelector('.app').classList.add('view-open');await show(h||'home')}
-async function show(view){document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));$('#title').textContent=({home:'Visão Geral',products:'Catálogo',stock:'Estoque Inteligente',clients:'Clientes & CRM',orders:'Pedidos',users:'Usuários',sellers:'Vendedores',logistics:'Logística',suppliers:'Fornecedores',inbound:'Recebimento de Mercadorias',reports:'Relatórios',store:'Loja Online',audit:'Auditoria',prices:'Tabelas de preço',ai:'IA Administrativa'})[view]||view;location.hash=view;const v=$('#view');v.innerHTML='<div class="panel">Carregando...</div>';try{if(view==='home')return home(v);if(view==='products')return products(v);if(view==='prices')return prices(v);if(view==='store')return storeSettings(v);if(view==='stock')return stock(v);if(view==='clients')return clients(v);if(view==='orders')return orders(v);if(view==='users')return users(v);if(view==='sellers')return sellers(v);if(view==='logistics')return logistics(v);if(view==='suppliers')return suppliers(v);if(view==='inbound')return inbound(v);if(view==='reports')return reports(v);if(view==='audit')return auditView(v);if(view==='ai')return ai(v)}catch(e){v.innerHTML=`<div class="panel">Erro: ${esc(e.message)}</div>`}}
+async function show(view){document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));$('#title').textContent=({home:'Visão Geral',products:'Catálogo',stock:'Estoque Inteligente',clients:'Clientes & CRM',orders:'Pedidos',users:'Usuários',sellers:'Vendedores',logistics:'Logística',suppliers:'Fornecedores',inbound:'Compra e Recebimento de Mercadorias',reports:'Relatórios',store:'Loja Online',audit:'Auditoria',prices:'Tabelas de preço',ai:'IA Administrativa'})[view]||view;location.hash=view;const v=$('#view');v.innerHTML='<div class="panel">Carregando...</div>';try{if(view==='home')return home(v);if(view==='products')return products(v);if(view==='prices')return prices(v);if(view==='store')return storeSettings(v);if(view==='stock')return stock(v);if(view==='clients')return clients(v);if(view==='orders')return orders(v);if(view==='users')return users(v);if(view==='sellers')return sellers(v);if(view==='logistics')return logistics(v);if(view==='suppliers')return suppliers(v);if(view==='inbound')return inbound(v);if(view==='reports')return reports(v);if(view==='audit')return auditView(v);if(view==='ai')return ai(v)}catch(e){v.innerHTML=`<div class="panel">Erro: ${esc(e.message)}</div>`}}
 /* ==========================================================================
    SISTEMA UNIFICADO DE FILTROS DE PERÍODO (XV_PERIOD_FILTER)
    ========================================================================== */
@@ -1049,7 +1053,7 @@ async function home(v){
 
     <div class="grid">
       ${cards.map(x=>`
-        <div class="card kpi"${x[1]==='Lucro Real no período'?' style="cursor:pointer" onclick="show(\'reports\')" title="Clique para abrir os Relatórios Gerenciais & Lucratividade Real"':''}>
+        <div class="card kpi"${x[1]==='Lucro Real no período'?' style="cursor:pointer" onclick="show(\'reports\')" title="Clique para abrir os Relatórios Gerenciais & Lucratividade Real"':x[1]==='Estoque baixo'?' style="cursor:pointer" onclick="showCriticalStock()" title="Clique para ver os itens críticos no Estoque Inteligente"':''}>
           <div class="kpi-title"><span class="kpi-dot"></span><span>${x[1]}</span></div>
           <div class="v">${x[2]}</div>
         </div>
@@ -1164,9 +1168,173 @@ async function deleteCategory(id,nome){const p=window.adminProducts?.items||[];c
 async function deleteSubcategory(id,nome,catId){const p=window.adminProducts?.items||[];const prodCount=p.filter(x=>x.subcategoria_id===id).length;let msg=`Excluir a subcategoria "${nome}"?`;if(prodCount>0){msg+=`\n\n- ${prodCount} produto(s) vinculado(s) ficarão sem subcategoria (permanecem na categoria principal).`}msg+=`\n\nO histórico de pedidos e estoque é preservado. Deseja continuar?`;if(!confirm(msg))return;try{await api('/api/subcategories/'+id,{method:'DELETE'});closeModal();toast(`Subcategoria "${nome}" excluída com sucesso`);const cId=catId||window.adminCurrentCatId;if(cId){const [newP,newC]=await Promise.all([api('/api/products?limit=100000'),api('/api/categories')]);window.adminProducts=newP;window.adminCategories=newC;window.catalogCategories=newC.categorias;window.catalogSubcategories=newC.subcategorias;adminSubcategorias(cId)}else{show('products')}}catch(e){toast(e.message,true)}}
 function newSubcategory(defaultCatId){const cats=window.catalogCategories||window.adminCategories?.categorias||[];modal('Nova subcategoria',`<form id="subForm" class="form"><div class="field"><label>Categoria vinculada</label><select name="categoria_id" required><option value="">Selecione a categoria...</option>${cats.map(c=>`<option value="${c.id}" ${c.id===defaultCatId?'selected':''}>${esc(c.nome)}</option>`).join('')}</select></div><div class="field"><label>Nome da subcategoria</label><input name="nome" required maxlength="120" placeholder="Ex: Latas, Long Neck, Garrafas..."></div><div class="field"><label>Slug (opcional)</label><input name="slug" placeholder="ex: latas"></div><div class="field"><label>Ordem de exibição</label><input name="ordem" type="number" value="0"></div><div class="actions" style="grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px;margin-top:10px"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary">Criar subcategoria</button></div></form>`);$('#subForm').onsubmit=async e=>{e.preventDefault();try{const b=Object.fromEntries(new FormData(e.currentTarget));b.ordem=Number(b.ordem||0);await api('/api/subcategories',{method:'POST',body:JSON.stringify(b)});closeModal();toast('Subcategoria criada com sucesso');if(defaultCatId){const [newP,newC]=await Promise.all([api('/api/products?limit=100000'),api('/api/categories')]);window.adminProducts=newP;window.adminCategories=newC;window.catalogCategories=newC.categorias;window.catalogSubcategories=newC.subcategorias;adminSubcategorias(defaultCatId)}else{show('products')}}catch(x){toast(x.message,true)}}}
 function editSubcategory(s){const cats=window.catalogCategories||window.adminCategories?.categorias||[];modal('Editar subcategoria',`<form id="editSubForm" class="form"><div class="field"><label>Categoria vinculada</label><select name="categoria_id" required>${cats.map(c=>`<option value="${c.id}" ${c.id===s.categoria_id?'selected':''}>${esc(c.nome)}</option>`).join('')}</select></div><div class="field"><label>Nome da subcategoria</label><input name="nome" value="${esc(s.nome)}" required maxlength="120"></div><div class="field"><label>Slug</label><input name="slug" value="${esc(s.slug||'')}"></div><div class="field"><label>Ordem de exibição</label><input name="ordem" type="number" value="${s.ordem||0}"></div><div class="field"><label>Status</label><select name="ativo"><option value="1" ${s.ativo?'selected':''}>Ativa</option><option value="0" ${!s.ativo?'selected':''}>Inativa</option></select></div><div class="actions" style="grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;margin-top:14px"><button type="button" class="btn" style="color:#b42318;border-color:#f5b5b5" onclick="deleteSubcategory('${s.id}',parseJsonArg('${jsonArg(s.nome)}'),'${s.categoria_id}')">🗑 Excluir subcategoria</button><div style="display:flex;gap:8px"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar subcategoria</button></div></div></form>`);$('#editSubForm').onsubmit=async e=>{e.preventDefault();try{const b=Object.fromEntries(new FormData(e.currentTarget));b.ordem=Number(b.ordem||0);b.ativo=Number(b.ativo||1);await api('/api/subcategories/'+s.id,{method:'PUT',body:JSON.stringify(b)});closeModal();toast('Subcategoria atualizada com sucesso');if(window.adminCurrentCatId){const [newP,newC]=await Promise.all([api('/api/products?limit=100000'),api('/api/categories')]);window.adminProducts=newP;window.adminCategories=newC;window.catalogCategories=newC.categorias;window.catalogSubcategories=newC.subcategorias;adminSubcategorias(window.adminCurrentCatId)}else{show('products')}}catch(z){toast(z.message,true)}}}
-async function stock(v){const x=await api('/api/stock?limit=100000');v.innerHTML=`<div class="panel"><div class="panel-title"><div><h3>Estoque Inteligente</h3><p class="muted">Módulo independente do catálogo. Alterações aqui não alteram nome, preço, categoria ou fotos.</p></div><div class="actions"><input id="stockSearch" class="search" style="max-width:360px" placeholder="Pesquisar estoque" oninput="stockFilter(this)"><button class="btn primary" onclick="exportStockPdf()">⇩ PDF do estoque</button></div></div><div class="stock-kpis"><span><b>${x.total}</b> itens</span><span><b>${x.items.filter(i=>i.status==='CRITICO').length}</b> críticos</span><span><b>${x.items.reduce((a,i)=>a+Number(i.quantidade_reservada),0)}</b> reservados</span></div></div><div id="stockTable" class="tablewrap"><table class="table"><thead><tr><th>Produto</th><th>SKU</th><th>Descrição</th><th>Disponível</th><th>Reservado</th><th>Mínimo</th><th>Status</th><th>Ações</th></tr></thead><tbody>${x.items.map(stockRow).join('')}</tbody></table></div>`}
-function stockRow(x){return `<tr data-stock-text="${esc((x.nome+' '+x.sku+' '+(x.descricao||'')).toLowerCase())}"><td><div class="catalog-product-cell">${x.foto_url?`<img class="catalog-mini-photo" src="${esc(x.foto_url)}" alt="" onerror="this.onerror=null;this.replaceWith(Object.assign(document.createElement('div'),{className:'catalog-mini-photo placeholder',textContent:'XV'}))">`:'<div class="catalog-mini-photo placeholder">XV</div>'}<div><strong>${esc(x.nome)}</strong><br><small>${esc([x.marca,x.sabor,x.tamanho].filter(Boolean).join(' · '))}</small></div></div></td><td>${esc(x.sku)}</td><td>${esc(x.descricao||'-')}</td><td><strong>${x.quantidade_disponivel}</strong></td><td>${x.quantidade_reservada}</td><td>${x.estoque_minimo}</td><td><span class="badge status-${String(x.status).toLowerCase()}">${esc(x.status)}</span></td><td><button class="btn" onclick="adjustStock('${x.id}')">Movimentar</button> <button class="btn" onclick="stockHistory('${x.id}')">Histórico</button></td></tr>`}
-function stockFilter(i){const q=i.value.toLowerCase();document.querySelectorAll('#stockTable tbody tr').forEach(r=>r.style.display=r.dataset.stockText.includes(q)?'':'none')}
+async function stock(v){
+  const x = await api('/api/stock?limit=100000');
+  window._stockData = x.items || [];
+  window._stockOnlyCritical = false;
+  const criticalItems = (x.items||[]).filter(i => i.status === 'CRITICO' || i.status === 'SEM_ESTOQUE' || Number(i.quantidade_disponivel) <= Number(i.estoque_minimo));
+  const criticalCount = criticalItems.length;
+
+  v.innerHTML = `
+    <div class="panel">
+      <div class="panel-title" style="flex-wrap:wrap;gap:12px">
+        <div>
+          <h3>Estoque Inteligente</h3>
+          <p class="muted">Módulo independente do catálogo. Alterações aqui não alteram nome, preço, categoria ou fotos.</p>
+        </div>
+        <div class="actions" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+          <input id="stockSearch" class="search" style="max-width:240px" placeholder="Pesquisar por nome, SKU..." oninput="stockFilter(this)">
+          <select id="stockStatusFilter" class="field-input" style="max-width:200px;padding:9px 12px;font-size:13px;border-radius:8px" onchange="stockFilter()">
+            <option value="ALL">Todos os status</option>
+            <option value="CRITICAL">⚠️ Itens Críticos (${criticalCount})</option>
+            <option value="SEM_ESTOQUE">Sem estoque (0 un)</option>
+            <option value="CRITICO">Estoque crítico (≤ mínimo)</option>
+            <option value="ATENCAO">Atenção</option>
+            <option value="OK">Estoque normal (OK)</option>
+          </select>
+          <button id="btnStockCritical" class="btn" style="background:#dc2626;border-color:#b91c1c;color:#fff;font-weight:750" onclick="toggleStockCriticalFilter()">
+            ⚠️ Mostrar Itens Críticos (${criticalCount})
+          </button>
+          <button class="btn" style="background:var(--xv-brand-navy,#061a4f);border-color:#021136;color:#fff;font-weight:750" onclick="show('inbound')">
+            📥 Compra e Recebimento de Mercadorias
+          </button>
+          <button class="btn primary" onclick="exportStockPdf()">⇩ PDF do estoque</button>
+        </div>
+      </div>
+      <div class="stock-kpis">
+        <span><b>${x.total}</b> itens</span>
+        <span style="cursor:pointer;border-bottom:1px dashed #f87171" onclick="toggleStockCriticalFilter(true)" title="Clique para filtrar e exibir apenas itens críticos">
+          <b style="color:${criticalCount > 0 ? '#ef4444' : 'inherit'}">${criticalCount}</b> críticos 🔍
+        </span>
+        <span><b>${(x.items||[]).reduce((a,i)=>a+Number(i.quantidade_reservada||0),0)}</b> reservados</span>
+      </div>
+      <div id="stockCriticalNotice" style="display:none;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:10px 14px;border-radius:8px;margin-top:12px;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:16px">⚠️</span>
+          <span><strong>Filtro de Itens Críticos Ativo:</strong> Exibindo apenas produtos com saldo zero ou abaixo do estoque mínimo (${criticalCount} produtos necessitando reposição).</span>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn" style="font-size:12px;padding:4px 10px;background:#061a4f;color:#fff;font-weight:700" onclick="show('inbound')">📥 Comprar / Repor na Doca</button>
+          <button class="btn" style="font-size:12px;padding:4px 10px;background:#fff;border-color:#fca5a5;color:#991b1b;font-weight:700" onclick="toggleStockCriticalFilter(false)">✕ Exibir Todos</button>
+        </div>
+      </div>
+    </div>
+    <div id="stockTable" class="tablewrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Produto</th>
+            <th>SKU</th>
+            <th>Descrição</th>
+            <th>Disponível</th>
+            <th>Reservado</th>
+            <th>Mínimo</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>${(x.items||[]).map(stockRow).join('')}</tbody>
+      </table>
+    </div>
+  `;
+}
+function stockRow(x){
+  const isCritical = x.status === 'CRITICO' || x.status === 'SEM_ESTOQUE' || Number(x.quantidade_disponivel) <= Number(x.estoque_minimo);
+  const isZero = Number(x.quantidade_disponivel) <= 0 || x.status === 'SEM_ESTOQUE';
+  let badgeHtml = '';
+  if(isZero){
+    badgeHtml = `<span class="badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;font-weight:800">⛔ SEM ESTOQUE</span>`;
+  } else if(x.status === 'CRITICO' || Number(x.quantidade_disponivel) <= Number(x.estoque_minimo)){
+    badgeHtml = `<span class="badge" style="background:#ffedd5;color:#9a3412;border:1px solid #fdba74;font-weight:800">⚠️ CRÍTICO</span>`;
+  } else if(x.status === 'ATENCAO'){
+    badgeHtml = `<span class="badge" style="background:#fef9c3;color:#854d0e;border:1px solid #fde047;font-weight:750">⚡ ATENÇÃO</span>`;
+  } else {
+    badgeHtml = `<span class="badge" style="background:#dcfce7;color:#166534;border:1px solid #86efac;font-weight:750">✓ OK</span>`;
+  }
+
+  return `
+    <tr data-stock-text="${esc(((x.nome||'')+' '+(x.sku||'')+' '+(x.descricao||'')).toLowerCase())}"
+        data-stock-status="${esc(x.status)}"
+        data-stock-critical="${isCritical ? '1' : '0'}"
+        style="${isZero ? 'background:rgba(239,68,68,0.06);' : (isCritical ? 'background:rgba(249,115,22,0.04);' : '')}">
+      <td>
+        <div class="catalog-product-cell">
+          ${x.foto_url?`<img class="catalog-mini-photo" src="${esc(x.foto_url)}" alt="" onerror="this.onerror=null;this.replaceWith(Object.assign(document.createElement('div'),{className:'catalog-mini-photo placeholder',textContent:'XV'}))">`:'<div class="catalog-mini-photo placeholder">XV</div>'}
+          <div>
+            <strong>${esc(x.nome)}</strong><br>
+            <small>${esc([x.marca,x.sabor,x.tamanho].filter(Boolean).join(' · '))}</small>
+          </div>
+        </div>
+      </td>
+      <td>${esc(x.sku||'-')}</td>
+      <td>${esc(x.descricao||'-')}</td>
+      <td><strong style="font-size:14px;color:${isZero ? '#dc2626' : (isCritical ? '#ea580c' : 'inherit')}">${x.quantidade_disponivel}</strong></td>
+      <td>${x.quantidade_reservada}</td>
+      <td>${x.estoque_minimo}</td>
+      <td>${badgeHtml}</td>
+      <td>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
+          <button class="btn" style="padding:6px 10px;font-size:12px" onclick="adjustStock('${x.id}')">Movimentar</button>
+          <button class="btn" style="padding:6px 10px;font-size:12px" onclick="stockHistory('${x.id}')">Histórico</button>
+          ${isCritical ? `<button class="btn" style="padding:6px 10px;font-size:12px;background:var(--xv-brand-orange,#fd5e02);border-color:#e05302;color:#fff;font-weight:750" onclick="show('inbound')" title="Ir para Compra e Recebimento de Mercadorias para repor este item">📥 Comprar</button>` : ''}
+        </div>
+      </td>
+    </tr>
+  `;
+}
+function stockFilter(elem){
+  const q = ($('#stockSearch')?.value || '').toLowerCase().trim();
+  const stFilter = $('#stockStatusFilter')?.value || (window._stockOnlyCritical ? 'CRITICAL' : 'ALL');
+  const isCriticalOnly = stFilter === 'CRITICAL' || window._stockOnlyCritical;
+  
+  const notice = document.getElementById('stockCriticalNotice');
+  if (notice) notice.style.display = isCriticalOnly ? 'flex' : 'none';
+
+  const btnCrit = document.getElementById('btnStockCritical');
+  if (btnCrit) {
+    if (isCriticalOnly) {
+      btnCrit.style.background = '#991b1b';
+      btnCrit.innerHTML = '✓ Mostrando Críticos';
+    } else {
+      btnCrit.style.background = '#dc2626';
+      const critRows = document.querySelectorAll('#stockTable tbody tr[data-stock-critical="1"]').length;
+      btnCrit.innerHTML = `⚠️ Mostrar Itens Críticos (${critRows})`;
+    }
+  }
+
+  document.querySelectorAll('#stockTable tbody tr').forEach(r => {
+    const textMatch = !q || (r.dataset.stockText || '').includes(q);
+    let statusMatch = true;
+    if (isCriticalOnly) {
+      statusMatch = r.dataset.stockCritical === '1';
+    } else if (stFilter === 'SEM_ESTOQUE') {
+      statusMatch = r.dataset.stockStatus === 'SEM_ESTOQUE';
+    } else if (stFilter === 'CRITICO') {
+      statusMatch = r.dataset.stockStatus === 'CRITICO';
+    } else if (stFilter === 'ATENCAO') {
+      statusMatch = r.dataset.stockStatus === 'ATENCAO';
+    } else if (stFilter === 'OK') {
+      statusMatch = r.dataset.stockStatus === 'OK';
+    }
+    r.style.display = (textMatch && statusMatch) ? '' : 'none';
+  });
+}
+window.toggleStockCriticalFilter = function(forceVal){
+  if (typeof forceVal === 'boolean') {
+    window._stockOnlyCritical = forceVal;
+  } else {
+    window._stockOnlyCritical = !window._stockOnlyCritical;
+  }
+  const sel = document.getElementById('stockStatusFilter');
+  if (sel) {
+    sel.value = window._stockOnlyCritical ? 'CRITICAL' : 'ALL';
+  }
+  stockFilter();
+};
+window.showCriticalStock = async function(){
+  await show('stock');
+  toggleStockCriticalFilter(true);
+};
 function exportStockPdf(){downloadAuthFile('/api/admin/export/stock.pdf','xiquim-vargas-estoque.pdf')}
 async function stockHistory(id){try{const x=await api('/api/stock/'+id+'/movements');modal('Histórico de estoque',`<div class="tablewrap"><table class="table"><thead><tr><th>Data</th><th>Tipo</th><th>Delta</th><th>Saldo</th><th>Operador</th><th>Observação</th></tr></thead><tbody>${x.items.map(m=>`<tr><td>${new Date(m.created_at).toLocaleString('pt-BR')}</td><td>${esc(m.tipo)}</td><td>${m.quantidade>0?'+':''}${m.quantidade}</td><td>${m.quantidade_posterior}</td><td>${esc(m.operador_nome||'-')}</td><td>${esc(m.observacao||'-')}</td></tr>`).join('')||'<tr><td colspan="6">Sem movimentações.</td></tr>'}</tbody></table></div>`)}catch(e){toast(e.message)}}
 function updateStockModalUI(){const tipo=$('#stockTipoSelect')?.value||'ENTRADA';const opWrap=$('#stockOpWrap');const opSelect=$('#stockOpSelect');const lbl=$('#stockDeltaLabel');const input=$('#stockDeltaInput');const preview=$('#stockPreviewBox');const cur=Number($('#stockForm')?.dataset.currentStock||0);if(tipo==='ENTRADA'){if(opWrap)opWrap.style.display='none';if(lbl)lbl.textContent='Quantidade de entrada (somar ao estoque)';if(input){input.min='1';input.placeholder='Ex: 10'}}else if(tipo==='SAIDA'){if(opWrap)opWrap.style.display='none';if(lbl)lbl.textContent='Quantidade de saída / baixa (subtrair do estoque)';if(input){input.min='1';input.placeholder='Ex: 5'}}else if(tipo==='AJUSTE'){if(opWrap){opWrap.style.display='block';if(opSelect&&!['SAIDA','ENTRADA'].includes(opSelect.value))opSelect.innerHTML='<option value="SAIDA">Subtrair do estoque (-)</option><option value="ENTRADA">Somar ao estoque (+)</option>'}if(lbl)lbl.textContent='Quantidade do ajuste';if(input){input.removeAttribute('min');input.placeholder='Ex: 5'}}else if(tipo==='INVENTARIO'){if(opWrap){opWrap.style.display='block';if(opSelect&&!['SALDO','SAIDA','ENTRADA'].includes(opSelect.value))opSelect.innerHTML='<option value="SALDO">Definir novo saldo exato (contagem física)</option><option value="SAIDA">Subtrair diferença (-)</option><option value="ENTRADA">Somar diferença (+)</option>'}const mode=opSelect?.value||'SALDO';if(lbl)lbl.textContent=mode==='SALDO'?'Novo saldo físico em estoque (un)':'Quantidade a movimentar';if(input){input.min='0';input.placeholder=mode==='SALDO'?String(cur):'Ex: 5'}}const raw=Number(input?.value||0);let next=cur;if(input?.value!==''&&!Number.isNaN(raw)){if(tipo==='ENTRADA')next=cur+Math.abs(raw);else if(tipo==='SAIDA')next=cur-Math.abs(raw);else if(tipo==='AJUSTE'){const op=opSelect?.value||'SAIDA';next=raw<0?cur+raw:(op==='SAIDA'?cur-Math.abs(raw):cur+Math.abs(raw))}else if(tipo==='INVENTARIO'){const op=opSelect?.value||'SALDO';next=op==='SALDO'?Math.max(0,raw):(op==='SAIDA'?cur-Math.abs(raw):cur+Math.abs(raw))}}if(preview){preview.innerHTML=`Saldo atual: <strong>${cur} un</strong> → Novo saldo: <strong style="color:${next<0?'#b42318':'var(--xv-brand-navy,#061a4f)'}">${next} un</strong> (${next-cur>=0?'+'+(next-cur):(next-cur)} un)`}}
@@ -1608,15 +1776,15 @@ async function clients(v){
   `;
   renderClientsUI();
 }
-async function newClient(defaultSellerId){const [t,uRes]=await Promise.all([api('/api/price-tables'),api('/api/users').catch(()=>({items:[]}))]);const sellers=(uRes.items||[]).filter(u=>u.role==='seller'&&u.ativo);const preSel=defaultSellerId||(window._selectedClientSellerFilter&&window._selectedClientSellerFilter!=='__SEM_VENDEDOR__'?window._selectedClientSellerFilter:'');modal('Novo cliente',`<form id="clientNewForm" class="form"><div class="field"><label>Nome fantasia</label><input name="nome_fantasia"></div><div class="field"><label>Razão social</label><input name="razao_social" required></div><div class="field"><label>CNPJ/CPF</label><input name="cnpj_cpf"></div><div class="field"><label>Email</label><input name="email" type="email"></div><div class="field"><label>Telefone</label><input name="telefone"></div><div class="field"><label>Endereço</label><input name="endereco" required></div><div class="field"><label>Bairro</label><input name="bairro" required></div><div class="field"><label>Cidade</label><input name="cidade"></div><div class="field"><label>Estado</label><input name="estado"></div><div class="field"><label>CEP</label><input name="cep"></div><div class="field"><label>Vendedor Responsável (Carteira)</label><select name="vendedor_id" class="field-input"><option value="">(Sem vendedor atribuído / Geral)</option>${sellers.map(s=>`<option value="${s.id}" ${preSel===s.id?'selected':''}>👤 ${esc(s.nome)}</option>`).join('')}</select></div><div class="field"><label>Tabela de Preços</label><select name="tabela_preco_id" class="field-input"><option value="">(Preço base - Padrão)</option>${t.items.map(p=>`<option value="${p.id}">${esc(p.nome)}</option>`).join('')}</select></div><div class="actions" style="grid-column:1/-1"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary">Criar cliente</button></div></form>`);$('#clientNewForm').onsubmit=async e=>{e.preventDefault();try{await api('/api/clients',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});closeModal();toast('Cliente criado');if(location.hash==='#sellers'&&window._currentSellerDashboardId){renderSellerDashboard(window._currentSellerDashboardId,window._currentSellerDashboardNome,window._currentSellerDashboardFilter)}else{show('clients')}}catch(z){toast(z.message)}}}
+async function newClient(defaultSellerId){const [t,uRes,bRes]=await Promise.all([api('/api/price-tables'),api('/api/users').catch(()=>({items:[]})),api('/api/city-bairros').catch(()=>({items:[]}))]);const sellers=(uRes.items||[]).filter(u=>u.role==='seller'&&u.ativo);const cityBairros=bRes.items||window._cityBairrosList||[];const preSel=defaultSellerId||(window._selectedClientSellerFilter&&window._selectedClientSellerFilter!=='__SEM_VENDEDOR__'?window._selectedClientSellerFilter:'');modal('Novo cliente',`<form id="clientNewForm" class="form"><div class="field"><label>Nome fantasia</label><input name="nome_fantasia"></div><div class="field"><label>Razão social</label><input name="razao_social" required></div><div class="field"><label>CNPJ/CPF</label><input name="cnpj_cpf"></div><div class="field"><label>Email</label><input name="email" type="email"></div><div class="field"><label>Telefone</label><input name="telefone"></div><div class="field"><label>Endereço</label><input name="endereco" required></div><div class="field"><label>Bairro (Governador Valadares - MG)</label><select name="bairro" class="field-input" required><option value="" disabled selected>Selecione o bairro...</option>${cityBairros.map(b=>`<option value="${esc(b)}">${esc(b)}</option>`).join('')}</select></div><div class="field"><label>Cidade</label><select name="cidade" class="field-input" required><option value="Governador Valadares" selected>Governador Valadares - MG</option></select></div><div class="field"><label>Estado (UF)</label><select name="estado" class="field-input" required><option value="MG" selected>MG</option></select></div><div class="field"><label>CEP</label><input name="cep"></div><div class="field"><label>Vendedor Responsável (Carteira)</label><select name="vendedor_id" class="field-input"><option value="">(Sem vendedor atribuído / Geral)</option>${sellers.map(s=>`<option value="${s.id}" ${preSel===s.id?'selected':''}>👤 ${esc(s.nome)}</option>`).join('')}</select></div><div class="field"><label>Tabela de Preços</label><select name="tabela_preco_id" class="field-input"><option value="">(Preço base - Padrão)</option>${t.items.map(p=>`<option value="${p.id}">${esc(p.nome)}</option>`).join('')}</select></div><div class="actions" style="grid-column:1/-1"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary">Criar cliente</button></div></form>`);$('#clientNewForm').onsubmit=async e=>{e.preventDefault();try{await api('/api/clients',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});closeModal();toast('Cliente criado');if(location.hash==='#sellers'&&window._currentSellerDashboardId){renderSellerDashboard(window._currentSellerDashboardId,window._currentSellerDashboardNome,window._currentSellerDashboardFilter)}else{show('clients')}}catch(z){toast(z.message)}}}
 
-async function editClient(x){const [t,uRes]=await Promise.all([api('/api/price-tables'),api('/api/users').catch(()=>({items:[]}))]);const sellers=(uRes.items||[]).filter(u=>u.role==='seller'&&u.ativo);modal('Editar cliente',`<form id="clientEditForm" class="form"><div class="field"><label>Nome fantasia</label><input name="nome_fantasia" value="${esc(x.nome_fantasia||'')}"></div><div class="field"><label>Razão social</label><input name="razao_social" required value="${esc(x.razao_social||'')}"></div><div class="field"><label>CNPJ/CPF</label><input name="cnpj_cpf" value="${esc(x.cnpj_cpf||'')}"></div><div class="field"><label>Email</label><input name="email" type="email" value="${esc(x.email||'')}"></div><div class="field"><label>Telefone</label><input name="telefone" value="${esc(x.telefone||'')}"></div><div class="field"><label>Endereço</label><input name="endereco" required value="${esc(x.endereco||'')}"></div><div class="field"><label>Bairro</label><input name="bairro" required value="${esc(x.bairro||'')}"></div><div class="field"><label>Cidade</label><input name="cidade" value="${esc(x.cidade||'')}"></div><div class="field"><label>Estado</label><input name="estado" value="${esc(x.estado||'')}"></div><div class="field"><label>CEP</label><input name="cep" value="${esc(x.cep||'')}"></div><div class="field"><label>Vendedor Responsável (Carteira)</label><select name="vendedor_id" class="field-input"><option value="">(Sem vendedor atribuído / Geral)</option>${sellers.map(s=>`<option value="${s.id}" ${x.vendedor_id===s.id?'selected':''}>👤 ${esc(s.nome)}</option>`).join('')}</select></div><div class="field"><label>Tabela de Preços</label><select name="tabela_preco_id" class="field-input"><option value="">(Preço base - Padrão)</option>${t.items.map(p=>`<option value="${p.id}" ${x.tabela_preco_id===p.id?'selected':''}>${esc(p.nome)}</option>`).join('')}</select></div><div class="actions" style="grid-column:1/-1"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar alterações</button></div></form>`);$('#clientEditForm').onsubmit=async e=>{e.preventDefault();try{await api('/api/clients/'+x.id,{method:'PUT',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});closeModal();toast('Cliente atualizado');if(location.hash==='#sellers'&&window._currentSellerDashboardId){renderSellerDashboard(window._currentSellerDashboardId,window._currentSellerDashboardNome,window._currentSellerDashboardFilter)}else{show('clients')}}catch(z){toast(z.message)}}}
+async function editClient(x){const [t,uRes,bRes]=await Promise.all([api('/api/price-tables'),api('/api/users').catch(()=>({items:[]})),api('/api/city-bairros').catch(()=>({items:[]}))]);const sellers=(uRes.items||[]).filter(u=>u.role==='seller'&&u.ativo);const baseBairros=bRes.items||window._cityBairrosList||[];const cityBairros=x.bairro&&!baseBairros.some(b=>b.toLowerCase()===String(x.bairro).trim().toLowerCase())?[String(x.bairro).trim(),...baseBairros]:baseBairros;modal('Editar cliente',`<form id="clientEditForm" class="form"><div class="field"><label>Nome fantasia</label><input name="nome_fantasia" value="${esc(x.nome_fantasia||'')}"></div><div class="field"><label>Razão social</label><input name="razao_social" required value="${esc(x.razao_social||'')}"></div><div class="field"><label>CNPJ/CPF</label><input name="cnpj_cpf" value="${esc(x.cnpj_cpf||'')}"></div><div class="field"><label>Email</label><input name="email" type="email" value="${esc(x.email||'')}"></div><div class="field"><label>Telefone</label><input name="telefone" value="${esc(x.telefone||'')}"></div><div class="field"><label>Endereço</label><input name="endereco" required value="${esc(x.endereco||'')}"></div><div class="field"><label>Bairro (Governador Valadares - MG)</label><select name="bairro" class="field-input" required><option value="" disabled ${!x.bairro?'selected':''}>Selecione o bairro...</option>${cityBairros.map(b=>`<option value="${esc(b)}" ${String(x.bairro||'').trim().toLowerCase()===b.toLowerCase()?'selected':''}>${esc(b)}</option>`).join('')}</select></div><div class="field"><label>Cidade</label><select name="cidade" class="field-input" required><option value="Governador Valadares" selected>Governador Valadares - MG</option></select></div><div class="field"><label>Estado (UF)</label><select name="estado" class="field-input" required><option value="MG" selected>MG</option></select></div><div class="field"><label>CEP</label><input name="cep" value="${esc(x.cep||'')}"></div><div class="field"><label>Vendedor Responsável (Carteira)</label><select name="vendedor_id" class="field-input"><option value="">(Sem vendedor atribuído / Geral)</option>${sellers.map(s=>`<option value="${s.id}" ${x.vendedor_id===s.id?'selected':''}>👤 ${esc(s.nome)}</option>`).join('')}</select></div><div class="field"><label>Tabela de Preços</label><select name="tabela_preco_id" class="field-input"><option value="">(Preço base - Padrão)</option>${t.items.map(p=>`<option value="${p.id}" ${x.tabela_preco_id===p.id?'selected':''}>${esc(p.nome)}</option>`).join('')}</select></div><div class="actions" style="grid-column:1/-1"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar alterações</button></div></form>`);$('#clientEditForm').onsubmit=async e=>{e.preventDefault();try{await api('/api/clients/'+x.id,{method:'PUT',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});closeModal();toast('Cliente atualizado');if(location.hash==='#sellers'&&window._currentSellerDashboardId){renderSellerDashboard(window._currentSellerDashboardId,window._currentSellerDashboardNome,window._currentSellerDashboardFilter)}else{show('clients')}}catch(z){toast(z.message)}}}
 async function clientProfile(id){const x=await api('/api/clients/'+id+'/profile');modal('Perfil completo do cliente',`<div class="grid"><div class="card"><small>Pedidos</small><h2>${x.summary?.pedidos||0}</h2></div><div class="card"><small>Faturado</small><h2>${brl(x.summary?.faturado||0)}</h2></div><div class="card"><small>Em aberto</small><h2>${brl(x.summary?.em_aberto||0)}</h2></div></div><h3>${esc(x.client.razao_social)}</h3><p>${esc(x.client.endereco)} · ${esc(x.client.cidade||'')} · Carteira: <strong>${esc(x.client.vendedor_nome||'Sem vendedor atribuído')}</strong> · Tabela: ${esc(x.client.tabela_preco_nome||'Preço base')}</p><div class="actions"><button class="btn primary" onclick="repeatClient('${id}')">↻ Repetir último pedido</button><button class="btn" onclick="crmInteractionsModal('${id}', parseJsonArg('${jsonArg(x.client.razao_social||x.client.nome_fantasia)}'))">📝 Linha do Tempo CRM</button></div><h4>Produtos mais comprados</h4><div class="tablewrap"><table class="table"><thead><tr><th>Produto</th><th>Qtd.</th><th>Faturamento</th><th>Última compra</th></tr></thead><tbody>${x.topProdutos.map(p=>`<tr><td>${esc(p.nome)}</td><td>${p.quantidade}</td><td>${brl(p.faturamento)}</td><td>${p.ultima_compra?new Date(p.ultima_compra).toLocaleDateString('pt-BR'):'-'}</td></tr>`).join('')||'<tr><td colspan=4>Nenhum histórico concluído.</td></tr>'}</tbody></table></div><h4>Histórico de pedidos</h4><div class="tablewrap"><table class="table"><thead><tr><th>Pedido</th><th>Origem</th><th>Status</th><th>Total</th><th>Documento</th></tr></thead><tbody>${x.orders.map(o=>`<tr><td><button class="btn" onclick="orderDetail('${o.id}')">${esc(o.numero)}</button></td><td>${esc(o.origem)}</td><td>${esc(o.status)}</td><td>${brl(o.total)}</td><td><button class="btn" onclick="downloadAuthFile('/api/orders/${o.id}/pdf','pedido-${o.numero}.pdf')">PDF</button></td></tr>`).join('')}</tbody></table></div>`)}
 async function repeatClient(id){try{const x=await api('/api/clients/'+id+'/repeat-last',{method:'POST',body:'{}'});modal('Repetir pedido',`<p>O último pedido foi recuperado. Revise as quantidades antes de emitir.</p><div class="tablewrap"><table class="table"><tbody>${x.itens.map(i=>`<tr><td>${esc(i.produto_id)}</td><td>${i.quantidade}</td></tr>`).join('')}</tbody></table></div><button class="btn primary" onclick="closeModal();toast('Itens recuperados. Abra o emissor para revisar.')">Continuar</button>`)}catch(e){toast(e.message)}}
 async function orderDetail(id){
  const x=await api('/api/orders/'+id+'/detail');
  const o=x.order;
- let products={items:[],total:0}; for(let page=1,done=false;!done;page++){const pg=await api('/api/products?limit=100&page='+page);products.items.push(...pg.items);products.total=pg.total;done=products.items.length>=pg.total||!pg.items.length}
+ let products={items:[],total:0}; for(let page=1,done=false;!done;page++){const pg=await api('/api/products?limit=100&page='+page+(o.cliente_id?'&cliente_id='+encodeURIComponent(o.cliente_id):''));products.items.push(...pg.items);products.total=pg.total;done=products.items.length>=pg.total||!pg.items.length}
  const existing=new Set(x.items.map(i=>i.produto_id));
  const catalog=products.items.filter(p=>!existing.has(p.id));
  modal('Editar pedido '+esc(o.numero),`<form id="orderEditForm" class="form">
@@ -1626,10 +1794,10 @@ async function orderDetail(id){
    <div class="field"><label>Tipo de desconto</label><select name="desconto_tipo"><option value="VALOR" ${o.desconto_tipo!=='PERCENTUAL'?'selected':''}>R$ valor</option><option value="PERCENTUAL" ${o.desconto_tipo==='PERCENTUAL'?'selected':''}>%</option></select></div>
    <div class="field" style="grid-column:1/-1"><label>Observação</label><textarea name="observacoes" rows="3">${esc(o.observacoes||'')}</textarea></div>
    <div class="field" style="grid-column:1/-1"><label>Itens atuais</label><div id="orderEditItems">${x.items.map(i=>`<div class="actions order-edit-line" style="margin-bottom:6px;border-bottom:1px solid #e5eaf1;padding-bottom:7px"><span style="flex:1">${esc(i.produto_nome)}</span><input class="order-q" data-product="${i.produto_id}" type="number" min="1" max="100000" value="${i.quantidade}" style="width:100px"><button type="button" class="btn danger order-remove" data-product="${i.produto_id}">Remover</button></div>`).join('')}</div></div>
-   <div class="field" style="grid-column:1/-1"><label>Adicionar item do catálogo</label><input id="orderCatalogSearch" class="search" placeholder="Pesquisar produto por nome, SKU ou código..." oninput="filterOrderCatalog(this)"><div id="orderCatalog" class="order-catalog-picker">${catalog.slice(0,30).map(p=>`<label class="order-catalog-item"><span><strong>${esc(p.nome)}</strong><small>${esc(p.sku||'Sem SKU')} · ${brl(p.preco_aplicado??p.preco_base)}</small></span><button type="button" class="btn" onclick="addOrderCatalogItem('${p.id}')">Adicionar</button></label>`).join('')||'<span class="muted">Todos os produtos disponíveis já estão no pedido.</span>'}</div></div>
+   <div class="field" style="grid-column:1/-1"><label>Adicionar item do catálogo</label><input id="orderCatalogSearch" class="search" placeholder="Pesquisar produto por nome, SKU ou código..." oninput="filterOrderCatalog(this)"><div id="orderCatalog" class="order-catalog-picker">${catalog.slice(0,30).map(p=>`<label class="order-catalog-item"><span><strong>${esc(p.nome)}</strong><small>${esc(p.sku||'Sem SKU')} · ${brl(p.preco_aplicado??p.preco_base)}${p.preco_tabela!=null?` · <strong style="color:#0f766e">🏷️ ${esc(p.tabela_preco_nome||p.tabela_nome||'Oferta')}: ${brl(p.preco_tabela)}${Number(p.quantidade_minima)>1?` (a partir de ${p.quantidade_minima} un.)`:''}</strong>`:''}</small></span><span style="display:flex;gap:6px">${p.preco_tabela!=null&&Number(p.quantidade_minima)>1?`<button type="button" class="btn" style="background:#f0fdf4;color:#0f766e;border-color:#99f6e4;font-weight:700" onclick="addOrderCatalogItem('${p.id}',${Number(p.quantidade_minima)})">⚡ Mín. ${p.quantidade_minima} un.</button>`:''}<button type="button" class="btn" onclick="addOrderCatalogItem('${p.id}',1)">Adicionar</button></span></label>`).join('')||'<span class="muted">Todos os produtos disponíveis já estão no pedido.</span>'}</div></div>
    <div class="actions"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button type="button" class="btn" onclick="downloadAuthFile('/api/orders/${id}/pdf','pedido-${o.numero}.pdf')">PDF atual</button><button class="btn primary">Salvar pedido</button></div>
  </form>`);
- window.orderEditCatalog=catalog;
+ window.orderEditAllProducts=products.items; window.orderEditCatalog=catalog;
  window.orderEditItems=new Map(x.items.map(i=>[i.produto_id,{produto_id:i.produto_id,quantidade:Number(i.quantidade),nome:i.produto_nome}]));
  $('#orderEditForm').querySelectorAll('.order-remove').forEach(b=>b.onclick=()=>{window.orderEditItems.delete(b.dataset.product);renderOrderEditItems()});
  $('#orderEditForm').onsubmit=async e=>{
@@ -1644,16 +1812,16 @@ async function orderDetail(id){
 }
 function renderOrderEditItems(){
  const host=$('#orderEditItems');if(!host)return;
- host.innerHTML=[...window.orderEditItems.values()].map(i=>`<div class="actions order-edit-line" style="margin-bottom:6px;border-bottom:1px solid #e5eaf1;padding-bottom:7px"><span style="flex:1">${esc(i.nome)}</span><input class="order-q" data-product="${i.produto_id}" type="number" min="1" max="100000" value="${Number(i.quantidade)}" style="width:100px" oninput="window.orderEditItems.get('${i.produto_id}').quantidade=Number(this.value)"><button type="button" class="btn danger order-remove" data-product="${i.produto_id}" onclick="window.orderEditItems.delete('${i.produto_id}');renderOrderEditItems()">Remover</button></div>`).join('')||'<span class="muted">Adicione ao menos um item.</span>';
+ host.innerHTML=[...window.orderEditItems.values()].map(i=>{const catProd=(window.orderEditAllProducts||window.orderEditCatalog||[]).find(p=>p.id===i.produto_id)||{};const hasMinOffer=catProd.preco_tabela!=null&&Number(catProd.quantidade_minima)>1;const tName=esc(catProd.tabela_preco_nome||catProd.tabela_nome||'Oferta');return `<div class="actions order-edit-line" style="margin-bottom:6px;border-bottom:1px solid #e5eaf1;padding-bottom:7px"><span style="flex:1">${esc(i.nome)}${hasMinOffer?`<div style="font-size:11px;color:#0f766e;margin-top:2px">🏷️ ${tName}: ${brl(catProd.preco_tabela)} (mín. ${catProd.quantidade_minima} un.) ${Number(i.quantidade)<Number(catProd.quantidade_minima)?`· <button type="button" onclick="window.orderEditItems.get('${i.produto_id}').quantidade=${Number(catProd.quantidade_minima)};renderOrderEditItems()" style="background:none;border:none;color:#0f766e;text-decoration:underline;font-weight:700;cursor:pointer;padding:0;font-size:11px">Usar ${catProd.quantidade_minima} un.</button>`:'✓ Aplicado'}</div>`:''}</span><input class="order-q" data-product="${i.produto_id}" type="number" min="1" max="100000" value="${Number(i.quantidade)}" style="width:100px" oninput="window.orderEditItems.get('${i.produto_id}').quantidade=Number(this.value)"><button type="button" class="btn danger order-remove" data-product="${i.produto_id}" onclick="window.orderEditItems.delete('${i.produto_id}');renderOrderEditItems()">Remover</button></div>`}).join('')||'<span class="muted">Adicione ao menos um item.</span>';
 }
 function filterOrderCatalog(input){
  const q=(input.value||'').toLowerCase().trim();
  const items=(window.orderEditCatalog||[]).filter(p=>(p.nome+' '+(p.sku||'')+' '+(p.codigo_barras||'')).toLowerCase().includes(q));
- $('#orderCatalog').innerHTML=items.slice(0,40).map(p=>`<label class="order-catalog-item"><span><strong>${esc(p.nome)}</strong><small>${esc(p.sku||'Sem SKU')} · ${brl(p.preco_aplicado??p.preco_base)}</small></span><button type="button" class="btn" onclick="addOrderCatalogItem('${p.id}')">Adicionar</button></label>`).join('')||'<span class="muted">Nenhum produto encontrado.</span>';
+ $('#orderCatalog').innerHTML=items.slice(0,40).map(p=>`<label class="order-catalog-item"><span><strong>${esc(p.nome)}</strong><small>${esc(p.sku||'Sem SKU')} · ${brl(p.preco_aplicado??p.preco_base)}${p.preco_tabela!=null?` · <strong style="color:#0f766e">🏷️ ${esc(p.tabela_preco_nome||p.tabela_nome||'Oferta')}: ${brl(p.preco_tabela)}${Number(p.quantidade_minima)>1?` (a partir de ${p.quantidade_minima} un.)`:''}</strong>`:''}</small></span><span style="display:flex;gap:6px">${p.preco_tabela!=null&&Number(p.quantidade_minima)>1?`<button type="button" class="btn" style="background:#f0fdf4;color:#0f766e;border-color:#99f6e4;font-weight:700" onclick="addOrderCatalogItem('${p.id}',${Number(p.quantidade_minima)})">⚡ Mín. ${p.quantidade_minima} un.</button>`:''}<button type="button" class="btn" onclick="addOrderCatalogItem('${p.id}',1)">Adicionar</button></span></label>`).join('')||'<span class="muted">Nenhum produto encontrado.</span>';
 }
-function addOrderCatalogItem(id){
+function addOrderCatalogItem(id,qtyToAdd=1){
  const p=(window.orderEditCatalog||[]).find(x=>x.id===id);if(!p)return;
- if(window.orderEditItems.has(id)){window.orderEditItems.get(id).quantidade+=1}else window.orderEditItems.set(id,{produto_id:id,quantidade:1,nome:p.nome});
+ if(window.orderEditItems.has(id)){window.orderEditItems.get(id).quantidade=Math.max(window.orderEditItems.get(id).quantidade+qtyToAdd,qtyToAdd)}else window.orderEditItems.set(id,{produto_id:id,quantidade:qtyToAdd,nome:p.nome});
  renderOrderEditItems();filterOrderCatalog($('#orderCatalogSearch'));
 }
 window.getSellersSummaryForOrders = function(ordersList) {
@@ -1767,14 +1935,24 @@ window.onMainOrdersOriginFilter = function(val) {
     const sCount = filtered.filter(i => i.status === 'SEPARACAO').length;
     const rCount = filtered.filter(i => i.status === 'ROTA').length;
     const cCount = filtered.filter(i => i.status === 'CONCLUIDO').length;
-    content.innerHTML = `
-      <div class="grid" style="margin-top:14px">
-        <div class="card" style="cursor:pointer;border-top:4px solid #f59e0b" onclick="window._ordersOrigin='${val}';renderOrdersList('PENDENTE')"><h3 style="margin-top:0">Pendentes</h3><p class="muted">${pCount} pedido(s) aguardando</p></div>
-        <div class="card" style="cursor:pointer;border-top:4px solid #3b82f6" onclick="window._ordersOrigin='${val}';renderOrdersList('SEPARACAO')"><h3 style="margin-top:0">Em Separação</h3><p class="muted">${sCount} pedido(s) no estoque</p></div>
-        <div class="card" style="cursor:pointer;border-top:4px solid #8b5cf6" onclick="window._ordersOrigin='${val}';renderOrdersList('ROTA')"><h3 style="margin-top:0">Em Rota</h3><p class="muted">${rCount} pedido(s) em transporte</p></div>
-        <div class="card" style="cursor:pointer;border-top:4px solid #10b981" onclick="window._ordersOrigin='${val}';renderOrdersList('CONCLUIDO')"><h3 style="margin-top:0">Concluídos</h3><p class="muted">${cCount} pedido(s) entregues</p></div>
-      </div>
-    `;
+    if(val === 'BALCAO') {
+      content.innerHTML = `
+        <div class="grid" style="margin-top:14px">
+          <div class="card" style="cursor:pointer;border-top:4px solid #3b82f6" onclick="window._ordersOrigin='BALCAO';renderOrdersList('SEPARACAO')"><h3 style="margin-top:0">Em Separação (Balcão — Entrega)</h3><p class="muted">${sCount} pedido(s) balcão para entrega no estoque</p></div>
+          <div class="card" style="cursor:pointer;border-top:4px solid #8b5cf6" onclick="window._ordersOrigin='BALCAO';renderOrdersList('ROTA')"><h3 style="margin-top:0">Em Rota (Balcão — Entrega)</h3><p class="muted">${rCount} pedido(s) balcão em transporte</p></div>
+          <div class="card" style="cursor:pointer;border-top:4px solid #10b981" onclick="window._ordersOrigin='BALCAO';renderOrdersList('CONCLUIDO')"><h3 style="margin-top:0">Concluídos (Retirada & Entregues)</h3><p class="muted">${cCount} pedido(s) concluídos</p></div>
+        </div>
+      `;
+    } else {
+      content.innerHTML = `
+        <div class="grid" style="margin-top:14px">
+          <div class="card" style="cursor:pointer;border-top:4px solid #f59e0b" onclick="window._ordersOrigin='${val}';renderOrdersList('PENDENTE')"><h3 style="margin-top:0">Pendentes</h3><p class="muted">${pCount} pedido(s) aguardando</p></div>
+          <div class="card" style="cursor:pointer;border-top:4px solid #3b82f6" onclick="window._ordersOrigin='${val}';renderOrdersList('SEPARACAO')"><h3 style="margin-top:0">Em Separação</h3><p class="muted">${sCount} pedido(s) no estoque</p></div>
+          <div class="card" style="cursor:pointer;border-top:4px solid #8b5cf6" onclick="window._ordersOrigin='${val}';renderOrdersList('ROTA')"><h3 style="margin-top:0">Em Rota</h3><p class="muted">${rCount} pedido(s) em transporte</p></div>
+          <div class="card" style="cursor:pointer;border-top:4px solid #10b981" onclick="window._ordersOrigin='${val}';renderOrdersList('CONCLUIDO')"><h3 style="margin-top:0">Concluídos</h3><p class="muted">${cCount} pedido(s) entregues</p></div>
+        </div>
+      `;
+    }
   } else {
     const pendentes=window._ordersItems.filter(i=>i.status==='PENDENTE').length;
     const separacao=window._ordersItems.filter(i=>i.status==='SEPARACAO').length;
@@ -1895,7 +2073,7 @@ async function orders(v){
                   ${tdCb}
                   <td><strong>${esc(x.numero)}</strong></td>
                   <td>${esc(x.nome_fantasia || x.cliente_nome || 'Cliente não identificado')}</td>
-                  <td>${esc(x.origem || '-')}${x.origem === 'VENDEDOR' && sellerName ? `<br><small style="color:var(--xv-brand-orange,#f45a08);font-weight:650">👤 ${esc(sellerName)}</small>` : ''}</td>
+                  <td>${esc(x.origem || '-')}${x.origem === 'VENDEDOR' && sellerName ? `<br><small style="color:var(--xv-brand-orange,#f45a08);font-weight:650">👤 ${esc(sellerName)}</small>` : ''}${x.origem === 'BALCAO' ? `<br><small style="color:${x.modalidade_entrega === 'ENTREGA' ? '#7c3aed' : '#059669'};font-weight:700">${x.modalidade_entrega === 'ENTREGA' ? '🚚 Balcão — Entrega' : '🏪 Retirada no Balcão'}${x.operador_nome ? ' · ' + esc(x.operador_nome) : ''}</small>` : ''}</td>
                   <td>${brl(x.total)}</td>
                   <td>${x.desconto_tipo === 'PERCENTUAL' ? Number(x.desconto_valor || 0) + '%' : brl(x.desconto_valor || 0)}</td>
                   <td>${esc(x.forma_pagamento || '-')} · <button class="btn ${x.pagamento_status === 'RECEBIDO' ? 'good' : 'danger'}" onclick="togglePaymentStatus('${x.id}', '${x.pagamento_status}', '${esc(x.numero)}')">${x.pagamento_status === 'RECEBIDO' ? 'Recebido' : 'Não recebido'}</button></td>
@@ -3853,10 +4031,32 @@ async function logistics(v){
         </div>
       </div>
       <div class="grid">
-        <div class="card" style="cursor:pointer;border-top:4px solid #1e3a8a" onclick="openDeliveryRoutesDashboard('expedicao', 'TODOS')"><h3 style="margin:0">Todos os pedidos</h3><p class="muted" style="margin-top:6px">Todos os pedidos agrupados por bairro para expedição.</p></div>
-        <div class="card" style="cursor:pointer;border-top:4px solid #f59e0b" onclick="openDeliveryRoutesDashboard('expedicao', 'VENDEDOR')"><h3 style="margin:0">Pedidos de vendedores</h3><p class="muted" style="margin-top:6px">Pedidos externos subdivididos por bairro.</p></div>
-        <div class="card" style="cursor:pointer;border-top:4px solid #3b82f6" onclick="openDeliveryRoutesDashboard('expedicao', 'WEB')"><h3 style="margin:0">Pedidos web</h3><p class="muted" style="margin-top:6px">Pedidos da Loja Online subdivididos por bairro.</p></div>
-        <div class="card" style="cursor:pointer;border-top:4px solid #8b5cf6" onclick="openDeliveryRoutesDashboard('expedicao', 'BALCAO')"><h3 style="margin:0">Pedidos balcão — entrega</h3><p class="muted" style="margin-top:6px">Pedidos locais marcados para entrega.</p></div>
+        ${(() => {
+          const grupos = o.grupos || [];
+          const countGroup = gName => (grupos.find(g => g.grupo === gName)?.subgrupos || []).reduce((acc, sg) => acc + (sg.pedidos?.length || 0), 0);
+          const countVendor = countGroup('VENDEDOR');
+          const countWeb = countGroup('WEB');
+          const countBalcao = countGroup('BALCAO');
+          const countTodos = countVendor + countWeb + countBalcao;
+          return `
+            <div class="card" style="cursor:pointer;border-top:4px solid #1e3a8a" onclick="openDeliveryRoutesDashboard('expedicao', 'TODOS')">
+              <div style="display:flex;align-items:center;justify-content:space-between"><h3 style="margin:0">Todos os pedidos</h3><span class="badge" style="background:${countTodos?'#1e3a8a':'#64748b'};color:#fff;font-size:12px;padding:3px 8px">${countTodos}</span></div>
+              <p class="muted" style="margin-top:6px">Todos os pedidos agrupados por bairro para expedição.</p>
+            </div>
+            <div class="card" style="cursor:pointer;border-top:4px solid #f59e0b" onclick="openDeliveryRoutesDashboard('expedicao', 'VENDEDOR')">
+              <div style="display:flex;align-items:center;justify-content:space-between"><h3 style="margin:0">Pedidos de vendedores</h3><span class="badge" style="background:${countVendor?'#f59e0b':'#64748b'};color:#fff;font-size:12px;padding:3px 8px">${countVendor}</span></div>
+              <p class="muted" style="margin-top:6px">Pedidos externos subdivididos por bairro.</p>
+            </div>
+            <div class="card" style="cursor:pointer;border-top:4px solid #3b82f6" onclick="openDeliveryRoutesDashboard('expedicao', 'WEB')">
+              <div style="display:flex;align-items:center;justify-content:space-between"><h3 style="margin:0">Pedidos web</h3><span class="badge" style="background:${countWeb?'#3b82f6':'#64748b'};color:#fff;font-size:12px;padding:3px 8px">${countWeb}</span></div>
+              <p class="muted" style="margin-top:6px">Pedidos da Loja Online subdivididos por bairro.</p>
+            </div>
+            <div class="card" style="cursor:pointer;border-top:4px solid #8b5cf6" onclick="openDeliveryRoutesDashboard('expedicao', 'BALCAO')">
+              <div style="display:flex;align-items:center;justify-content:space-between"><h3 style="margin:0">Pedidos balcão — entrega</h3><span class="badge" style="background:${countBalcao?'#8b5cf6':'#64748b'};color:#fff;font-size:12px;padding:3px 8px">${countBalcao}</span></div>
+              <p class="muted" style="margin-top:6px">Pedidos locais marcados para entrega (já em separação).</p>
+            </div>
+          `;
+        })()}
         <div class="card" style="cursor:pointer;border-top:4px solid #3b82f6;position:relative" onclick="openLogisticsInRoute()">
           <div style="display:flex;align-items:center;justify-content:space-between">
             <h3 style="margin:0">🚚 Pedidos em rota</h3>
@@ -4325,7 +4525,9 @@ window.renderDeliveryRoutesDashboardContent = async function(){
     };
 
     const totalBairrosCronograma = schedule.reduce((acc, s) => acc + (s.bairros || []).length, 0);
-    const allKnownBairros = [...new Set(groups.flatMap(g => (g.subgrupos || []).map(sg => sg.bairro)).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+    const cityBairros = Array.isArray(delivRes.bairros_cidade) && delivRes.bairros_cidade.length ? delivRes.bairros_cidade : [...new Set(groups.flatMap(g => (g.subgrupos || []).map(sg => sg.bairro)).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+    window._cityBairrosList = cityBairros;
+    const allKnownBairros = cityBairros;
 
     // Current displayed group
     let currentGroupObj = activeGrupo === 'TODOS' ? todosGrupo : groups.find(x => x.grupo === activeGrupo);
@@ -4500,7 +4702,7 @@ window.renderDeliveryRoutesDashboardContent = async function(){
                             📍 ${esc(p.endereco || sg.bairro)}
                           </div>
                           <div class="muted" style="font-size:11px; margin-top:2px; color:#64748b">
-                            👤 ${esc(p.operador_nome || 'N/A')}${activeGrupo === 'TODOS' ? ` · ${esc(p.origem)}` : ''}
+                            👤 ${esc(p.operador_nome || 'N/A')}${p.origem === 'BALCAO' ? ' · <strong style="color:#7c3aed">🏪 Balcão — Entrega</strong>' : (activeGrupo === 'TODOS' ? ` · ${esc(p.origem)}` : '')}
                           </div>
                         </div>
                       </label>
@@ -4579,6 +4781,28 @@ window.renderDeliveryRoutesDashboardContent = async function(){
             </div>
           </div>
 
+          <div style="margin-bottom:18px; padding:16px; background:#ffffff; border:1px solid #dce4ef; border-left:4px solid #021d60; border-radius:10px; box-shadow:0 2px 8px rgba(6,26,79,0.04)">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px">
+              <div>
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap">
+                  <strong style="font-size:15px; color:#061a4f">🏙️ Lista Pré-Determinada de Bairros — Governador Valadares - MG</strong>
+                  <span class="badge" style="background:#eff6ff; color:#1e3a8a; border:1px solid #bfdbfe; font-weight:800">${cityBairros.length} bairros cadastrados</span>
+                </div>
+                <small class="muted" style="display:block; margin-top:3px; color:#64748b">
+                  Crie e edite aqui todos os bairros oficiais da cidade. Esta lista abastece o Cronograma Semanal, o cadastro da Loja Online e todos os cadastros de clientes.
+                </small>
+              </div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center">
+                <input id="newCityBairroInput" class="field-input" style="margin:0; width:230px; padding:7px 12px; font-size:13px; background:#fff; border:1px solid #cbd5e1; color:#061a4f" placeholder="Novo bairro de Gov. Valadares..." onkeydown="if(event.key==='Enter'){event.preventDefault();addCityBairroFromDash()}">
+                <button type="button" class="btn primary" style="padding:7px 14px; font-size:12.5px; font-weight:800" onclick="addCityBairroFromDash()">+ Cadastrar Bairro</button>
+                <input id="filterCityBairrosInput" class="field-input search" style="margin:0; width:190px; padding:7px 12px; font-size:12.5px; background:#f8fafc; border:1px solid #cbd5e1; color:#061a4f" placeholder="🔍 Filtrar bairros..." oninput="filterCityBairrosChips(this.value)">
+              </div>
+            </div>
+            <div id="cityBairrosChipsContainer" style="display:flex; gap:6px; flex-wrap:wrap; max-height:175px; overflow-y:auto; padding:6px 2px">
+              ${cityBairros.map(b => `<span class="badge city-bairro-chip" data-bname="${esc(b.toLowerCase())}" style="display:inline-flex; align-items:center; gap:6px; background:#f8fafc; color:#061a4f; border:1px solid #cbd5e1; font-weight:700; font-size:11.5px; padding:4px 9px; border-radius:6px"><span style="cursor:pointer" title="Clique para adicionar ao dia ativo do cronograma" onclick="appendBairroToActiveDay(parseJsonArg('${jsonArg(b)}'))">📍 ${esc(b)}</span><button type="button" title="Editar nome do bairro" onclick="renameCityBairroModal(parseJsonArg('${jsonArg(b)}'))" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:11px;color:#0284c7">✏️</button><button type="button" title="Remover bairro da lista" onclick="deleteCityBairro(parseJsonArg('${jsonArg(b)}'))" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:11px;color:#ef4444;font-weight:800">✕</button></span>`).join('')}
+            </div>
+          </div>
+
           ${schedule.length === 0 ? `
             <div class="card" style="text-align:center; padding:36px; border:2px dashed var(--border); background:rgba(255,255,255,0.01); border-radius:10px">
               <div style="font-size:42px; margin-bottom:12px">🚚📅</div>
@@ -4597,7 +4821,7 @@ window.renderDeliveryRoutesDashboardContent = async function(){
             </div>
           ` : `
             <!-- Known Neighborhoods Quick Selection Chips -->
-            ${allKnownBairros.length ? `
+            ${false && allKnownBairros.length ? `
               <div style="margin-bottom:18px; padding:14px 16px; background:#ffffff; border:1px solid #dce4ef; border-radius:10px; box-shadow:0 2px 8px rgba(6,26,79,0.04)">
                 <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap">
                   <span style="font-size:13px; font-weight:800; color:#061a4f">💡 Bairros com clientes cadastrados:</span>
@@ -4639,10 +4863,10 @@ window.renderDeliveryRoutesDashboardContent = async function(){
 
                       <div class="field">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px">
-                          <label style="font-size:12px; font-weight:700">📍 Bairros Atendidos (separados por vírgula ou linha)</label>
-                          <small style="font-size:11px; color:var(--muted)">Clique na caixa e use as sugestões acima</small>
+                          <label style="font-size:12px; font-weight:700">📍 Bairros Atendidos (Lista Pré-Determinada)</label>
+                          <button type="button" class="btn" style="padding:3px 9px; font-size:11px; font-weight:800; background:#eff6ff; color:#1e3a8a; border:1px solid #bfdbfe" onclick="openDayBairrosPickerModal(${index})">📋 Marcar / Desmarcar da Lista</button>
                         </div>
-                        <textarea id="deliv_bairros_${index}" rows="4" class="field-input" style="width:100%; font-size:13px; line-height:1.5" placeholder="Ex: Centro, Vila Isa, JK..." onfocus="window._lastFocusedDayIndex = ${index}" onchange="updateDeliveryBairrosInSchedule(${index}, this.value)">${esc(bairrosText)}</textarea>
+                        <select id="deliv_select_bairro_${index}" class="field-input" style="width:100%; margin-bottom:8px; font-size:12.5px" onfocus="window._lastFocusedDayIndex = ${index}" onchange="if(this.value){addBairroToScheduleDay(${index}, this.value);this.value='';}"><option value="">+ Escolher bairro da lista de Governador Valadares - MG...</option>${cityBairros.filter(b => !(item.bairros || []).some(eb => eb.toLowerCase() === b.toLowerCase())).map(b => `<option value="${esc(b)}">${esc(b)}</option>`).join('')}</select><div id="deliv_bairros_chips_${index}" onclick="window._lastFocusedDayIndex = ${index}" style="min-height:74px; padding:8px; background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; display:flex; flex-wrap:wrap; gap:6px; align-content:flex-start">${(item.bairros || []).length ? (item.bairros || []).map(b => `<span class="badge" style="display:inline-flex; align-items:center; gap:5px; background:#eff6ff; color:#1e3a8a; border:1px solid #93c5fd; font-weight:700; font-size:11.5px; padding:4px 8px; border-radius:6px">📍 ${esc(b)} <button type="button" title="Remover bairro deste dia" onclick="event.stopPropagation();removeBairroFromScheduleDay(${index}, parseJsonArg('${jsonArg(b)}'))" style="background:none;border:none;color:#ef4444;font-weight:800;cursor:pointer;padding:0 2px;font-size:11px">✕</button></span>`).join('') : '<span class="muted" style="font-size:12px; color:#64748b">Nenhum bairro selecionado. Escolha na lista acima ou clique em "Marcar / Desmarcar da Lista".</span>'}</div>
                       </div>
                     </div>
 
@@ -4774,8 +4998,8 @@ window.addDeliveryDayModal = function(){
         </select>
       </div>
       <div class="field" style="grid-column:1/-1">
-        <label>Bairros Atendidos (separados por vírgula ou linha)</label>
-        <textarea name="bairros" rows="4" placeholder="Ex: Centro, Vila Isa, JK..."></textarea>
+        <label>Bairros Atendidos (Lista Pré-Determinada — Governador Valadares - MG)</label>
+        <input type="text" class="field-input search" style="margin-bottom:8px;width:100%" placeholder="🔍 Filtrar bairro na lista..." oninput="const q=this.value.toLowerCase().trim();document.querySelectorAll('#addDayBairrosChecklist .add-day-bairro-opt').forEach(el=>{el.style.display=!q||el.dataset.bname.includes(q)?'inline-flex':'none'})"><div id="addDayBairrosChecklist" style="max-height:220px;overflow-y:auto;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;display:flex;flex-wrap:wrap;gap:6px">${(window._cityBairrosList||[]).map(b=>`<label class="add-day-bairro-opt badge" data-bname="${esc(b.toLowerCase())}" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:#ffffff;color:#061a4f;border:1px solid #cbd5e1;border-radius:6px;font-weight:700;font-size:12px"><input type="checkbox" class="add-day-bairro-cb" value="${esc(b)}"> ${esc(b)}</label>`).join('')}</div>
       </div>
       <div class="actions">
         <button type="button" class="btn" onclick="closeModal()">Cancelar</button>
@@ -4790,8 +5014,8 @@ window.addDeliveryDayModal = function(){
     const diaNome = selDay.selectedOptions[0]?.getAttribute('data-nome') || 'Dia ' + diaNum;
     const driverId = e.currentTarget.querySelector('select[name="motorista_id"]').value || null;
     const drv = drivers.find(d => d.id === driverId);
-    const bairrosText = e.currentTarget.querySelector('textarea[name="bairros"]').value || '';
-    const bairros = bairrosText.split(/\n|,/).map(x => x.trim()).filter(Boolean);
+    const bairros = [...e.currentTarget.querySelectorAll('.add-day-bairro-cb:checked')].map(cb => cb.value.trim()).filter(Boolean);
+    // bairros selecionados da lista pré-determinada
 
     if(!window._currentDeliverySchedule) window._currentDeliverySchedule = [];
     window._currentDeliverySchedule.push({
@@ -4837,7 +5061,15 @@ window.removeDeliveryDay = async function(index){
   await renderDeliveryRoutesDashboardContent();
 };
 
-window.appendBairroToActiveDay = function(bairroName){
+window.addCityBairroFromDash = async function(){ const inp = document.getElementById('newCityBairroInput'); const val = (inp?.value || '').trim(); if(!val) return toast('Digite o nome do bairro de Governador Valadares - MG para cadastrar.'); try { const res = await api('/api/city-bairros', { method: 'POST', body: JSON.stringify({ action: 'add', bairro: val }) }); window._cityBairrosList = res.items || []; if(inp) inp.value = ''; toast(`Bairro "${val}" adicionado à lista oficial de Governador Valadares - MG!`); await renderDeliveryRoutesDashboardContent(); } catch(e) { toast(e.message, true); } };
+window.filterCityBairrosChips = function(q){ const clean = String(q || '').toLowerCase().trim(); document.querySelectorAll('#cityBairrosChipsContainer .city-bairro-chip').forEach(el => { el.style.display = (!clean || (el.dataset.bname || '').includes(clean)) ? 'inline-flex' : 'none'; }); };
+window.renameCityBairroModal = function(oldName){ modal('Editar Bairro — Governador Valadares - MG', `<form id="renameCityBairroForm" class="form"><div class="field" style="grid-column:1/-1"><label>Nome atual do bairro</label><input value="${esc(oldName)}" disabled></div><div class="field" style="grid-column:1/-1"><label>Novo nome do bairro</label><input name="new_bairro" value="${esc(oldName)}" required></div><div class="actions" style="grid-column:1/-1"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar Alteração</button></div></form>`); $('#renameCityBairroForm').onsubmit = async e => { e.preventDefault(); const novo = (new FormData(e.currentTarget).get('new_bairro') || '').trim(); if(!novo) return toast('Informe o novo nome.'); try { const res = await api('/api/city-bairros', { method: 'POST', body: JSON.stringify({ action: 'rename', old_bairro: oldName, new_bairro: novo }) }); window._cityBairrosList = res.items || []; if(Array.isArray(window._currentDeliverySchedule)){ window._currentDeliverySchedule.forEach(d => { if(Array.isArray(d.bairros)) d.bairros = d.bairros.map(b => b.toLowerCase() === oldName.toLowerCase() ? novo : b); }); } closeModal(); toast(`Bairro atualizado para "${novo}"!`); await renderDeliveryRoutesDashboardContent(); } catch(err) { toast(err.message, true); } }; };
+window.deleteCityBairro = async function(bName){ if(!confirm(`Remover o bairro "${bName}" da lista pré-determinada de Governador Valadares - MG?`)) return; try { const res = await api('/api/city-bairros', { method: 'POST', body: JSON.stringify({ action: 'delete', bairro: bName }) }); window._cityBairrosList = res.items || []; if(Array.isArray(window._currentDeliverySchedule)){ window._currentDeliverySchedule.forEach(d => { if(Array.isArray(d.bairros)) d.bairros = d.bairros.filter(b => b.toLowerCase() !== bName.toLowerCase()); }); } toast(`Bairro "${bName}" removido da lista.`); await renderDeliveryRoutesDashboardContent(); } catch(err) { toast(err.message, true); } };
+window.addBairroToScheduleDay = async function(dayIndex, bairroName){ if(!window._currentDeliverySchedule || !window._currentDeliverySchedule[dayIndex]) return; window._lastFocusedDayIndex = dayIndex; const item = window._currentDeliverySchedule[dayIndex]; if(!Array.isArray(item.bairros)) item.bairros = []; if(!item.bairros.some(b => b.toLowerCase() === bairroName.toLowerCase())){ item.bairros.push(bairroName); item.bairros.sort((a,b) => a.localeCompare(b, 'pt-BR')); try { await api('/api/logistics/delivery-routes-config', { method: 'POST', body: JSON.stringify({ items: window._currentDeliverySchedule, schedule: window._currentDeliverySchedule }) }); } catch(_) {} await renderDeliveryRoutesDashboardContent(); toast(`Bairro "${bairroName}" adicionado a ${item.dia_nome || ('Dia ' + item.dia)}!`); } };
+window.removeBairroFromScheduleDay = async function(dayIndex, bairroName){ if(!window._currentDeliverySchedule || !window._currentDeliverySchedule[dayIndex]) return; window._lastFocusedDayIndex = dayIndex; const item = window._currentDeliverySchedule[dayIndex]; item.bairros = (item.bairros || []).filter(b => b.toLowerCase() !== String(bairroName).toLowerCase()); try { await api('/api/logistics/delivery-routes-config', { method: 'POST', body: JSON.stringify({ items: window._currentDeliverySchedule, schedule: window._currentDeliverySchedule }) }); } catch(_) {} await renderDeliveryRoutesDashboardContent(); toast(`Bairro "${bairroName}" removido de ${item.dia_nome || ('Dia ' + item.dia)}.`); };
+window.openDayBairrosPickerModal = function(dayIndex){ if(!window._currentDeliverySchedule || !window._currentDeliverySchedule[dayIndex]) return; const item = window._currentDeliverySchedule[dayIndex]; const selectedSet = new Set((item.bairros || []).map(b => b.toLowerCase())); const cityBairros = window._cityBairrosList || []; modal(`📍 Selecionar Bairros — ${esc(item.dia_nome || ('Dia ' + item.dia))}`, `<form id="dayBairrosPickerForm" class="form"><div class="field" style="grid-column:1/-1"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px"><input type="text" class="field-input search" style="flex:1;min-width:200px;margin:0" placeholder="🔍 Filtrar bairro de Governador Valadares - MG..." oninput="const q=this.value.toLowerCase().trim();document.querySelectorAll('#pickerDayBairrosList .picker-bairro-opt').forEach(el=>{el.style.display=!q||el.dataset.bname.includes(q)?'inline-flex':'none'})"><div style="display:flex;gap:6px"><button type="button" class="btn" style="padding:5px 10px;font-size:12px" onclick="document.querySelectorAll('#pickerDayBairrosList .picker-bairro-opt').forEach(el=>{if(el.style.display!=='none')el.querySelector('input').checked=true})">Marcar visíveis</button><button type="button" class="btn" style="padding:5px 10px;font-size:12px" onclick="document.querySelectorAll('#pickerDayBairrosList .picker-bairro-cb').forEach(cb=>cb.checked=false)">Limpar</button></div></div><div id="pickerDayBairrosList" style="max-height:300px;overflow-y:auto;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;display:flex;flex-wrap:wrap;gap:6px">${cityBairros.map(b => `<label class="picker-bairro-opt badge" data-bname="${esc(b.toLowerCase())}" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:#ffffff;color:#061a4f;border:1px solid #cbd5e1;border-radius:6px;font-weight:700;font-size:12px"><input type="checkbox" class="picker-bairro-cb" value="${esc(b)}" ${selectedSet.has(b.toLowerCase()) ? 'checked' : ''}> ${esc(b)}</label>`).join('')}</div></div><div class="actions" style="grid-column:1/-1"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary">Aplicar Bairros Selecionados</button></div></form>`); $('#dayBairrosPickerForm').onsubmit = async e => { e.preventDefault(); item.bairros = [...e.currentTarget.querySelectorAll('.picker-bairro-cb:checked')].map(cb => cb.value.trim()).filter(Boolean); try { await api('/api/logistics/delivery-routes-config', { method: 'POST', body: JSON.stringify({ items: window._currentDeliverySchedule, schedule: window._currentDeliverySchedule }) }); Realtime.emit('delivery_routes_changed'); } catch(_) {} closeModal(); toast(`Bairros de ${item.dia_nome || ('Dia ' + item.dia)} atualizados!`); await renderDeliveryRoutesDashboardContent(); }; };
+window.appendBairroToActiveDay = function(bairroName){ const dayIndex = window._lastFocusedDayIndex != null ? window._lastFocusedDayIndex : 0; if(!window._currentDeliverySchedule || !window._currentDeliverySchedule.length) return toast('Adicione ou inicialize um dia no cronograma primeiro.'); return window.addBairroToScheduleDay(dayIndex, bairroName); };
+window. _legacyAppendBairroToActiveDay = function(bairroName){
   if(!window._currentDeliverySchedule || !window._currentDeliverySchedule.length) {
     return toast('Adicione ou inicialize um dia no cronograma primeiro.');
   }
@@ -4914,7 +5146,15 @@ window.saveDepotCoordinates = async function(){
     toast(e.message);
   }
 };
-function routeConfigModal(x=null){
+async function routeConfigModal(x=null){
+ const bs=(x?.bairros||[]).map(b=>b.bairro);
+ const bRes=await api('/api/city-bairros').catch(()=>({items:window._cityBairrosList||[]}));
+ const cityBairros=bRes.items||window._cityBairrosList||[];
+ const selectedSet=new Set(bs.map(b=>String(b).toLowerCase()));
+ modal(x?'Editar rota':'Nova rota',`<form id="routeConfigForm" class="form"><div class="field" style="grid-column:1/-1"><label>Nome da rota</label><input name="nome" required value="${esc(x?.nome||'')}"></div><div class="field" style="grid-column:1/-1"><label>Bairros Atendidos (Lista Pré-Determinada — Governador Valadares - MG)</label><input type="text" class="field-input search" style="margin-bottom:8px;width:100%" placeholder="🔍 Filtrar bairro na lista..." oninput="const q=this.value.toLowerCase().trim();document.querySelectorAll('#routeCfgBairrosChecklist .route-cfg-bairro-opt').forEach(el=>{el.style.display=!q||el.dataset.bname.includes(q)?'inline-flex':'none'})"><div id="routeCfgBairrosChecklist" style="max-height:240px;overflow-y:auto;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;display:flex;flex-wrap:wrap;gap:6px">${cityBairros.map(b=>`<label class="route-cfg-bairro-opt badge" data-bname="${esc(b.toLowerCase())}" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:#ffffff;color:#061a4f;border:1px solid #cbd5e1;border-radius:6px;font-weight:700;font-size:12px"><input type="checkbox" class="route-cfg-bairro-cb" value="${esc(b)}" ${selectedSet.has(b.toLowerCase())?'checked':''}> ${esc(b)}</label>`).join('')}</div></div><div class="actions"><button class="btn primary">Salvar rota</button></div></form>`);
+ $('#routeConfigForm').onsubmit=async e=>{e.preventDefault();const b=Object.fromEntries(new FormData(e.currentTarget));b.bairros=[...e.currentTarget.querySelectorAll('.route-cfg-bairro-cb:checked')].map(cb=>cb.value.trim()).filter(Boolean);try{await api(x?'/api/logistics/route-config/'+x.id:'/api/logistics/route-config',{method:x?'PUT':'POST',body:JSON.stringify(b)});closeModal();if(document.getElementById('sellerRoutesDashboard')?.style.display==='block'&&window.renderSellerRoutesDashboardContent){await window.renderSellerRoutesDashboardContent()}else{show('logistics')}}catch(z){toast(z.message)}}
+}
+function _legacyRouteConfigModal(x=null){
  const bs=(x?.bairros||[]).map(b=>b.bairro);
  modal(x?'Editar rota':'Nova rota',`<form id="routeConfigForm" class="form"><div class="field"><label>Nome da rota</label><input name="nome" required value="${esc(x?.nome||'')}"></div><div class="field" style="grid-column:1/-1"><label>Bairros (um por linha)</label><textarea name="bairros" rows="8" placeholder="Centro\nIndustrial\nFuncionários">${esc(bs.join('\n'))}</textarea></div><div class="actions"><button class="btn primary">Salvar rota</button></div></form>`);
  $('#routeConfigForm').onsubmit=async e=>{e.preventDefault();const b=Object.fromEntries(new FormData(e.currentTarget));b.bairros=b.bairros.split(/\n|,/).map(x=>x.trim()).filter(Boolean);try{await api(x?'/api/logistics/route-config/'+x.id:'/api/logistics/route-config',{method:x?'PUT':'POST',body:JSON.stringify(b)});closeModal();show('logistics')}catch(z){toast(z.message)}}
@@ -5715,7 +5955,7 @@ async function suppliers(v){
           <p class="muted">Gerencie seus parceiros comerciais, lead times de entrega e catálogo de produtos vinculados.</p>
         </div>
         <div class="actions">
-          <button class="btn" onclick="show('inbound')">📥 Recebimento de Mercadorias</button>
+          <button class="btn" onclick="show('inbound')">📥 Compra e Recebimento de Mercadorias</button>
           <button class="btn primary" onclick="newSupplierModal()">+ Novo Fornecedor</button>
         </div>
       </div>
@@ -6108,7 +6348,7 @@ async function inbound(v){
     <div class="panel">
       <div class="panel-title">
         <div>
-          <h3>Doca de Recebimento de Mercadorias</h3>
+          <h3>Doca de Compra e Recebimento de Mercadorias</h3>
           <p class="muted">Gestão de compras, prazos de entrega determinados por fornecedor e conferência de entrada.</p>
         </div>
         <div class="actions">

@@ -77,6 +77,8 @@ describe('Orders Extended API', () => {
     db.prepare('UPDATE clientes SET tabela_preco_id=NULL WHERE id=?').run(clientId);
   });
 
+  it('should create a BALCAO RETIRADA order immediately as CONCLUIDO and deduct stock directly', async () => { const beforeStock = db.prepare('SELECT quantidade_disponivel, quantidade_reservada FROM estoque WHERE produto_id=?').get(productId); const res = await request(server).post('/api/orders').set('Authorization', `Bearer ${token}`).send({ cliente_id: clientId, itens: [{ produto_id: productId, quantidade: 2 }], origem: 'BALCAO', modalidade_entrega: 'RETIRADA' }); expect(res.status).toBe(201); expect(res.body.item.status).toBe('CONCLUIDO'); expect(res.body.item.modalidade_entrega).toBe('RETIRADA'); const afterStock = db.prepare('SELECT quantidade_disponivel, quantidade_reservada FROM estoque WHERE produto_id=?').get(productId); expect(afterStock.quantidade_disponivel).toBe(beforeStock.quantidade_disponivel - 2); expect(afterStock.quantidade_reservada).toBe(beforeStock.quantidade_reservada); });
+  it('should create a BALCAO ENTREGA order directly in SEPARACAO and list it in BALCAO logistics group', async () => { const beforeStock = db.prepare('SELECT quantidade_disponivel, quantidade_reservada FROM estoque WHERE produto_id=?').get(productId); const res = await request(server).post('/api/orders').set('Authorization', `Bearer ${token}`).send({ cliente_id: clientId, itens: [{ produto_id: productId, quantidade: 2 }], origem: 'BALCAO', modalidade_entrega: 'ENTREGA' }); expect(res.status).toBe(201); expect(res.body.item.status).toBe('SEPARACAO'); expect(res.body.item.modalidade_entrega).toBe('ENTREGA'); const afterStock = db.prepare('SELECT quantidade_disponivel, quantidade_reservada FROM estoque WHERE produto_id=?').get(productId); expect(afterStock.quantidade_disponivel).toBe(beforeStock.quantidade_disponivel - 2); expect(afterStock.quantidade_reservada).toBe(beforeStock.quantidade_reservada + 2); const grouped = await request(server).get('/api/logistics/grouped-orders').set('Authorization', `Bearer ${token}`); expect(grouped.status).toBe(200); const balcaoGroup = grouped.body.grupos.find(g => g.grupo === 'BALCAO'); expect(balcaoGroup).toBeDefined(); const balcaoOrders = balcaoGroup.subgrupos.flatMap(sg => sg.pedidos); expect(balcaoOrders.some(o => o.id === res.body.item.id)).toBe(true); });
   it('should create an order', async () => {
     const res = await request(server)
       .post('/api/orders')
@@ -84,7 +86,7 @@ describe('Orders Extended API', () => {
       .send({
         cliente_id: clientId,
         itens: [{ produto_id: productId, quantidade: 2 }],
-        origem: 'BALCAO'
+        origem: 'VENDEDOR'
       });
       
     expect(res.status).toBe(201);
@@ -145,7 +147,7 @@ describe('Orders Extended API', () => {
 
   it('completes an in-route delivery without requiring a proof image', async () => {
     const created = await request(server).post('/api/orders').set('Authorization', `Bearer ${token}`).send({
-      cliente_id: clientId, origem: 'BALCAO', itens: [{ produto_id: productId, quantidade: 1 }]
+      cliente_id: clientId, origem: 'BALCAO', modalidade_entrega: 'ENTREGA', itens: [{ produto_id: productId, quantidade: 1 }]
     });
     expect(created.status).toBe(201);
     db.prepare("UPDATE pedidos SET status='ROTA' WHERE id=?").run(created.body.item.id);
@@ -156,7 +158,7 @@ describe('Orders Extended API', () => {
 
   it('accepts a 6 MiB delivery proof and stores its path relative to persistent storage', async () => {
     const created = await request(server).post('/api/orders').set('Authorization', `Bearer ${token}`).send({
-      cliente_id: clientId, origem: 'BALCAO', itens: [{ produto_id: productId, quantidade: 1 }]
+      cliente_id: clientId, origem: 'BALCAO', modalidade_entrega: 'ENTREGA', itens: [{ produto_id: productId, quantidade: 1 }]
     });
     expect(created.status).toBe(201);
     db.prepare("UPDATE pedidos SET status='ROTA' WHERE id=?").run(created.body.item.id);

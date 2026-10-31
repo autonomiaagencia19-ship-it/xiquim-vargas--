@@ -137,7 +137,7 @@ class MainActivity : Activity() {
                     readTimeout = 4000
                     instanceFollowRedirects = true
                     requestMethod = "GET"
-                    setRequestProperty("User-Agent", "XiquimVargasMobileApp/1.8.3")
+                    setRequestProperty("User-Agent", "XiquimVargasMobileApp/1.8.4")
                 }
                 val code = conn.responseCode
                 if (code in 200..499) {
