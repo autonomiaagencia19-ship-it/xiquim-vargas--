@@ -184,12 +184,24 @@ const Realtime={
 let _refreshDebounce=null;
 async function refreshCurrentViewSilently(eventType,payload){
   clearTimeout(_refreshDebounce);
+  const seqAtSchedule=_showSeq;
   _refreshDebounce=setTimeout(async()=>{
+    if(_showSeq!==seqAtSchedule)return;
     const currentView=location.hash.slice(1)||'home';
-    const hasOpenModal=!!document.querySelector('#modal');
+    const isStale=()=>{
+      if(_showSeq!==seqAtSchedule)return true;
+      if((location.hash.slice(1)||'home')!==currentView)return true;
+      if(document.querySelector('#modal'))return true;
+      const ae=document.activeElement;
+      if(ae&&(ae.tagName==='INPUT'||ae.tagName==='TEXTAREA'||ae.tagName==='SELECT'))return true;
+      return false;
+    };
+    if(isStale())return;
+    const hasOpenModal=false;
     try{
       if(currentView==='home'){
         const d=await api('/api/dashboard');
+        if(isStale())return;
         window._dashboardData=d;
         if(typeof window.renderModalidadeRanking==='function') window.renderModalidadeRanking(window._currentModalidadePeriodo||'geral');
         if(typeof window.renderTopProdutos==='function'&&!window._currentTopProdutosQuery) window.renderTopProdutos(window._currentTopProdutosPeriodo||'geral','');
@@ -206,7 +218,7 @@ async function refreshCurrentViewSilently(eventType,payload){
           });
         }else{
           const v=$('#view');
-          if(v&&!hasOpenModal)home(v);
+          if(v&&!isStale())home(v);
         }
         const kanCols=document.querySelectorAll('.panel .kanban .kanban-col');
         const kanVals=[d.pendentes, d.separacao, d.rota, d.concluidos];
@@ -232,6 +244,7 @@ async function refreshCurrentViewSilently(eventType,payload){
       }else if(currentView==='orders'){
         if(!eventType||eventType==='orders_changed'||eventType==='routes_changed'||eventType==='returns_changed'||eventType==='tab_focused'){
           const [res,usersRes]=await Promise.all([api('/api/orders'),api('/api/users').catch(()=>({items:[]}))]);
+          if(isStale())return;
           window._ordersItems=Array.isArray(res.items)?res.items:[];
           if(usersRes?.items) window._sellerUsers=usersRes.items.filter(u=>u.role==='seller'&&u.ativo);
           if(window.currentOrdersStatus!==undefined&&window.currentOrdersStatus!==null){
@@ -254,7 +267,7 @@ async function refreshCurrentViewSilently(eventType,payload){
         if(!eventType||eventType==='products_changed'||eventType==='stock_changed'||eventType==='prices_changed'||eventType==='tab_focused'){
           const [p,c,promo]=await Promise.all([api('/api/products?limit=100000'),api('/api/categories'),api('/api/promotions')]);
           window.adminProducts=p;window.adminCategories=c;window.catalogCategories=c.categorias;window.catalogSubcategories=c.subcategorias;window.adminPromotions=promo;
-          if(!hasOpenModal){
+          if(!isStale()){
             const pqVal=$('#pq')?.value,catVal=$('#catFilter')?.value,subVal=$('#subFilter')?.value;
             const v=$('#view');
             if(v){
@@ -276,7 +289,7 @@ async function refreshCurrentViewSilently(eventType,payload){
       }else if(currentView==='stock'){
         if(!eventType||eventType==='stock_changed'||eventType==='products_changed'||eventType==='orders_changed'||eventType==='purchases_changed'||eventType==='returns_changed'||eventType==='tab_focused'){
           const x=await api('/api/stock?limit=100000');
-          if(!hasOpenModal){
+          if(!isStale()){
             const searchVal=$('#stockSearch')?.value;
             const statusVal=$('#stockStatusFilter')?.value;
             const tbody=$('#stockTable tbody');
@@ -299,6 +312,7 @@ async function refreshCurrentViewSilently(eventType,payload){
             window.refreshCrmData();
           }else{
             const c=await api('/api/clients');
+            if(isStale())return;
             window._clientsData=c.items||[];
             if(typeof window.renderClientsUI==='function')window.renderClientsUI();
           }
@@ -306,12 +320,13 @@ async function refreshCurrentViewSilently(eventType,payload){
       }else if(currentView==='logistics'){
         if(!eventType||eventType==='routes_changed'||eventType==='orders_changed'||eventType==='returns_changed'||eventType==='tab_focused'){
           const v=$('#view');
-          if(v&&!hasOpenModal){
+          if(v&&!isStale()){
             if(document.getElementById('returnedOrdersDashboard')?.style.display==='block'){
               if(typeof window.refreshReturnedOrders==='function')window.refreshReturnedOrders();
             }else if(document.getElementById('deliveryRoutesDashboard')?.style.display==='block'){if(typeof window.refreshDeliveryRoutesSilently==='function')window.refreshDeliveryRoutesSilently();}else if(document.getElementById('logisticsModalityDashboard')?.style.display==='block'){
               if(typeof window.renderModalityDashboard==='function'){
                 const groupsReq=await api('/api/logistics/grouped-orders').catch(()=>[]);
+                if(isStale())return;
                 window._logisticsGroups=groupsReq;
                 window.renderModalityDashboard(window._currentLogisticsGrupoKey||'TODOS', window._currentLogisticsSellerFilter||'');
               }
@@ -337,22 +352,23 @@ async function refreshCurrentViewSilently(eventType,payload){
           if(window.ptdCurrentTableId && document.getElementById('ptdBody')){
             try{
               const updated=await api('/api/price-tables/'+window.ptdCurrentTableId+'/details');
-              renderPriceTableDashboard(window.ptdCurrentTableId, window.ptdCurrentTableName, updated);
+              if(!isStale())renderPriceTableDashboard(window.ptdCurrentTableId, window.ptdCurrentTableName, updated);
             }catch(e){}
-          }else if(!hasOpenModal){
+          }else if(!isStale()){
             const v=$('#view');if(v)prices(v);
           }
         }
       }else if(currentView==='users'){
         if(!eventType||eventType==='users_changed'||eventType==='tab_focused'){
-          const v=$('#view');if(v&&!hasOpenModal)users(v);
+          const v=$('#view');if(v&&!isStale())users(v);
         }
       }else if(currentView==='suppliers'){
         if(!eventType||eventType==='suppliers_changed'||eventType==='tab_focused'){
           const v=$('#view');
-          if(v&&!hasOpenModal){
+          if(v&&!isStale()){
             const sVal=$('#supplierSearch')?.value;
             const s=await api('/api/suppliers');
+            if(isStale())return;
             window._suppliersData=s.items||[];
             const wrap=$('#supplierTableWrap');
             if(wrap){
@@ -372,13 +388,14 @@ async function refreshCurrentViewSilently(eventType,payload){
       }else if(currentView==='inbound'){
         if(!eventType||eventType==='purchases_changed'||eventType==='stock_changed'||eventType==='tab_focused'){
           const v=$('#view');
-          if(v&&!hasOpenModal){
+          if(v&&!isStale()){
             const sVal=$('#inboundSearch')?.value;
             const stVal=$('#inboundStatusFilter')?.value;
             const [summary, res]=await Promise.all([
               api('/api/inbound/summary'),
               api('/api/purchases')
             ]);
+            if(isStale())return;
             window._inboundSummary=summary;
             window._purchasesData=res.items||[];
             const wrap=$('#inboundTableWrap');
@@ -402,7 +419,7 @@ async function refreshCurrentViewSilently(eventType,payload){
         }
       }else if(currentView==='sellers'){
         if(!eventType||eventType==='orders_changed'||eventType==='users_changed'||eventType==='clients_changed'||eventType==='tab_focused'){
-          if(!hasOpenModal){
+          if(!isStale()){
             if(window._currentSellerDashboardId && window._currentSellerDashboardNome){
               renderSellerDashboard(window._currentSellerDashboardId, window._currentSellerDashboardNome);
             }else{
@@ -412,15 +429,15 @@ async function refreshCurrentViewSilently(eventType,payload){
         }
       }else if(currentView==='reports'){
         if(!eventType||eventType==='orders_changed'||eventType==='dashboard_changed'||eventType==='tab_focused'){
-          const v=$('#view');if(v&&!hasOpenModal)reports(v,window._currentReportsPeriodo||'geral');
+          const v=$('#view');if(v&&!isStale())reports(v,window._currentReportsPeriodo||'geral');
         }
       }else if(currentView==='audit'){
         if(!eventType||eventType==='audit_changed'||eventType==='tab_focused'){
-          const v=$('#view');if(v&&!hasOpenModal)auditView(v);
+          const v=$('#view');if(v&&!isStale())auditView(v);
         }
       }else if(currentView==='store'){
         if(!eventType||eventType==='settings_changed'||eventType==='tab_focused'){
-          if(!hasOpenModal&&!document.querySelector('#storeConfigForm:focus-within')){
+          if(!isStale()&&!document.querySelector('#storeConfigForm:focus-within')){
             const v=$('#view');if(v)storeSettings(v);
           }
         }
@@ -504,7 +521,7 @@ function setupPage(status){const q=new URLSearchParams(location.search);const se
 const menu=[['Visão Geral','home'],['Catálogo','products'],['Tabelas de preço','prices'],['Estoque Inteligente','stock'],['Clientes & CRM','clients'],['Pedidos','orders'],['Logística','logistics'],['Fornecedores','suppliers'],['Compra e Recebimento de Mercadorias','inbound'],['Vendedores','sellers'],['Relatórios','reports'],['Auditoria','audit'],['Usuários','users'],['IA Administrativa','ai']];
 function shell(){const dot='•';const groups=[['Operação',[[dot,'Visão Geral','home'],[dot,'Pedidos','orders'],[dot,'Catálogo','products'],[dot,'Loja Online','store'],[dot,'Estoque Inteligente','stock'],[dot,'Clientes & CRM','clients'],[dot,'Logística','logistics']]],['Suprimentos',[[dot,'Fornecedores','suppliers'],[dot,'Compra e Recebimento de Mercadorias','inbound']]],['Gestão',[[dot,'Vendedores','sellers'],[dot,'Usuários','users'],[dot,'Tabelas de preço','prices'],[dot,'Relatórios','reports']]],['Governança',[[dot,'Auditoria','audit'],[dot,'IA Administrativa','ai']]]];return `<div class="app"><aside class="sidebar"><img class="xv-logo" src="/assets/institucional/01_Logo_Xiquim_Vargas_HD.png" alt="Xiquim Vargas ERP"><div class="group">Torre de Controle</div>${groups.map(([title,items])=>`<div class="group">${title}</div><div class="nav">${items.map(([i,l,k])=>`<button data-view="${k}"><span style="width:16px;text-align:center;font-size:16px;line-height:1;display:inline-block">${i}</span>${l}</button>`).join('')}</div>`).join('')}<div class="group">Sessão</div><div class="nav"><button onclick="logout()"><span style="width:16px;text-align:center;font-size:16px;line-height:1;display:inline-block">•</span>Sair</button></div></aside><main class="main"><div class="topbar"><div class="brand-dark"><button class="mobile-back-btn btn" onclick="window.showSidebar()">← Voltar</button><div><h1 id="title">Visão Geral</h1></div></div><div class="topbar-actions"><span id="offlineIndicator" style="display:${navigator.onLine?'none':'inline-flex'};background:#e11d48;color:#fff;font-weight:700;font-size:11px;padding:3px 8px;border-radius:12px;margin-right:6px">OFFLINE</span><span class="badge">${esc(ROLE_LABELS[me?.role]||me?.role||'Administrador')}</span></div></div><div id="view"></div></main></div><div id="toast" class="toast"></div>`}
 async function render(){if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});Realtime.init((type,payload)=>refreshCurrentViewSilently(type,payload));document.body.innerHTML=shell();window.showSidebar=()=>document.querySelector('.app').classList.remove('view-open');document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{document.querySelector('.app').classList.add('view-open');show(b.dataset.view)});const h=location.hash.slice(1);if(h&&window.innerWidth<=800)document.querySelector('.app').classList.add('view-open');await show(h||'home')}
-async function show(view){document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));$('#title').textContent=({home:'Visão Geral',products:'Catálogo',stock:'Estoque Inteligente',clients:'Clientes & CRM',orders:'Pedidos',users:'Usuários',sellers:'Vendedores',logistics:'Logística',suppliers:'Fornecedores',inbound:'Compra e Recebimento de Mercadorias',reports:'Relatórios',store:'Loja Online',audit:'Auditoria',prices:'Tabelas de preço',ai:'IA Administrativa'})[view]||view;location.hash=view;const v=$('#view');v.innerHTML='<div class="panel">Carregando...</div>';try{if(view==='home')return home(v);if(view==='products')return products(v);if(view==='prices')return prices(v);if(view==='store')return storeSettings(v);if(view==='stock')return stock(v);if(view==='clients')return clients(v);if(view==='orders')return orders(v);if(view==='users')return users(v);if(view==='sellers')return sellers(v);if(view==='logistics')return logistics(v);if(view==='suppliers')return suppliers(v);if(view==='inbound')return inbound(v);if(view==='reports')return reports(v);if(view==='audit')return auditView(v);if(view==='ai')return ai(v)}catch(e){v.innerHTML=`<div class="panel">Erro: ${esc(e.message)}</div>`}}
+let _showSeq=0;async function show(view){const seq=++_showSeq;document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));$('#title').textContent=({home:'Visão Geral',products:'Catálogo',stock:'Estoque Inteligente',clients:'Clientes & CRM',orders:'Pedidos',users:'Usuários',sellers:'Vendedores',logistics:'Logística',suppliers:'Fornecedores',inbound:'Compra e Recebimento de Mercadorias',reports:'Relatórios',store:'Loja Online',audit:'Auditoria',prices:'Tabelas de preço',ai:'IA Administrativa'})[view]||view;location.hash=view;const org=$('#view');if(!org)return;org.innerHTML='<div class="panel">Carregando...</div>';const v=new Proxy(org,{set(t,p,val){if(seq!==_showSeq)return true;t[p]=val;return true},get(t,p){const val=t[p];return typeof val==='function'?val.bind(t):val}});try{if(view==='home')return await home(v);if(view==='products')return await products(v);if(view==='prices')return await prices(v);if(view==='store')return await storeSettings(v);if(view==='stock')return await stock(v);if(view==='clients')return await clients(v);if(view==='orders')return await orders(v);if(view==='users')return await users(v);if(view==='sellers')return await sellers(v);if(view==='logistics')return await logistics(v);if(view==='suppliers')return await suppliers(v);if(view==='inbound')return await inbound(v);if(view==='reports')return await reports(v);if(view==='audit')return await auditView(v);if(view==='ai')return await ai(v)}catch(e){if(seq===_showSeq)org.innerHTML=`<div class="panel">Erro: ${esc(e.message)}</div>`}}
 /* ==========================================================================
    SISTEMA UNIFICADO DE FILTROS DE PERÍODO (XV_PERIOD_FILTER)
    ========================================================================== */
@@ -3451,7 +3468,7 @@ async function sellers(v) {
   };
   renderSellersDashboard();
 }
-async function users(v){const [x,links]=await Promise.all([api('/api/users'),api('/api/admin/access-links')]);window.accessLinks=links.links;const labels=ROLE_LABELS;window.renderUsersDashboard=function(){v.innerHTML=`<div class="panel"><div class="panel-title"><div><h3>Usuários</h3><p class="muted">Gerencie os acessos do ERP e Loja Online.</p></div></div><div class="grid"><div class="card" style="cursor:pointer" onclick="renderUsersList('internos')"><h3>Usuários Internos</h3><p class="muted">Administradores, Vendedores, Caixas e Motoristas</p></div><div class="card" style="cursor:pointer" onclick="renderUsersList('web')"><h3>Usuários Web</h3><p class="muted">Clientes da Loja Online</p></div></div></div>`};window.renderUsersList=function(tipo){const isInternal=tipo==='internos';const filtered=x.items.filter(u=>isInternal?u.role!=='web_client':u.role==='web_client');v.innerHTML=`<div class="panel"><div class="panel-title"><div style="display:flex;align-items:center;gap:12px"><button class="btn" onclick="renderUsersDashboard()">← Voltar</button><div><h3 style="margin:0">${isInternal?'Usuários Internos':'Usuários Web'}</h3></div></div><button class="btn primary" onclick="newUser()">+ Usuário</button></div></div>${isInternal?`<div class="panel" style="margin-top:14px"><div class="panel-title"><div><h3>Links de acesso interno</h3><p class="muted">Os links abaixo já apontam para este ERP no endereço atual. Clique para copiar e envie ao usuário.</p></div><span class="badge">${esc(links.base_url)}</span></div><div class="access-links-grid">${Object.entries(links.links).filter(([role])=>role!=='web_client').map(([role,url])=>`<div class="access-link-card"><strong>${labels[role]||role}</strong><code>${esc(url)}</code><button class="btn" onclick="copyAccessLink('${role}')">⧉ Copiar URL</button></div>`).join('')}</div></div>`:`<div class="panel" style="margin-top:14px"><div class="panel-title"><div><h3>Link da Loja Online</h3><p class="muted">Envie este link para os clientes acessarem a loja e se cadastrarem.</p></div><span class="badge">${esc(links.base_url)}</span></div><div class="access-links-grid">${Object.entries(links.links).filter(([role])=>role==='web_client').map(([role,url])=>`<div class="access-link-card"><strong>${labels[role]||role}</strong><code>${esc(url)}</code><button class="btn" onclick="copyAccessLink('${role}')">⧉ Copiar URL</button></div>`).join('')}</div></div>`}<div class="tablewrap" style="margin-top:14px"><table class="table"><thead><tr><th>Nome</th><th>Email</th><th>Perfil</th><th>Ativo</th><th>Ações</th></tr></thead><tbody>${filtered.map(u=>`<tr><td>${esc(u.nome)}</td><td>${esc(u.email)}</td><td>${esc(labels[u.role]||u.role)}</td><td>${u.ativo?'Sim':'Não'}</td><td class="actions"><button class="btn" onclick="editUser(parseJsonArg('${jsonArg(u)}'))">Editar</button>${u.id!==me?.id?`<button class="btn danger" onclick="deleteUser('${u.id}',parseJsonArg('${jsonArg(u.nome)}'))">Excluir</button>`:'<span class="muted">Sessão atual</span>'}</td></tr>`).join('')||'<tr><td colspan="5" class="empty-state">Nenhum usuário encontrado.</td></tr>'}</tbody></table></div>`};renderUsersDashboard()}
+async function users(v,subTab){const [x,links]=await Promise.all([api('/api/users'),api('/api/admin/access-links')]);window.accessLinks=links.links;const labels=ROLE_LABELS;window.renderUsersDashboard=function(){window._currentUsersSubTab=null;v.innerHTML=`<div class="panel"><div class="panel-title"><div><h3>Usuários</h3><p class="muted">Gerencie os acessos do ERP e Loja Online.</p></div></div><div class="grid"><div class="card" style="cursor:pointer" onclick="renderUsersList('internos')"><h3>Usuários Internos</h3><p class="muted">Administradores, Vendedores, Caixas e Motoristas</p></div><div class="card" style="cursor:pointer" onclick="renderUsersList('web')"><h3>Usuários Web</h3><p class="muted">Clientes da Loja Online</p></div></div></div>`};window.renderUsersList=function(tipo){window._currentUsersSubTab=tipo;const isInternal=tipo==='internos';const filtered=x.items.filter(u=>isInternal?u.role!=='web_client':u.role==='web_client');v.innerHTML=`<div class="panel"><div class="panel-title"><div style="display:flex;align-items:center;gap:12px"><button class="btn" onclick="renderUsersDashboard()">← Voltar</button><div><h3 style="margin:0">${isInternal?'Usuários Internos':'Usuários Web'}</h3></div></div><button class="btn primary" onclick="newUser()">+ Usuário</button></div></div>${isInternal?`<div class="panel" style="margin-top:14px"><div class="panel-title"><div><h3>Links de acesso interno</h3><p class="muted">Os links abaixo já apontam para este ERP no endereço atual. Clique para copiar e envie ao usuário.</p></div><span class="badge">${esc(links.base_url)}</span></div><div class="access-links-grid">${Object.entries(links.links).filter(([role])=>role!=='web_client').map(([role,url])=>`<div class="access-link-card"><strong>${labels[role]||role}</strong><code>${esc(url)}</code><button class="btn" onclick="copyAccessLink('${role}')">⧉ Copiar URL</button></div>`).join('')}</div></div>`:`<div class="panel" style="margin-top:14px"><div class="panel-title"><div><h3>Link da Loja Online</h3><p class="muted">Envie este link para os clientes acessarem a loja e se cadastrarem.</p></div><span class="badge">${esc(links.base_url)}</span></div><div class="access-links-grid">${Object.entries(links.links).filter(([role])=>role==='web_client').map(([role,url])=>`<div class="access-link-card"><strong>${labels[role]||role}</strong><code>${esc(url)}</code><button class="btn" onclick="copyAccessLink('${role}')">⧉ Copiar URL</button></div>`).join('')}</div></div>`}<div class="tablewrap" style="margin-top:14px"><table class="table"><thead><tr><th>Nome</th><th>Email</th><th>Perfil</th><th>Ativo</th><th>Ações</th></tr></thead><tbody>${filtered.map(u=>`<tr><td>${esc(u.nome)}</td><td>${esc(u.email)}</td><td>${esc(labels[u.role]||u.role)}</td><td>${u.ativo?'Sim':'Não'}</td><td class="actions"><button class="btn" onclick="editUser(parseJsonArg('${jsonArg(u)}'))">Editar</button>${u.id!==me?.id?`<button class="btn danger" onclick="deleteUser('${u.id}',parseJsonArg('${jsonArg(u.nome)}'))">Excluir</button>`:'<span class="muted">Sessão atual</span>'}</td></tr>`).join('')||'<tr><td colspan="5" class="empty-state">Nenhum usuário encontrado.</td></tr>'}</tbody></table></div>`};const targetTab=subTab!==undefined?subTab:window._currentUsersSubTab;if(targetTab)window.renderUsersList(targetTab);else renderUsersDashboard()}
 function copyAccessLink(role){const url=window.accessLinks?.[role];if(!url)return toast('URL não encontrada');navigator.clipboard?.writeText(url).then(()=>toast('URL copiada')).catch(()=>{prompt('Copie esta URL:',url)})}
 function newUser(){modal('Novo usuário',`<form id="userForm" class="form"><div class="field"><label>Nome</label><input name="nome" required></div><div class="field"><label>Email</label><input name="email" required></div><div class="field"><label>Senha</label><input name="password" value="ChangeMe123!" required></div><div class="field"><label>Função / Perfil</label><select name="role" required><option value="seller">Vendedor</option><option value="cashier">Caixa</option><option value="driver">Motorista</option><option value="web_client">Loja Online</option><option value="admin">Administrador</option></select></div><button class="btn primary">Criar usuário</button></form>`);$('#userForm').onsubmit=async e=>{e.preventDefault();try{await api('/api/users',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});closeModal();show('users')}catch(x){toast(x.message)}}}
 function editUser(u){modal('Editar usuário',`<form id="userEditForm" class="form"><div class="field"><label>Nome</label><input name="nome" required value="${esc(u.nome)}"></div><div class="field"><label>Email</label><input name="email" type="email" required value="${esc(u.email)}"></div><div class="field"><label>Nova senha (opcional)</label><div style="display:flex;gap:6px"><input name="password" type="password" placeholder="Deixe vazio para manter" style="flex:1"><button type="button" class="btn" tabindex="-1" onclick="const x=this.previousElementSibling; x.type=x.type==='password'?'text':'password'">👁</button></div></div><div class="field"><label>Função / Perfil</label><select name="role">${[['seller','Vendedor'],['cashier','Caixa'],['driver','Motorista'],['web_client','Loja Online'],['admin','Administrador']].map(([v,l])=>`<option value="${v}" ${u.role===v?'selected':''}>${l}</option>`).join('')}</select></div><div class="field"><label>Ativo</label><select name="ativo"><option value="1" ${u.ativo?'selected':''}>Sim</option><option value="0" ${!u.ativo?'selected':''}>Não</option></select></div><div class="actions"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar</button></div></form>`);$('#userEditForm').onsubmit=async e=>{e.preventDefault();const b=Object.fromEntries(new FormData(e.currentTarget));b.ativo=b.ativo==='1';if(!b.password)delete b.password;try{await api('/api/users/'+u.id,{method:'PUT',body:JSON.stringify(b)});closeModal();toast('Usuário atualizado');show('users')}catch(x){toast(x.message)}}}
@@ -5616,10 +5633,10 @@ async function productCostHistoryModal(pid, pnome){
             Este produto ainda não possui preço de custo definido e nenhuma entrada de compra ou ajuste foi registrada no sistema.
           </p>
           <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap">
-            <button class="btn btn-primary" onclick="closeModal();location.hash='#catalog';editProduct(parseJsonArg('${jsonArg(p)}'))">
+            <button class="btn btn-primary" onclick="closeModal();show('products');editProduct(parseJsonArg('${jsonArg(p)}'))">
               ✏️ Informar Preço de Custo no Produto
             </button>
-            <button class="btn" onclick="closeModal();location.hash='#purchases'">
+            <button class="btn" onclick="closeModal();show('inbound')">
               🏢 Registrar Entrada via Fornecedor
             </button>
           </div>
@@ -5881,7 +5898,7 @@ async function askAI(){
   }
 }
 function filterTable(input,id){const q=input.value.toLowerCase();document.querySelectorAll(`#${id} tbody tr`).forEach(r=>r.style.display=r.innerText.toLowerCase().includes(q)?'':'none')}
-function modal(title,body,width='700px'){const x=document.createElement('div');x.id='modal';x.style='position:fixed;inset:0;background:#000b;display:grid;place-items:center;z-index:100';x.innerHTML=`<div class="panel" style="width:min(${width},94vw);max-height:90vh;overflow:auto"><div class="top"><h2>${title}</h2><button class="btn" onclick="closeModal()">×</button></div>${body}</div>`;document.body.appendChild(x)}function closeModal(){window.inboundBarcodeActive=false;window.ptdCurrentTableId=null;document.querySelector('#modal')?.remove()}
+function modal(title,body,width='700px'){document.querySelectorAll('#modal').forEach(m=>m.remove());const x=document.createElement('div');x.id='modal';x.style='position:fixed;inset:0;background:#000b;display:grid;place-items:center;z-index:100';x.innerHTML=`<div class="panel" style="width:min(${width},94vw);max-height:90vh;overflow:auto"><div class="top"><h2>${title}</h2><button class="btn" onclick="closeModal()">×</button></div>${body}</div>`;document.body.appendChild(x)}function closeModal(){window.inboundBarcodeActive=false;window.ptdCurrentTableId=null;document.querySelectorAll('#modal').forEach(m=>m.remove())}
 function roleLoginPage(role){
   const srvUrl = (typeof API !== 'undefined' && API) ? API : (window.location.origin || 'https://xiquim-vargas-erp.onrender.com');
   const hasAppConfig = typeof window !== 'undefined' && window.AndroidApp && typeof window.AndroidApp.openConfig === 'function';
@@ -6019,6 +6036,7 @@ function renderSuppliersTable(list){
             </td>
             <td>
               <button class="btn primary" style="padding:6px 10px;font-size:12px" onclick="newPurchaseOrderModal('${f.id}')">➕ Comprar</button>
+              <button class="btn" style="padding:6px 10px;font-size:12px" onclick="linkProductsToSupplierModal('${f.id}',parseJsonArg('${jsonArg(f.nome)}'))">🔗 Associar</button>
               <button class="btn" style="padding:6px 10px;font-size:12px" onclick="editSupplierModal('${f.id}')">Editar</button>
               <button class="btn danger" style="padding:6px 10px;font-size:12px" onclick="deleteSupplier('${f.id}',parseJsonArg('${jsonArg(f.nome)}'))">🗑</button>
             </td>
@@ -6230,66 +6248,179 @@ async function unlinkSupplierProduct(fid, pid, fnome){
 }
 
 async function linkProductsToSupplierModal(fid, fnome){
-  const catalog = window.adminProducts?.items || (await api('/api/products?limit=100000')).items;
+  let catalog = [];
+  try {
+    if (window.adminProducts && Array.isArray(window.adminProducts.items) && window.adminProducts.items.length > 0) {
+      catalog = window.adminProducts.items;
+    } else {
+      const res = await api('/api/products?limit=100000');
+      catalog = res.items || [];
+    }
+  } catch(e) {
+    try {
+      const res = await api('/api/products');
+      catalog = res.items || [];
+    } catch(err) {
+      toast('Erro ao carregar catálogo: ' + (err.message || err), true);
+      return;
+    }
+  }
+
+  if(!catalog || !catalog.length){
+    toast('Nenhum produto cadastrado no catálogo para vincular.', true);
+    return;
+  }
+
+  window._linkCatalog = catalog;
+
   modal(`Associar Produto ao Fornecedor — ${esc(fnome)}`, `
-    <form id="linkProdForm" class="form">
-      <div class="field" style="grid-column:1/-1">
-        <label>Selecione o Produto do Catálogo *</label>
-        <input id="linkProdSearch" class="search" placeholder="Buscar produto por nome ou SKU..." oninput="filterCatalogForLink(this.value)">
-        <select id="linkProdSelect" name="produto_id" size="6" required style="margin-top:6px;width:100%">
-          ${catalog.map(p=>`<option value="${p.id}" data-text="${esc((p.nome+' '+(p.sku||'')).toLowerCase())}">${esc(p.nome)} (${esc(p.sku||'S/ SKU')}) — Venda: ${brl(p.preco_base)}</option>`).join('')}
+    <form id="linkProdForm" style="display:flex;flex-direction:column;gap:14px" onsubmit="return false;">
+      <div class="card po-card">
+        <label>
+          1. Buscar e Selecionar o Produto do Catálogo <span class="po-req-star">*</span>
+        </label>
+        <input id="linkProdSearch" class="po-input" placeholder="🔍 Digite para filtrar por nome, SKU ou código..." oninput="filterCatalogForLink(this.value)" autocomplete="off">
+        <select id="linkProdSelect" name="produto_id" size="7" style="margin-top:4px;width:100%;font-size:13.5px;padding:8px;border-radius:9px;border:1.5px solid #cbd5e1;background:#ffffff;color:#17233d;font-weight:600;box-sizing:border-box" onchange="onLinkProductSelectChange(this.value)">
+          <option value="" disabled selected>-- Clique em um produto abaixo para selecionar --</option>
+          ${catalog.map(p=>`<option value="${p.id}" data-text="${esc(((p.nome||'')+' '+(p.sku||'')+' '+(p.codigo_barras||'')).toLowerCase())}">${esc(p.nome)} (${esc(p.sku||'S/ SKU')}) — Venda: ${brl(p.preco_base)}${p.preco_custo ? ' · Custo base: '+brl(p.preco_custo) : ''}</option>`).join('')}
         </select>
+        <div id="linkProdSelectedBox" style="margin-top:4px;padding:10px 14px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:9px;display:none">
+          <div style="font-weight:800;color:#166534;font-size:14px" id="linkProdSelectedTitle"></div>
+          <div style="font-size:12.5px;color:#15803d;margin-top:3px;font-weight:600" id="linkProdSelectedDetails"></div>
+        </div>
       </div>
-      <div class="field">
-        <label>Custo de Aquisição (R$) *</label>
-        <input name="custo_aquisicao" type="number" step="0.01" min="0" required placeholder="0.00">
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;align-items:stretch">
+        <div class="card po-card">
+          <label style="min-height:22px">
+            2. Custo de Aquisição (R$) <span class="po-req-star">*</span>
+          </label>
+          <input id="linkProdCusto" name="custo_aquisicao" type="number" step="0.01" min="0" placeholder="0.00" class="po-input">
+          <small class="muted">Preço que este fornecedor cobra pela unidade.</small>
+        </div>
+        <div class="card po-card">
+          <label style="min-height:22px">
+            Código / Referência no Fornecedor (opcional)
+          </label>
+          <input name="codigo_referencia_fornecedor" placeholder="Ex: REF-8812" class="po-input">
+          <small class="muted">Código deste item na nota fiscal do fornecedor.</small>
+        </div>
+        <div class="card po-card">
+          <label style="min-height:22px">
+            Prazo de Entrega Específico (dias)
+          </label>
+          <input name="lead_time_dias" type="number" min="1" placeholder="Em branco usa o padrão do fornecedor" class="po-input">
+          <small class="muted">Prazo em dias corridos para recebimento.</small>
+        </div>
+        <div class="card po-card">
+          <label style="min-height:22px">
+            Lote Mínimo de Compra (unidades)
+          </label>
+          <input name="quantidade_minima_compra" type="number" min="1" value="1" class="po-input">
+          <small class="muted">Quantidade mínima exigida por pedido.</small>
+        </div>
       </div>
-      <div class="field">
-        <label>Código / Referência no Fornecedor (opcional)</label>
-        <input name="codigo_referencia_fornecedor" placeholder="Ex: REF-8812">
-      </div>
-      <div class="field">
-        <label>Prazo de Entrega Específico (dias)</label>
-        <input name="lead_time_dias" type="number" min="1" placeholder="Em branco usa o padrão do fornecedor">
-      </div>
-      <div class="field">
-        <label>Lote Mínimo de Compra (unidades)</label>
-        <input name="quantidade_minima_compra" type="number" min="1" value="1">
-      </div>
-      <div class="actions" style="grid-column:1/-1;margin-top:10px">
-        <button type="button" class="btn" onclick="supplierProductsModal('${fid}',parseJsonArg('${jsonArg(fnome)}'))">← Voltar</button>
-        <button class="btn primary">Confirmar Associação</button>
+
+      <div class="actions" style="margin-top:6px;display:flex;justify-content:space-between;align-items:center">
+        <button type="button" class="btn po-btn-cancel" onclick="supplierProductsModal('${fid}',parseJsonArg('${jsonArg(fnome)}'))">← Voltar</button>
+        <button id="linkProdSubmitBtn" type="button" class="btn primary" style="font-weight:800;padding:12px 22px;font-size:15px" onclick="submitLinkProductToSupplier('${fid}',parseJsonArg('${jsonArg(fnome)}'))">Confirmar Associação</button>
       </div>
     </form>
-  `, '750px');
+  `, '820px');
+}
 
-  $('#linkProdForm').onsubmit = async e => {
-    e.preventDefault();
-    try {
-      const b = Object.fromEntries(new FormData(e.currentTarget));
-      await api(`/api/suppliers/${fid}/products`, {
-        method: 'POST',
-        body: JSON.stringify({
-          produto_id: b.produto_id,
-          custo_aquisicao: Number(b.custo_aquisicao||0),
-          codigo_referencia_fornecedor: b.codigo_referencia_fornecedor||null,
-          lead_time_dias: b.lead_time_dias ? Number(b.lead_time_dias) : null,
-          quantidade_minima_compra: Number(b.quantidade_minima_compra||1)
-        })
-      });
-      toast('Produto associado com sucesso!');
-      supplierProductsModal(fid, fnome);
-    } catch(err) {
-      toast(err.message, true);
+function onLinkProductSelectChange(val){
+  if(!val || !window._linkCatalog) return;
+  const prod = window._linkCatalog.find(p => String(p.id) === String(val));
+  if(!prod) return;
+  const box = document.getElementById('linkProdSelectedBox');
+  const title = document.getElementById('linkProdSelectedTitle');
+  const details = document.getElementById('linkProdSelectedDetails');
+  const custoInput = document.getElementById('linkProdCusto');
+  if(box && title && details){
+    box.style.display = 'block';
+    title.textContent = '✓ ' + prod.nome;
+    details.textContent = `SKU: ${prod.sku || 'S/ SKU'} | Preço de Venda: ${brl(prod.preco_base)}${prod.preco_custo ? ' | Custo Atual Cadastrado: ' + brl(prod.preco_custo) : ''}`;
+  }
+  if(custoInput && (!custoInput.value || Number(custoInput.value) <= 0)){
+    if(prod.preco_custo && Number(prod.preco_custo) > 0){
+      custoInput.value = Number(prod.preco_custo).toFixed(2);
+    } else if(prod.preco_base && Number(prod.preco_base) > 0){
+      custoInput.value = Number(prod.preco_base).toFixed(2);
     }
-  };
+  }
 }
 
 function filterCatalogForLink(q){
   const sq = (q||'').toLowerCase().trim();
-  document.querySelectorAll('#linkProdSelect option').forEach(opt => {
-    opt.hidden = sq ? !opt.dataset.text.includes(sq) : false;
+  const select = document.getElementById('linkProdSelect');
+  if(!select) return;
+  const opts = select.querySelectorAll('option');
+  let firstMatch = null;
+  let matchCount = 0;
+  opts.forEach(opt => {
+    if(!opt.value) return;
+    const match = !sq || (opt.dataset.text||'').includes(sq);
+    opt.hidden = !match;
+    if(match){
+      matchCount++;
+      if(!firstMatch) firstMatch = opt;
+    }
   });
+  if(sq && matchCount === 1 && firstMatch){
+    select.value = firstMatch.value;
+    onLinkProductSelectChange(firstMatch.value);
+  }
+}
+
+async function submitLinkProductToSupplier(fid, fnome){
+  const form = document.getElementById('linkProdForm');
+  if(!form) return;
+  const b = Object.fromEntries(new FormData(form));
+  const select = document.getElementById('linkProdSelect');
+  const produtoId = b.produto_id || (select ? select.value : '');
+
+  if(!produtoId){
+    toast('Selecione um produto da lista para vincular ao fornecedor.', true);
+    if(select) select.focus();
+    return;
+  }
+
+  const custo = Number(String(b.custo_aquisicao || '').replace(',', '.'));
+  if(isNaN(custo) || custo <= 0){
+    toast('Informe o Custo de Aquisição do produto (deve ser maior que zero).', true);
+    const cInput = document.getElementById('linkProdCusto');
+    if(cInput) cInput.focus();
+    return;
+  }
+
+  const btn = document.getElementById('linkProdSubmitBtn');
+  if(btn){
+    btn.disabled = true;
+    btn.textContent = 'Salvando Associação...';
+  }
+
+  try {
+    await api(`/api/suppliers/${fid}/products`, {
+      method: 'POST',
+      body: JSON.stringify({
+        produto_id: produtoId,
+        custo_aquisicao: custo,
+        codigo_referencia_fornecedor: b.codigo_referencia_fornecedor ? String(b.codigo_referencia_fornecedor).trim() : null,
+        lead_time_dias: b.lead_time_dias ? Number(b.lead_time_dias) : null,
+        quantidade_minima_compra: Number(b.quantidade_minima_compra || 1)
+      })
+    });
+    toast('Produto associado com sucesso ao fornecedor!');
+    supplierProductsModal(fid, fnome);
+  } catch(err) {
+    toast('Erro ao associar produto: ' + (err.message || err), true);
+  } finally {
+    if(btn){
+      btn.disabled = false;
+      btn.textContent = 'Confirmar Associação';
+    }
+  }
 }
 
 async function productSuppliersModal(pid, pnome){
@@ -6297,6 +6428,14 @@ async function productSuppliersModal(pid, pnome){
     const res = await api('/api/products/' + pid + '/suppliers');
     const items = res.items || [];
     modal(`Fornecedores Homologados — ${esc(pnome)}`, `
+      <div class="actions" style="margin-bottom:14px;justify-content:space-between;align-items:center">
+        <div>
+          <span class="badge" style="font-size:12px">${items.length} fornecedor(es) homologado(s)</span>
+        </div>
+        <button class="btn primary" onclick="linkSupplierToProductModal('${pid}',parseJsonArg('${jsonArg(pnome)}'))">
+          ➕ Associar a um Fornecedor
+        </button>
+      </div>
       <p class="muted" style="margin-bottom:12px">Compare custos de aquisição e prazos de entrega entre os fornecedores cadastrados para este produto.</p>
       <div class="tablewrap">
         <table class="table">
@@ -6306,7 +6445,7 @@ async function productSuppliersModal(pid, pnome){
               <th>Custo de Compra</th>
               <th>Previsão de Entrega</th>
               <th>Telefone / Contato</th>
-              <th>Ação</th>
+              <th>Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -6318,18 +6457,193 @@ async function productSuppliersModal(pid, pnome){
                 <td>${esc(s.telefone_whatsapp||'—')}</td>
                 <td>
                   <button class="btn primary" style="padding:4px 8px;font-size:12px" onclick="closeModal();newPurchaseOrderModal('${s.fornecedor_id}')">➕ Comprar deste</button>
+                  <button class="btn danger" style="padding:4px 8px;font-size:12px" onclick="unlinkProductSupplier('${pid}','${s.fornecedor_id}',parseJsonArg('${jsonArg(pnome)}'))">Desvincular</button>
                 </td>
               </tr>
-            `).join('') || '<tr><td colspan="5">Nenhum fornecedor vinculado a este produto ainda. Acesse o menu "Fornecedores" para vincular.</td></tr>'}
+            `).join('') || '<tr><td colspan="5">Nenhum fornecedor vinculado a este produto ainda. Clique no botão acima para associar.</td></tr>'}
           </tbody>
         </table>
       </div>
       <div class="actions" style="margin-top:14px;justify-content:flex-end">
         <button class="btn" onclick="closeModal()">Fechar</button>
       </div>
-    `, '750px');
+    `, '800px');
   } catch(e) {
     toast(e.message, true);
+  }
+}
+
+async function unlinkProductSupplier(pid, fid, pnome){
+  if(!confirm('Remover o vínculo deste fornecedor com o produto?')) return;
+  try {
+    await api(`/api/products/${pid}/suppliers/${fid}`, { method: 'DELETE' });
+    toast('Vínculo removido com sucesso');
+    productSuppliersModal(pid, pnome);
+  } catch(e) {
+    toast(e.message, true);
+  }
+}
+
+async function linkSupplierToProductModal(pid, pnome){
+  let suppliers = [];
+  try {
+    const res = await api('/api/suppliers');
+    suppliers = res.items || [];
+  } catch(e) {
+    toast('Erro ao carregar lista de fornecedores: ' + (e.message || e), true);
+    return;
+  }
+
+  if(!suppliers.length){
+    toast('Nenhum fornecedor ativo encontrado. Cadastre um fornecedor primeiro no menu "Fornecedores".', true);
+    return;
+  }
+
+  window._linkSuppliersList = suppliers;
+
+  modal(`Associar Fornecedor ao Produto — ${esc(pnome)}`, `
+    <form id="linkSuppForm" style="display:flex;flex-direction:column;gap:14px" onsubmit="return false;">
+      <div class="card po-card">
+        <label>
+          1. Selecione o Fornecedor <span class="po-req-star">*</span>
+        </label>
+        <input id="linkSuppSearch" class="po-input" placeholder="🔍 Digite o nome, CNPJ ou cidade do fornecedor..." oninput="filterSupplierForLink(this.value)" autocomplete="off">
+        <select id="linkSuppSelect" name="fornecedor_id" size="6" style="margin-top:4px;width:100%;font-size:13.5px;padding:8px;border-radius:9px;border:1.5px solid #cbd5e1;background:#ffffff;color:#17233d;font-weight:600;box-sizing:border-box" onchange="onLinkSupplierSelectChange(this.value)">
+          <option value="" disabled selected>-- Clique em um fornecedor abaixo para selecionar --</option>
+          ${suppliers.map(s=>`<option value="${s.id}" data-text="${esc(((s.nome||'')+' '+(s.cnpj_cpf||'')+' '+(s.cidade||'')).toLowerCase())}">${esc(s.nome)} — Prazo médio: ${s.lead_time_padrao_dias||5}d ${s.telefone_whatsapp ? ' · '+esc(s.telefone_whatsapp) : ''}</option>`).join('')}
+        </select>
+        <div id="linkSuppSelectedBox" style="margin-top:4px;padding:10px 14px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:9px;display:none">
+          <div style="font-weight:800;color:#166534;font-size:14px" id="linkSuppSelectedTitle"></div>
+          <div style="font-size:12.5px;color:#15803d;margin-top:3px;font-weight:600" id="linkSuppSelectedDetails"></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;align-items:stretch">
+        <div class="card po-card">
+          <label style="min-height:22px">
+            2. Custo de Aquisição (R$) <span class="po-req-star">*</span>
+          </label>
+          <input id="linkSuppCusto" name="custo_aquisicao" type="number" step="0.01" min="0" placeholder="0.00" class="po-input">
+          <small class="muted">Preço que o fornecedor cobra por este produto.</small>
+        </div>
+        <div class="card po-card">
+          <label style="min-height:22px">
+            Código / Referência no Fornecedor (opcional)
+          </label>
+          <input name="codigo_referencia_fornecedor" placeholder="Ex: REF-8812" class="po-input">
+          <small class="muted">Código deste item na nota fiscal do fornecedor.</small>
+        </div>
+        <div class="card po-card">
+          <label style="min-height:22px">
+            Prazo de Entrega Específico (dias)
+          </label>
+          <input id="linkSuppLeadTime" name="lead_time_dias" type="number" min="1" placeholder="Em branco usa o padrão do fornecedor" class="po-input">
+          <small class="muted">Prazo em dias corridos para recebimento.</small>
+        </div>
+        <div class="card po-card">
+          <label style="min-height:22px">
+            Lote Mínimo de Compra (unidades)
+          </label>
+          <input name="quantidade_minima_compra" type="number" min="1" value="1" class="po-input">
+          <small class="muted">Quantidade mínima exigida por pedido.</small>
+        </div>
+      </div>
+
+      <div class="actions" style="margin-top:6px;display:flex;justify-content:space-between;align-items:center">
+        <button type="button" class="btn po-btn-cancel" onclick="productSuppliersModal('${pid}',parseJsonArg('${jsonArg(pnome)}'))">← Voltar</button>
+        <button id="linkSuppSubmitBtn" type="button" class="btn primary" style="font-weight:800;padding:12px 22px;font-size:15px" onclick="submitLinkSupplierToProduct('${pid}',parseJsonArg('${jsonArg(pnome)}'))">Confirmar Associação</button>
+      </div>
+    </form>
+  `, '820px');
+}
+
+function onLinkSupplierSelectChange(val){
+  if(!val || !window._linkSuppliersList) return;
+  const supp = window._linkSuppliersList.find(s => String(s.id) === String(val));
+  if(!supp) return;
+  const box = document.getElementById('linkSuppSelectedBox');
+  const title = document.getElementById('linkSuppSelectedTitle');
+  const details = document.getElementById('linkSuppSelectedDetails');
+  const ltInput = document.getElementById('linkSuppLeadTime');
+  if(box && title && details){
+    box.style.display = 'block';
+    title.textContent = '✓ ' + supp.nome;
+    details.textContent = `Contato: ${supp.contato_nome || supp.telefone_whatsapp || '—'} | Prazo Padrão: ${supp.lead_time_padrao_dias || 5} dias`;
+  }
+  if(ltInput && !ltInput.value){
+    ltInput.value = supp.lead_time_padrao_dias || 5;
+  }
+}
+
+function filterSupplierForLink(q){
+  const sq = (q||'').toLowerCase().trim();
+  const select = document.getElementById('linkSuppSelect');
+  if(!select) return;
+  const opts = select.querySelectorAll('option');
+  let firstMatch = null;
+  let matchCount = 0;
+  opts.forEach(opt => {
+    if(!opt.value) return;
+    const match = !sq || (opt.dataset.text||'').includes(sq);
+    opt.hidden = !match;
+    if(match){
+      matchCount++;
+      if(!firstMatch) firstMatch = opt;
+    }
+  });
+  if(sq && matchCount === 1 && firstMatch){
+    select.value = firstMatch.value;
+    onLinkSupplierSelectChange(firstMatch.value);
+  }
+}
+
+async function submitLinkSupplierToProduct(pid, pnome){
+  const form = document.getElementById('linkSuppForm');
+  if(!form) return;
+  const b = Object.fromEntries(new FormData(form));
+  const select = document.getElementById('linkSuppSelect');
+  const fornecedorId = b.fornecedor_id || (select ? select.value : '');
+
+  if(!fornecedorId){
+    toast('Selecione um fornecedor da lista.', true);
+    if(select) select.focus();
+    return;
+  }
+
+  const custo = Number(String(b.custo_aquisicao || '').replace(',', '.'));
+  if(isNaN(custo) || custo <= 0){
+    toast('Informe o Custo de Aquisição do produto (deve ser maior que zero).', true);
+    const cInput = document.getElementById('linkSuppCusto');
+    if(cInput) cInput.focus();
+    return;
+  }
+
+  const btn = document.getElementById('linkSuppSubmitBtn');
+  if(btn){
+    btn.disabled = true;
+    btn.textContent = 'Salvando Associação...';
+  }
+
+  try {
+    await api(`/api/products/${pid}/suppliers`, {
+      method: 'POST',
+      body: JSON.stringify({
+        fornecedor_id: fornecedorId,
+        custo_aquisicao: custo,
+        codigo_referencia_fornecedor: b.codigo_referencia_fornecedor ? String(b.codigo_referencia_fornecedor).trim() : null,
+        lead_time_dias: b.lead_time_dias ? Number(b.lead_time_dias) : null,
+        quantidade_minima_compra: Number(b.quantidade_minima_compra || 1)
+      })
+    });
+    toast('Fornecedor associado com sucesso ao produto!');
+    productSuppliersModal(pid, pnome);
+  } catch(err) {
+    toast('Erro ao associar fornecedor: ' + (err.message || err), true);
+  } finally {
+    if(btn){
+      btn.disabled = false;
+      btn.textContent = 'Confirmar Associação';
+    }
   }
 }
 

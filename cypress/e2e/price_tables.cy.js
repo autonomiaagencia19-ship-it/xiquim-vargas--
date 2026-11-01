@@ -5,10 +5,10 @@ describe('Price Tables & Modalities E2E', () => {
 
   it('1. Admin: Create table, configure items and apply in mass/individual', () => {
     cy.visit('http://localhost:3000/admin.html');
-    cy.get('input[name="email"]').type('admin@admin.com');
-    cy.get('input[name="password"]').type('ChangeMe123!');
+    cy.get('input[name="email"]').clear().type('cypress@xiquim.local');
+    cy.get('input[name="password"]').clear().type('CypressPass123!');
     cy.contains('button', 'Entrar').click();
-    cy.contains('h1', 'Visão Geral', {timeout: 10000}).should('be.visible');
+    cy.contains('h1', 'Visão Geral', {timeout: 15000}).should('be.visible');
 
     cy.get('button[data-view="prices"]').click();
     cy.contains('h3', 'Governança de preços').should('be.visible');
@@ -27,7 +27,7 @@ describe('Price Tables & Modalities E2E', () => {
     cy.get('@firstProduct').find('input[data-price-product]').type(tPrice);
     cy.get('@firstProduct').find('input[data-qty-product]').clear().type(tQty);
     
-    cy.get('#priceItemsForm').contains('button', 'Salvar preços').click();
+    cy.get('#priceItemsForm').contains('button', 'Salvar tabela').click();
     
     cy.get('#applyTid').select(tName);
     cy.get('#applyTarget').select('ALL');
@@ -65,15 +65,14 @@ describe('Price Tables & Modalities E2E', () => {
     cy.contains('button', 'Entrar na operação').click();
     cy.contains('Frente de Loja', {timeout: 10000}).should('be.visible');
 
-    cy.get('#pdvClient option', {timeout: 10000}).should('have.length.gt', 1);
-
-    cy.get('#pdvClient').find('option').eq(1).then($option => {
-      cy.get('#pdvClient').select($option.val());
-    });
+    cy.get('#pdvClientSearch', {timeout: 10000}).should('be.visible').click();
+    cy.get('#pdvClientDropdown .pdv-client-option', {timeout: 10000}).first().click({force: true});
 
     cy.get('input[oninput="pdvFilter(this)"]').type('a');
 
-    cy.get('.pdv-product', {timeout: 10000}).first().click({force: true});
+    cy.get('.pdv-product', {timeout: 10000}).first().within(() => {
+      cy.contains('button', 'Adicionar').click({force: true});
+    });
 
     cy.get('.pdv-row').first().within(() => {
       cy.get('.qty-control button').eq(1).click({force: true});
@@ -87,7 +86,7 @@ describe('Price Tables & Modalities E2E', () => {
     cy.get('input[name="email"]').type('vendedor1@gv.local');
     cy.get('input[name="password"]').type('ChangeMe123!');
     cy.contains('button', 'Entrar na operação').click();
-    cy.contains('Meus clientes', {timeout: 10000}).should('be.visible');
+    cy.contains('Meus Clientes & CRM', {timeout: 15000}).should('be.visible');
 
     cy.get('.client-card').first().within(() => {
       cy.contains('button', 'Novo pedido').click({force: true});

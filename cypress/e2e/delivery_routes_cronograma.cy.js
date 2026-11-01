@@ -36,14 +36,17 @@ describe('Central de Rotas & Cronograma Semanal de Entregas (E2E)', () => {
     cy.contains('Central Única de Rotas de Entrega & Expedição').should('be.visible');
     cy.contains('button', '2. Cronograma Semanal & Motoristas').should('be.visible');
 
-    // 6. Validar a renderização dos 6 dias com o visual navy do ERP
+    // 6. Validar a renderização dos 6 dias com o visual navy do ERP (inicializando semana padrão)
+    cy.contains('h3', 'Cronograma Semanal de Entregas por Bairros e Motoristas', { timeout: 15000 }).should('be.visible');
+    cy.get('button[onclick="initDefaultDeliverySchedule()"]').first().click();
     const dias = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
     dias.forEach(dia => {
-      cy.contains(dia).should('be.visible');
+      cy.contains('#deliveryRoutesDashboardContainer strong', dia, { timeout: 10000 }).should('be.visible');
     });
 
     // 7. Configurar motorista e bairros no card da Segunda-feira
-    cy.get('#deliv_bairros_0').clear().type('Centro, Vila Isa, JK, São Pedro');
+    cy.get('#deliv_select_bairro_0').select('Centro');
+    cy.get('#deliv_bairros_chips_0').should('contain', 'Centro');
     cy.get('#deliv_driver_0').should('be.visible');
 
     // 8. Salvar o cronograma completo
@@ -59,7 +62,7 @@ describe('Central de Rotas & Cronograma Semanal de Entregas (E2E)', () => {
     cy.contains('Histórico de Rotas Criadas').should('be.visible');
 
     // 11. Voltar para a Logística
-    cy.contains('button', 'Voltar para Logística').click();
+    cy.get('#deliveryRoutesDashboard').contains('button', 'Voltar para Logística').click();
     cy.get('#logisticsMain').should('be.visible');
   });
 });
