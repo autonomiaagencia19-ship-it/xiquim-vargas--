@@ -233,6 +233,33 @@ if(method==='GET'&&p==='/api/promotions'){auth(req);return send(res,200,{items:a
 if(method==='DELETE'&&p.startsWith('/api/promotions/')){const user=requireRole(req,['admin']);const pid=p.split('/')[3];const before=one('SELECT * FROM promocoes WHERE id=?',[pid]);if(!before)throw Object.assign(new Error('Promoção não encontrada'),{status:404});run('UPDATE promocoes SET ativo=0,updated_at=CURRENT_TIMESTAMP WHERE id=?',[pid]);audit({userId:user.sub,action:'DEACTIVATE_PROMOTION',entity:'promocao',entityId:pid,before,after:one('SELECT * FROM promocoes WHERE id=?',[pid])});return send(res,200,{ok:true})}
 if(method==='GET'&&p==='/api/admin/export/catalog.pdf'){const user=requireRole(req,['admin']);const file=path.join(STORAGE,'exports',`catalogo-${Date.now()}.pdf`);fs.mkdirSync(path.dirname(file),{recursive:true});makeCatalogPdf(listCatalog(u.searchParams.get('q')||''),file);res.writeHead(200,{'content-type':'application/pdf','content-disposition':'attachment; filename="xiquim-vargas-catalogo.pdf"'});return fs.createReadStream(file).pipe(res)}
 if(method==='GET'&&p==='/api/admin/export/stock.pdf'){const user=requireRole(req,['admin']);const file=path.join(STORAGE,'exports',`estoque-${Date.now()}.pdf`);fs.mkdirSync(path.dirname(file),{recursive:true});makeStockPdf(listStock(u.searchParams.get('q')||''),file);res.writeHead(200,{'content-type':'application/pdf','content-disposition':'attachment; filename="xiquim-vargas-estoque.pdf"'});return fs.createReadStream(file).pipe(res)}
+if(method==='GET'&&p==='/api/admin/export/database.db'){
+  const user=requireRole(req,['admin']);
+  const exportsDir=path.join(STORAGE,'exports');
+  fs.mkdirSync(exportsDir,{recursive:true});
+  const snapFile=path.join(exportsDir,`xiquim-vargas-backup-${Date.now()}-${crypto.randomUUID()}.db`);
+  try{
+    db.exec(`VACUUM INTO '${snapFile.replaceAll("'","''")}'`);
+    const stat=fs.statSync(snapFile);
+    const dateTag=new Date().toISOString().slice(0,10);
+    audit({userId:user.sub,action:'EXPORT_DATABASE_BACKUP',entity:'database',entityId:'xiquim-vargas.db',after:{bytes:stat.size}});
+    res.writeHead(200,{
+      'content-type':'application/octet-stream',
+      'content-length':String(stat.size),
+      'content-disposition':`attachment; filename="xiquim-vargas-${dateTag}.db"`,
+      'cache-control':'no-store',
+      'access-control-allow-origin':'*'
+    });
+    const stream=fs.createReadStream(snapFile);
+    const cleanup=()=>{try{if(fs.existsSync(snapFile))fs.unlinkSync(snapFile)}catch{}};
+    stream.on('close',cleanup);
+    stream.on('error',cleanup);
+    return stream.pipe(res);
+  }catch(err){
+    try{if(fs.existsSync(snapFile))fs.unlinkSync(snapFile)}catch{}
+    throw err;
+  }
+}
 if(method==='GET'&&p==='/api/categories'){auth(req);return send(res,200,{categorias:all('SELECT * FROM categorias WHERE ativo=1 ORDER BY ordem,nome'),subcategorias:all('SELECT * FROM subcategorias WHERE ativo=1 ORDER BY ordem,nome')})}
 if(method==='POST'&&p==='/api/categories'){const user=requireRole(req,['admin']);const b=await body(req);assertString(b.nome,'Nome',{max:120});const cid=id();run('INSERT INTO categorias(id,nome,slug,descricao,ordem) VALUES(?,?,?,?,?)',[cid,b.nome,slugify(b.slug||b.nome),b.descricao||null,Number(b.ordem||0)]);audit({userId:user.sub,action:'CREATE_CATEGORY',entity:'categoria',entityId:cid,after:one('SELECT * FROM categorias WHERE id=?',[cid])});return send(res,201,{item:one('SELECT * FROM categorias WHERE id=?',[cid])})}
 if(method==='PUT'&&p.startsWith('/api/categories/')){const user=requireRole(req,['admin']);const cid=p.split('/')[3];const before=one('SELECT * FROM categorias WHERE id=?',[cid]);if(!before)throw Object.assign(new Error('Categoria não encontrada'),{status:404});const b=await body(req);run('UPDATE categorias SET nome=COALESCE(?,nome),slug=COALESCE(?,slug),descricao=?,ordem=COALESCE(?,ordem),ativo=COALESCE(?,ativo) WHERE id=?',[b.nome,b.slug?slugify(b.slug):null,b.descricao??before.descricao,b.ordem,b.ativo,cid]);const after=one('SELECT * FROM categorias WHERE id=?',[cid]);audit({userId:user.sub,action:'UPDATE_CATEGORY',entity:'categoria',entityId:cid,before,after});return send(res,200,{item:after})}
