@@ -8,7 +8,7 @@ $root = (Get-Item -Path ".").FullName
 $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 
 if (-not $DestinationPath) {
-    $DestinationPath = Join-Path $root "BACKUP_XIQUIM_VARGAS_FINAL_29-10-2026.zip"
+    $DestinationPath = Join-Path $root "BACKUP_XIQUIM_VARGAS_DEDUPLICADO_03-11-2026.zip"
 }
 
 $tempZip = Join-Path $root "backup_temp_$timestamp.zip"
@@ -37,8 +37,8 @@ function ShouldExclude([string]$fullPath, [string]$name) {
 
 # Prioridade de caminho para que arquivos essenciais (public/, src/, storage/, raiz) NUNCA sejam descartados em favor de copias secundarias
 function Get-PathPriority([string]$relPath) {
-    # 1. Arquivos na pasta public/, src/, storage/, catalog/, scripts/, tests/, cypress/, ops/ tem prioridade maxima
-    if ($relPath -match '^(public|src|storage|catalog|scripts|tests|cypress|ops|\.github)/') { return 1 }
+    # 1. Arquivos na pasta public/, src/, storage/, catalog/, scripts/, tests/, dist-apks/, cypress/, ops/ tem prioridade maxima
+    if ($relPath -match '^(public|src|storage|catalog|scripts|tests|dist-apks|cypress|ops|\.github)/') { return 1 }
     # 2. Arquivos na raiz (incluindo os APKs principais na raiz, exceto PDV que e copia de Caixa)
     if ($relPath -notmatch '/') {
         if ($relPath -eq 'XiquimVargas-PDV.apk') { return 5 }
@@ -169,6 +169,11 @@ Write-Host "==========================================================" -Foregro
 Write-Host "Arquivo:               $($finalItem.FullName)"
 Write-Host "Tamanho original:      $rawMB MB"
 Write-Host "Tamanho do ZIP final:  $zipMB MB"
+if ($finalItem.Length -le 500 * 1024 * 1024) {
+    Write-Host "Status do Limite:      [OK] Abaixo de 500 MB ($zipMB MB)" -ForegroundColor Green
+} else {
+    Write-Host "Status do Limite:      [ALERTA] Excedeu 500 MB ($zipMB MB)" -ForegroundColor Red
+}
 Write-Host "Total de arquivos no zip: $totalFiles"
 Write-Host "Duplicatas descartadas:   $duplicatesIgnored"
 Write-Host "Data de conclusao:     $(Get-Date -Format 'dd/MM/yyyy HH:mm:ss')"
