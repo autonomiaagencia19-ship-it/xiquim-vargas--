@@ -2468,6 +2468,32 @@ async function storeSettings(v){
           <input name="store.min_order_value" type="number" step="0.01" min="0" placeholder="0.00 (deixe 0 ou vazio para sem valor mínimo)" value="${esc(vals['store.min_order_value']||'')}">
           <span class="muted">Exibido com destaque na página inicial de todos os clientes da loja online e bloqueia finalizações abaixo deste valor.</span>
         </div>
+        <div class="field" style="grid-column:1/-1;background:rgba(2,132,199,0.08);border:1px solid rgba(2,132,199,0.25);border-radius:12px;padding:16px;margin:8px 0;">
+          <h4 style="margin:0 0 12px;color:#38bdf8;font-size:15px;display:flex;align-items:center;gap:8px">
+            <span>📞 Canais de Atendimento &amp; Botão "Fale Conosco"</span>
+            <span class="badge" style="background:rgba(2,132,199,0.2);color:#38bdf8">Loja Online</span>
+          </h4>
+          <p class="muted" style="margin-bottom:14px;font-size:13px">
+            Configure os telefones e instruções de contato. No <strong>celular</strong>, o botão <em>"📞 Fale Conosco"</em> abre diretamente o discador do aparelho. Em <strong>computadores / desktops</strong>, abre um card com os números, cópia rápida, WhatsApp e horários de atendimento.
+          </p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin-bottom:12px">
+            <div class="field" style="margin:0">
+              <label style="font-weight:700">Telefone Principal (Aciona Discador no Celular)</label>
+              <input name="store.phone" value="${esc(vals['store.phone']||'(33) 3221-4210')}" placeholder="(33) 3221-4210">
+              <span class="muted" style="font-size:11.5px">Número principal discado ao tocar no botão em celulares.</span>
+            </div>
+            <div class="field" style="margin:0">
+              <label style="font-weight:700">WhatsApp Comercial (Opcional)</label>
+              <input name="store.whatsapp" value="${esc(vals['store.whatsapp']||'(33) 3221-4210')}" placeholder="(33) 3221-4210 ou celular">
+              <span class="muted" style="font-size:11.5px">Exibido no card de atendimento com link direto para conversa.</span>
+            </div>
+          </div>
+          <div class="field" style="margin:0">
+            <label style="font-weight:700">Texto Informativo de Atendimento &amp; Endereço (Exibido no Desktop)</label>
+            <textarea name="store.contact_info" rows="3" placeholder="Horários de atendimento, endereço e orientações...">${esc(vals['store.contact_info']||'Segunda à Sexta: 07:30 às 17:30 | Sábado: 07:30 às 12:30\nRua José Luís Nogueira, 645 - Centro, Governador Valadares/MG')}</textarea>
+            <span class="muted" style="font-size:11.5px">Texto informativo exibido para clientes em computadores ou notebooks.</span>
+          </div>
+        </div>
         <div class="field" style="grid-column:1/-1">
           <label>Rodapé</label>
           <textarea name="store.footer" rows="2">${esc(vals['store.footer']||'Pedido, catálogo e operação integrados.')}</textarea>

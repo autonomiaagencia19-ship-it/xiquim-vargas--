@@ -1157,7 +1157,7 @@ async function submitPDV(){
   }catch(e){toastRole(e.message,true)}
 }
 
-async function loja(){const [c,p,sc,cats]=await Promise.all([api('/api/clients'),api('/api/products'),api('/api/store-config'),api('/api/categories')]);const cfg=sc.config||{};window.lojaProducts=p.items;window.lojaCategories=cats.categorias;window.lojaSubcategories=cats.subcategorias;window.lojaCart=window.lojaCart||{};const activeIds=new Set(window.lojaProducts.map(x=>x.id));const removed=Object.keys(window.lojaCart).filter(id=>!activeIds.has(id));for(const id of removed)delete window.lojaCart[id];if(removed.length)setTimeout(()=>alert(`${removed.length} produto(s) indisponível(is) foram removidos automaticamente do carrinho.`),0);window.lojaClientId=c.items[0]?.id||'';if(window.lojaClientId){try{const priced=await api('/api/products?cliente_id='+encodeURIComponent(window.lojaClientId));window.lojaProducts=priced.items}catch(error){console.warn('Falha ao atualizar precos da loja',error)}}document.body.innerHTML=`<div><header class="store-header"><img class="xv-logo" src="/assets/institucional/01_Logo_Xiquim_Vargas_HD.png" alt="Xiquim Vargas"><nav class="store-links"><button class="store-nav active" onclick="lojaCatalogo()">Catálogo</button><button class="store-nav" onclick="lojaPedidos()">Pedidos</button><button class="store-nav" onclick="lojaPerfil()">Perfil</button><button class="store-nav" onclick="lojaSobreNos()">Sobre Nós</button></nav><div class="store-actions"><span>♙ ${esc(me.nome)}</span><button class="btn cart-button" onclick="openCart()">🛒 <b id="cartCount">0</b></button><button class="btn" onclick="logout()">⇥</button></div></header><main id="storeMain"></main><footer class="store-footer"><strong>Xiquim Vargas</strong><div style="margin-top:7px">${esc(cfg['store.footer']||'Pedido, catálogo e operação integrados.')}</div></footer><div id="cartDrawer"></div></div>`;window.storeCfg=cfg;lojaCatalogo()}
+async function loja(){const [c,p,sc,cats]=await Promise.all([api('/api/clients'),api('/api/products'),api('/api/store-config'),api('/api/categories')]);const cfg=sc.config||{};window.lojaProducts=p.items;window.lojaCategories=cats.categorias;window.lojaSubcategories=cats.subcategorias;window.lojaCart=window.lojaCart||{};const activeIds=new Set(window.lojaProducts.map(x=>x.id));const removed=Object.keys(window.lojaCart).filter(id=>!activeIds.has(id));for(const id of removed)delete window.lojaCart[id];if(removed.length)setTimeout(()=>alert(`${removed.length} produto(s) indisponível(is) foram removidos automaticamente do carrinho.`),0);window.lojaClientId=c.items[0]?.id||'';if(window.lojaClientId){try{const priced=await api('/api/products?cliente_id='+encodeURIComponent(window.lojaClientId));window.lojaProducts=priced.items}catch(error){console.warn('Falha ao atualizar precos da loja',error)}}document.body.innerHTML=`<div><header class="store-header"><img class="xv-logo" src="/assets/institucional/01_Logo_Xiquim_Vargas_HD.png" alt="Xiquim Vargas"><nav class="store-links"><button class="store-nav active" onclick="lojaCatalogo()">Catálogo</button><button class="store-nav" onclick="lojaPedidos()">Pedidos</button><button class="store-nav" onclick="lojaPerfil()">Perfil</button><button class="store-nav" onclick="lojaSobreNos()">Sobre Nós</button><button class="store-nav store-nav-contact" onclick="lojaFaleConosco()" title="Fale com nosso atendimento">📞 Fale Conosco</button></nav><div class="store-actions"><span>♙ ${esc(me.nome)}</span><button class="btn cart-button" onclick="openCart()">🛒 <b id="cartCount">0</b></button><button class="btn" onclick="logout()">⇥</button></div></header><main id="storeMain"></main><footer class="store-footer"><strong>Xiquim Vargas</strong><div style="margin-top:7px">${esc(cfg['store.footer']||'Pedido, catálogo e operação integrados.')}</div></footer><div id="cartDrawer"></div></div>`;window.storeCfg=cfg;lojaCatalogo()}
 
 function lojaNav(active){document.querySelectorAll('.store-nav').forEach(b=>b.classList.toggle('active',b.textContent.toLowerCase().startsWith(active)))}
 function lojaDashboard(){return lojaCatalogo()}
@@ -1321,6 +1321,117 @@ async function lojaSobreNos(){
     </section>
   `;
 }
+
+function isLojaCellularDevice(){
+  const ua = navigator.userAgent || navigator.vendor || window.opera || '';
+  const isMobileUA = /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua);
+  return isMobileUA && !/iPad|Macintosh/i.test(ua);
+}
+
+function copyToClipboard(text, btnEl){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>{
+      if(btnEl){
+        const orig = btnEl.innerHTML;
+        btnEl.innerHTML = '✓ Copiado!';
+        btnEl.style.background = '#10b981';
+        btnEl.style.color = '#fff';
+        setTimeout(()=>{
+          btnEl.innerHTML = orig;
+          btnEl.style.background = '';
+          btnEl.style.color = '';
+        }, 2200);
+      }
+      toastRole('✓ Número copiado para a área de transferência!');
+    }).catch(()=>{
+      window.prompt('Copie o número de telefone:', text);
+    });
+  }else{
+    window.prompt('Copie o número de telefone:', text);
+  }
+}
+window.copyToClipboard = copyToClipboard;
+
+function lojaFaleConosco(){
+  const cfg = window.storeCfg || {};
+  const phone = cfg['store.phone'] || '(33) 3221-4210';
+  const cleanDigits = String(phone).replace(/\D/g, '');
+  
+  if(isLojaCellularDevice() && cleanDigits){
+    window.location.href = 'tel:' + cleanDigits;
+    return;
+  }
+  
+  openLojaContactModal();
+}
+window.lojaFaleConosco = lojaFaleConosco;
+
+function openLojaContactModal(){
+  const cfg = window.storeCfg || {};
+  const phone = cfg['store.phone'] || '(33) 3221-4210';
+  const whatsapp = cfg['store.whatsapp'] || phone || '';
+  const contactInfo = cfg['store.contact_info'] || 'Segunda à Sexta: 07:30 às 17:30 | Sábado: 07:30 às 12:30\nRua José Luís Nogueira, 645 - Centro, Governador Valadares/MG';
+  const cleanPhone = String(phone).replace(/\D/g, '');
+  const cleanWpp = String(whatsapp).replace(/\D/g, '');
+  
+  modal('📞 Fale Conosco — Canais de Atendimento', `
+    <div class="store-contact-modal-body" style="font-family:inherit;color:#1e293b">
+      <div style="text-align:center;padding:6px 0 16px;border-bottom:1px solid #e2e8f0">
+        <div style="font-size:38px;line-height:1;margin-bottom:6px">📞</div>
+        <h3 style="margin:0 0 4px;font-size:20px;font-weight:900;color:var(--xv-brand-navy,#061a4f)">Central de Atendimento ao Cliente</h3>
+        <p class="muted" style="margin:0;font-size:13.5px">Distribuidora Xiquim Vargas · Canais Oficiais de Contato</p>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px;margin-top:16px">
+        <!-- Telefone Principal / Fixo -->
+        <div style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:12px;padding:16px;border-left:5px solid #0284c7">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+            <div>
+              <span class="badge" style="background:rgba(2,132,199,0.15);color:#0284c7;font-weight:700">Telefone Principal</span>
+              <div style="font-size:22px;font-weight:900;color:#0f172a;margin-top:4px;letter-spacing:0.5px">${esc(phone)}</div>
+              <div class="muted" style="font-size:12px;margin-top:2px">Televendas, pedidos e suporte comercial</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <button type="button" class="btn" style="font-weight:700;padding:8px 14px" onclick="copyToClipboard('${esc(phone)}', this)">📋 Copiar</button>
+              ${cleanPhone ? `<a href="tel:${cleanPhone}" class="btn" style="background:#0284c7;color:#fff;border-color:#0284c7;font-weight:700;padding:8px 14px;text-decoration:none">📞 Ligar</a>` : ''}
+            </div>
+          </div>
+        </div>
+
+        <!-- WhatsApp Comercial -->
+        ${cleanWpp ? `
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px;border-left:5px solid #16a34a">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+            <div>
+              <span class="badge" style="background:rgba(22,163,74,0.15);color:#16a34a;font-weight:700">WhatsApp Comercial</span>
+              <div style="font-size:20px;font-weight:800;color:#14532d;margin-top:4px">${esc(whatsapp)}</div>
+              <div class="muted" style="font-size:12px;margin-top:2px">Converse diretamente com nossa equipe de vendas</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <button type="button" class="btn" style="font-weight:700;padding:8px 14px" onclick="copyToClipboard('${esc(whatsapp)}', this)">📋 Copiar</button>
+              <a href="https://wa.me/55${cleanWpp}?text=${encodeURIComponent('Olá! Gostaria de informações sobre produtos e pedidos na Distribuidora Xiquim Vargas.')}" target="_blank" rel="noopener noreferrer" class="btn" style="background:#16a34a;color:#fff;border-color:#16a34a;font-weight:700;padding:8px 14px;text-decoration:none">💬 Abrir WhatsApp</a>
+            </div>
+          </div>
+        </div>
+        ` : ''}
+
+        <!-- Horários & Localização -->
+        <div style="background:#fffbeb;border:1px solid #fef3c7;border-radius:12px;padding:16px;border-left:5px solid #f59e0b">
+          <span class="badge" style="background:rgba(245,158,11,0.15);color:#b45309;font-weight:700">🕒 Horários de Atendimento &amp; Localização</span>
+          <div style="margin-top:8px;color:#78350f;font-size:13.5px;line-height:1.6;white-space:pre-wrap;font-weight:600">${esc(contactInfo)}</div>
+          <div style="margin-top:12px">
+            <a href="https://maps.google.com/?q=Rua+Jose+Luiz+Nogueira+645+Centro+Governador+Valadares+MG" target="_blank" rel="noopener noreferrer" class="btn" style="background:#fff;border-color:#f59e0b;color:#b45309;font-weight:700;font-size:12.5px;text-decoration:none;display:inline-flex;align-items:center;gap:6px">📍 Abrir no Google Maps ↗</a>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:18px;display:flex;justify-content:flex-end">
+        <button type="button" class="btn primary" onclick="closeModal()" style="padding:10px 24px;font-weight:700">Fechar</button>
+      </div>
+    </div>
+  `, '560px');
+}
+window.openLojaContactModal = openLojaContactModal;
 async function lojaCatalogo(){lojaNav('cat');const cats=window.lojaCategories||[];const catCards=cats.length?`<div class="grid" style="margin-top:14px;margin-bottom:24px;">${cats.map(c=>`<div class="mobile-card" style="cursor:pointer" onclick="lojaSubcategorias('${c.id}')"><h3>${esc(c.nome)}</h3><p class="muted">${esc(c.descricao||'')}</p></div>`).join('')}</div>`:'';$('#storeMain').innerHTML=`${storeHeroHtml()}<section class="store-main">${catCards}<div class="section-title"><h2>Catálogo de Produtos</h2></div><div class="form" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;"><input id="storeSearch" class="search" style="grid-column:1/-1" placeholder="Pesquisar produto por nome, marca ou SKU..." oninput="lojaFilter()"><div class="field"><label>Menor preço (R$)</label><input type="number" step="0.01" min="0" id="storeMin" class="search" placeholder="0,00" onkeydown="if(event.key==='Enter')lojaFilter()"></div><div class="field"><label>Maior preço (R$)</label><input type="number" step="0.01" min="0" id="storeMax" class="search" placeholder="Sem limite" onkeydown="if(event.key==='Enter')lojaFilter()"></div><div style="grid-column:1/-1;display:flex;gap:8px;margin-top:4px;"><button type="button" class="btn primary" style="flex:1" onclick="lojaFilter()">🔍 Filtrar por preço</button><button type="button" class="btn" onclick="lojaClearFilters()">Limpar filtros</button></div></div><div id="storeProducts" class="product-grid" style="margin-top:14px"></div></section>`;lojaFilter()}
 function lojaClearFilters(){const s=$('#storeSearch');if(s)s.value='';const mn=$('#storeMin');if(mn)mn.value='';const mx=$('#storeMax');if(mx)mx.value='';lojaFilter()}
 function lojaSubcategorias(catId){const cat=window.lojaCategories.find(c=>c.id===catId);const subs=(window.lojaSubcategories||[]).filter(s=>s.categoria_id===catId);window.lojaCurrentCatId=catId;const catItems=(window.lojaProducts||[]).filter(p=>p.categoria_id===catId);$('#storeMain').innerHTML=`${storeHeroHtml()}<section class="store-main"><div class="mobile-nav" style="margin-bottom:14px"><button class="btn" onclick="lojaCatalogo()">← Todas as Categorias</button></div><div class="section-title"><h2>${esc(cat?.nome||'Categoria')}</h2><span class="badge">${catItems.length} produtos</span></div><div class="grid" style="margin-top:14px;margin-bottom:20px;"><div class="mobile-card" style="cursor:pointer;border-left:4px solid #f97316" onclick="lojaProdutosSub('','Todos os Produtos (${catItems.length})','${catId}')"><h3>Todos os Produtos</h3><p class="muted">Ver toda a linha de ${esc(cat?.nome||'')}</p></div>${subs.length?subs.map(s=>{const cnt=(window.lojaProducts||[]).filter(p=>p.subcategoria_id===s.id).length;return `<div class="mobile-card" style="cursor:pointer" onclick="lojaProdutosSub('${s.id}','${esc(s.nome).replace(/'/g,"\\'").replace(/"/g,"&quot;")}','${catId}')"><h3>${esc(s.nome)}</h3><p class="muted">${cnt} produtos</p></div>`}).join(''):'<p class="muted">Nenhuma subcategoria encontrada.</p>'}</div><div class="section-title"><h2>Produtos em ${esc(cat?.nome||'')}</h2></div><div id="storeProducts" class="product-grid" style="margin-top:14px"></div></section>`;lojaRender(catItems)}

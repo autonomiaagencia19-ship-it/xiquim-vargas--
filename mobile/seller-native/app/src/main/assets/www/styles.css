@@ -2669,6 +2669,24 @@ td.actions .btn {
   color: var(--xv-brand-orange, #fd5e02) !important;
 }
 
+.store-links .store-nav-contact {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  color: #0284c7 !important;
+  background: rgba(2, 132, 199, 0.08) !important;
+  border: 1px solid rgba(2, 132, 199, 0.28) !important;
+  border-radius: 10px !important;
+  transition: all 0.2s ease !important;
+}
+
+.store-links .store-nav-contact:hover {
+  background: rgba(2, 132, 199, 0.18) !important;
+  color: #0369a1 !important;
+  border-color: #0284c7 !important;
+  transform: translateY(-1px);
+}
+
 .store-actions {
   display: flex !important;
   align-items: center !important;
