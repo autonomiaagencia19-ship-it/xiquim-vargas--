@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutonomIA Systems — Sistema de Gestão para Empresas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #0a1128;
+      --navy-card: #101c42;
+      --orange: #fd5e02;
+      --orange-hover: #e04f00;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --border: rgba(255, 255, 255, 0.1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--primary);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    header {
+      padding: 20px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 24px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .logo span { color: var(--orange); }
+    .btn {
+      background: var(--orange);
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 700;
+      transition: all 0.2s;
+      border: none;
+      cursor: pointer;
+    }
+    .btn:hover { background: var(--orange-hover); }
+    .hero {
+      text-align: center;
+      padding: 80px 20px 60px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .badge-pill {
+      background: rgba(253, 94, 2, 0.15);
+      color: #ff914d;
+      border: 1px solid rgba(253, 94, 2, 0.3);
+      padding: 6px 16px;
+      border-radius: 50px;
+      font-size: 13px;
+      font-weight: 700;
+      display: inline-block;
+      margin-bottom: 20px;
+    }
+    .hero h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 46px;
+      font-weight: 800;
+      line-height: 1.15;
+      margin-bottom: 20px;
+      letter-spacing: -0.5px;
+    }
+    .hero p {
+      font-size: 18px;
+      color: var(--muted);
+      margin-bottom: 35px;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+      max-width: 1100px;
+      margin: 40px auto 80px;
+      padding: 0 20px;
+    }
+    .card {
+      background: var(--navy-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 30px;
+    }
+    .card-icon {
+      font-size: 32px;
+      margin-bottom: 16px;
+    }
+    .card h3 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      margin-bottom: 10px;
+      color: #fff;
+    }
+    .card p {
+      font-size: 14.5px;
+      color: var(--muted);
+    }
+    footer {
+      border-top: 1px solid var(--border);
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">AutonomIA <span>Systems</span></div>
+    <a href="#contato" class="btn">Agendar Demonstração</a>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="badge-pill">⚡ VENDAS SEM PARAR MESMO SEM INTERNET</div>
+      <h1>O Sistema de Gestão Inteligente que sua Distribuidora Precisa</h1>
+      <p>Chega de perder pedidos por falta de sinal no cliente ou balcão travado. Vendas na rua, frente de caixa ágil, roteirização de entregas e estoque em tempo real.</p>
+      <a href="#contato" class="btn" style="padding: 16px 36px; font-size: 16px;">Conheça na Prática</a>
+    </section>
+
+    <section class="features-grid">
+      <div class="card">
+        <div class="card-icon">📱</div>
+        <h3>Vendas de Campo 100% Offline</h3>
+        <p>Seus vendedores montam os pedidos no celular sem sinal de internet. Assim que a rede volta, tudo sobe sozinho para a matriz sem duplicar.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">⚡</div>
+        <h3>Reserva Imediata de Estoque</h3>
+        <p>Saiu uma venda no balcão ou na rua? O produto é reservado no mesmo segundo para que nenhum colega venda mercadoria inexistente.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">🚚</div>
+        <h3>Logística e Canhoto Digital</h3>
+        <p>Roteirização inteligente da ordem de entrega para economizar combustível e foto do canhoto assinado direto pelo aplicativo do motorista.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">🛒</div>
+        <h3>Frente de Caixa (PDV) Ágil</h3>
+        <p>Bipagem contínua de código de barras, troco automático e emissão rápida de comprovante de venda para impressoras térmicas.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">🏷️</div>
+        <h3>Tabelas de Preço Automáticas</h3>
+        <p>Descontos por volume e atacado direto no carrinho. Ao atingir a quantidade mínima, o preço cai sozinho sem conta de cabeça.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">🛡️</div>
+        <h3>Segurança e Auditoria Permanente</h3>
+        <p>Trilha de auditoria criptografada imutável que registra todas as alterações de preços, descontos e movimentações de estoque.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer id="contato">
+    <p>© 2026 AutonomIA Systems. Todos os direitos reservados. Sistema de Gestão para Empresas.</p>
+  </footer>
+</body>
+</html>
+

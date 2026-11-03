@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#070c18"/>
+      <stop offset="100%" stop-color="#101c42"/>
+    </linearGradient>
+    <linearGradient id="orangeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#fd5e02"/>
+      <stop offset="100%" stop-color="#ff8c42"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGradient)"/>
+
+  <!-- Geometric Grid Accent -->
+  <circle cx="1050" cy="150" r="300" fill="none" stroke="#fd5e02" stroke-opacity="0.08" stroke-width="2"/>
+  <circle cx="1050" cy="150" r="180" fill="none" stroke="#fd5e02" stroke-opacity="0.12" stroke-width="2"/>
+
+  <!-- Header / Brand -->
+  <text x="80" y="110" font-family="'Segoe UI', Roboto, Helvetica, sans-serif" font-weight="900" font-size="34" fill="#ffffff" letter-spacing="1">
+    AUTONOMIA <tspan fill="#fd5e02">SYSTEMS</tspan>
+  </text>
+  <rect x="80" y="130" width="180" height="4" fill="url(#orangeGradient)" rx="2"/>
+
+  <!-- Badge Pill -->
+  <rect x="80" y="180" width="380" height="38" rx="19" fill="#fd5e02" fill-opacity="0.15" stroke="#fd5e02" stroke-opacity="0.3" stroke-width="1.5"/>
+  <text x="100" y="204" font-family="'Segoe UI', Roboto, sans-serif" font-weight="700" font-size="14" fill="#ff914d" letter-spacing="0.5">
+    ⚡ SISTEMA DE GESTÃO PARA EMPRESAS
+  </text>
+
+  <!-- Main Headline -->
+  <text x="80" y="280" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="52" fill="#ffffff" line-height="1.2">
+    Venda na rua e no balcão
+  </text>
+  <text x="80" y="340" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="52" fill="#fd5e02">
+    mesmo sem internet.
+  </text>
+
+  <!-- Subheadline -->
+  <text x="80" y="410" font-family="'Segoe UI', Roboto, sans-serif" font-weight="400" font-size="22" fill="#94a3b8">
+    Aplicativos Android nativos para vendedores, PDV ágil e entregas com
+  </text>
+  <text x="80" y="445" font-family="'Segoe UI', Roboto, sans-serif" font-weight="400" font-size="22" fill="#94a3b8">
+    canhoto digital. Sincronização automática assim que o sinal volta.
+  </text>
+
+  <!-- Feature Pills -->
+  <g transform="translate(80, 500)">
+    <!-- Pill 1 -->
+    <rect x="0" y="0" width="220" height="48" rx="10" fill="#1e293b" stroke="rgba(255,255,255,0.1)"/>
+    <text x="20" y="30" font-family="'Segoe UI', Roboto, sans-serif" font-weight="700" font-size="15" fill="#f8fafc">📱 100% Offline-First</text>
+
+    <!-- Pill 2 -->
+    <rect x="235" y="0" width="230" height="48" rx="10" fill="#1e293b" stroke="rgba(255,255,255,0.1)"/>
+    <text x="255" y="30" font-family="'Segoe UI', Roboto, sans-serif" font-weight="700" font-size="15" fill="#f8fafc">⚡ Reserva de Estoque</text>
+
+    <!-- Pill 3 -->
+    <rect x="480" y="0" width="220" height="48" rx="10" fill="#1e293b" stroke="rgba(255,255,255,0.1)"/>
+    <text x="500" y="30" font-family="'Segoe UI', Roboto, sans-serif" font-weight="700" font-size="15" fill="#f8fafc">🚚 Canhotos Digitais</text>
+  </g>
+</svg>
+
