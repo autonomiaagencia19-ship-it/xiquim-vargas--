@@ -316,6 +316,35 @@ function migrateBalcaoPendingOrders(){
 }
 migrateBalcaoPendingOrders();
 
+function migrateCleanCatalogFields(){
+  try{
+    const jaLimpou = one("SELECT valor FROM configuracoes WHERE chave = 'migration.clean_catalog_fields_v1'");
+    if(!jaLimpou){
+      console.log('Aplicando migração automática: limpeza de SKUs, marcas e descrições do catálogo (preservando fotos e preços base)...');
+      tx(()=>{
+        // Altera ESTRITAMENTE campos secundários de texto: sku, barcode, marca, sabor, tamanho, descricao
+        // NUNCA altera preco_base, NUNCA altera foto_url, NUNCA altera estoque
+        run(`
+          UPDATE produtos 
+          SET 
+            sku = NULL, 
+            codigo_barras = NULL, 
+            marca = NULL, 
+            sabor = NULL, 
+            tamanho = NULL, 
+            descricao = NULL,
+            updated_at = CURRENT_TIMESTAMP
+        `);
+        run("INSERT INTO configuracoes(chave, valor) VALUES('migration.clean_catalog_fields_v1', '1') ON CONFLICT(chave) DO UPDATE SET valor='1', updated_at=CURRENT_TIMESTAMP");
+      });
+      console.log('Migração clean_catalog_fields_v1 concluída com sucesso!');
+    }
+  }catch(err){
+    console.error('Aviso ao verificar migração clean_catalog_fields_v1:', err.message);
+  }
+}
+migrateCleanCatalogFields();
+
 let onAuditCallback = null;
 export function setAuditCallback(fn) { onAuditCallback = fn; }
 export function audit({userId,action,entity,entityId,before=null,after=null,ip='',ua=''}){
