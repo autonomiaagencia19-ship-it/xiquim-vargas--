@@ -4174,8 +4174,8 @@ async function logistics(v){
     <div id="logisticsModalityContent"></div>
     <div style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--xv-panel,#101d2e); padding:10px 20px; border-radius:30px; box-shadow:0 10px 25px rgba(0,0,0,0.35); z-index:999; display:flex; flex-wrap:wrap; justify-content:center; gap:10px; width:max-content; max-width:90vw; border:1px solid var(--border)">
      <button class="btn" onclick="generateLoadingList()">📋 Gerar lista</button>
-     <button class="btn good" style="background:#059669; border-color:#059669; font-weight:700" onclick="completeOrdersWithoutDriver()">✓ Concluir sem motorista</button>
      <button class="btn primary" onclick="makeRouteModal()">🚚 Gerar rota</button>
+     <button class="btn good" style="background:#059669; border-color:#059669; font-weight:700" onclick="completeOrdersWithoutDriver()">✓ Concluir sem motorista</button>
     </div>
   </div>
 
@@ -4721,11 +4721,11 @@ window.renderDeliveryRoutesDashboardContent = async function(){
               <button class="btn" style="background:#fff; color:#061a4f; border:1px solid #dce4ef" onclick="downloadDeliveryOrdersPdf()">
                 🖨️ Imprimir Pedidos em PDF
               </button>
-              <button id="btnDelivCompleteDirect" class="btn" style="background:#ffffff; color:var(--xv-brand-navy,#061a4f); border:1px solid #dce4ef; font-weight:800; font-size:13px; display:inline-flex; align-items:center; gap:6px" onclick="completeOrdersWithoutDriver()">
-                ✓ Concluir Pedidos (Sem Motorista)
-              </button>
               <button id="btnDelivMakeRoute" class="btn" style="background:#ffffff; color:var(--xv-brand-navy,#061a4f); border:1px solid #dce4ef; font-weight:800; font-size:13px" onclick="makeRouteModal()">
                 🚚 Gerar Rota & Designar Motorista →
+              </button>
+              <button id="btnDelivCompleteDirect" class="btn" style="background:#ffffff; color:var(--xv-brand-navy,#061a4f); border:1px solid #dce4ef; font-weight:800; font-size:13px; display:inline-flex; align-items:center; gap:6px" onclick="completeOrdersWithoutDriver()">
+                ✓ Concluir Pedidos (Sem Motorista)
               </button>
             </div>
           </div>
@@ -5255,11 +5255,11 @@ async function generateLoadingList(){
       Finalização dos pedidos desta lista:
     </div>
     <div style="display:flex; gap:10px; flex-wrap:wrap">
-      <button class="btn good" style="background:#059669; border-color:#059669; font-weight:800; display:inline-flex; align-items:center; gap:6px" onclick="completeOrdersWithoutDriver(parseJsonArg('${jsonArg(ids)}'))">
-        ✓ Concluir Pedidos Sem Motorista
-      </button>
       <button class="btn primary" style="background:#10b981; border-color:#10b981; font-weight:800; display:inline-flex; align-items:center; gap:6px" onclick="closeModal(); makeRouteModal()">
         🚚 Prosseguir com Motorista →
+      </button>
+      <button class="btn good" style="background:#059669; border-color:#059669; font-weight:800; display:inline-flex; align-items:center; gap:6px" onclick="completeOrdersWithoutDriver(parseJsonArg('${jsonArg(ids)}'))">
+        ✓ Concluir Pedidos Sem Motorista
       </button>
     </div>
   </div>`);
