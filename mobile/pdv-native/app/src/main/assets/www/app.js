@@ -3434,22 +3434,38 @@ async function sellers(v) {
                   <th>Nº Pedido</th>
                   <th>Data</th>
                   <th>Cliente</th>
+                  <th>Localização da Venda</th>
                   <th>Pagamento</th>
                   <th>Status</th>
                   <th style="text-align:right">Valor Total</th>
                 </tr>
               </thead>
               <tbody>
-                ${sellerOrders.map(o => `
+                ${sellerOrders.map(o => {
+                  const hasGeo = (o.origem_lat != null && o.origem_lng != null);
+                  const latNum = Number(o.origem_lat);
+                  const lngNum = Number(o.origem_lng);
+                  const mapLink = hasGeo ? `https://www.google.com/maps?q=${latNum},${lngNum}` : '';
+                  return `
                   <tr>
                     <td><strong>${esc(o.numero)}</strong></td>
                     <td>${o.created_at ? new Date(o.created_at).toLocaleString('pt-BR') : '-'}</td>
-                    <td><strong>${esc(o.nome_fantasia || o.razao_social || '-')}</strong></td>
+                    <td><strong>${esc(o.nome_fantasia || o.razao_social || '-')}</strong>${o.bairro ? `<br><small class="muted">${esc(o.bairro)}</small>` : ''}</td>
+                    <td>
+                      ${hasGeo ? `
+                        <a href="${mapLink}" target="_blank" rel="noopener noreferrer" class="btn" style="padding:4px 9px; font-size:11px; font-weight:800; background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; text-decoration:none; display:inline-flex; align-items:center; gap:5px; border-radius:6px" title="GPS: ${latNum}, ${lngNum}">
+                          📍 Ver no Mapa
+                        </a>
+                        <div style="font-size:10px; color:var(--muted); margin-top:2px;">${latNum.toFixed(4)}, ${lngNum.toFixed(4)}</div>
+                      ` : `
+                        <span class="muted" style="font-size:11px; font-style:italic">Sem GPS</span>
+                      `}
+                    </td>
                     <td>${esc(o.forma_pagamento || '-')}</td>
                     <td><span class="badge">${esc(o.status)}</span></td>
                     <td style="text-align:right"><strong>${brl(o.total || 0)}</strong></td>
                   </tr>
-                `).join('') || '<tr><td colspan="6" class="empty-state">Nenhum pedido encontrado neste período para este vendedor.</td></tr>'}
+                `}).join('') || '<tr><td colspan="7" class="empty-state">Nenhum pedido encontrado neste período para este vendedor.</td></tr>'}
               </tbody>
             </table>
           </div>

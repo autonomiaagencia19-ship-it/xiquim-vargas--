@@ -5261,24 +5261,36 @@ h4 {
   justify-content: space-between !important;
 }
 
+/* 1. Padroniza o contêiner da imagem no catálogo (Opção 1: 240px Desktop / 210px Mobile com respiro sutil) */
 .product-thumb,
 .product-card .product-thumb {
-  height: 220px !important;
-  min-height: 220px !important;
-  max-height: 220px !important;
   width: 100% !important;
-  padding: 8px !important;
-  background: #ffffff !important;
-  border: 1px solid #e2e8f0 !important;
-  border-radius: 12px !important;
+  height: 240px !important;
+  min-height: 240px !important;
+  max-height: 240px !important;
+  background-color: #ffffff !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  box-sizing: border-box !important;
   overflow: hidden !important;
-  margin-bottom: 12px !important;
+  padding: 4px !important;
+  box-sizing: border-box !important;
+  border: none !important;
+  box-shadow: none !important;
+  margin-bottom: 10px !important;
 }
 
+@media (max-width: 768px) {
+  .product-thumb,
+  .product-card .product-thumb {
+    height: 210px !important;
+    min-height: 210px !important;
+    max-height: 210px !important;
+    padding: 4px !important;
+  }
+}
+
+/* 2. Controla a imagem para proporção perfeita e preenchimento amplo sem distorcer */
 .product-thumb img,
 .product-card .product-thumb img {
   max-width: 100% !important;
@@ -5289,8 +5301,7 @@ h4 {
   object-position: center !important;
   display: block !important;
   margin: auto !important;
-  border-radius: 6px !important;
-  mix-blend-mode: normal !important;
+  background-color: transparent !important;
 }
 
 .product-image-fallback {

@@ -37,6 +37,12 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         Api.init(this)
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION), 2002)
+            }
+        }
+
         registerNetworkMonitor()
 
         val url = Api.getBaseUrl()
@@ -538,6 +544,7 @@ class MainActivity : Activity() {
                 mediaPlaybackRequiresUserGesture = false
                 javaScriptCanOpenWindowsAutomatically = true
                 setSupportMultipleWindows(true)
+                setGeolocationEnabled(true)
                 cacheMode = WebSettings.LOAD_DEFAULT
             }
 
@@ -775,6 +782,31 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun getAppVersion(): String {
             return BuildConfig.VERSION_NAME
+        }
+
+        @JavascriptInterface
+        fun getLastLocation(): String {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    if (checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED &&
+                        checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                        return ""
+                    }
+                }
+                val lm = getSystemService(Context.LOCATION_SERVICE) as? android.location.LocationManager ?: return ""
+                val providers = lm.getProviders(true)
+                var bestLocation: android.location.Location? = null
+                for (provider in providers) {
+                    val l = lm.getLastKnownLocation(provider) ?: continue
+                    if (bestLocation == null || l.accuracy < bestLocation.accuracy) {
+                        bestLocation = l
+                    }
+                }
+                if (bestLocation != null) {
+                    return "{\"lat\":${bestLocation.latitude},\"lng\":${bestLocation.longitude},\"accuracy\":${bestLocation.accuracy}}"
+                }
+            } catch (_: Exception) {}
+            return ""
         }
 
         @JavascriptInterface

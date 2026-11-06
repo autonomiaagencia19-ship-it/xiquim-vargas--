@@ -791,6 +791,8 @@ function getSellerDiscountCalculations(subtotal){
 }
 
 async function sellerNewOrder(clientOrId){
+  try { getSellerOrderLocation().catch(()=>{}); } catch(_) {}
+
   try{
     let client=clientOrId;
     if(!client)return alert('Selecione um cliente na carteira.');
@@ -995,6 +997,50 @@ function initSellerScrollFloatingBack(){
 window.handleSellerScrollFloatingBack=handleSellerScrollFloatingBack;
 window.initSellerScrollFloatingBack=initSellerScrollFloatingBack;
 function sellerFilter(i){sellerRender(window.sellerProducts.filter(x=>(x.nome+' '+x.sku+' '+(x.marca||'')).toLowerCase().includes(i.value.toLowerCase())))}
+
+async function getSellerOrderLocation() {
+  try {
+    if (window.AndroidApp?.getLastLocation) {
+      const raw = window.AndroidApp.getLastLocation();
+      if (raw) {
+        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        if (parsed && Number.isFinite(parsed.lat) && Number.isFinite(parsed.lng)) {
+          window._currentSellerGeo = { lat: parsed.lat, lng: parsed.lng };
+          return window._currentSellerGeo;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Native GPS fallback:', e);
+  }
+
+  if (window._currentSellerGeo && Number.isFinite(window._currentSellerGeo.lat) && Number.isFinite(window._currentSellerGeo.lng)) {
+    return window._currentSellerGeo;
+  }
+
+  if (typeof navigator !== 'undefined' && navigator.geolocation) {
+    try {
+      const pos = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 3500,
+          maximumAge: 60000
+        });
+      });
+      if (pos && pos.coords) {
+        const geo = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        window._currentSellerGeo = geo;
+        return geo;
+      }
+    } catch (err) {
+      console.warn('GPS não obtido:', err.message);
+    }
+  }
+
+  return { lat: null, lng: null };
+}
+window.getSellerOrderLocation = getSellerOrderLocation;
+
 async function submitSellerOrder(clientId){
   const items=[...(window.sellerOrderItems?.values()||[])].filter(x=>x.quantidade>0);
   if(!items.length)return toastRole('Adicione pelo menos um produto ao carrinho.',true);
@@ -1014,7 +1060,9 @@ async function submitSellerOrder(clientId){
   Realtime.emit('orders_changed');
   Realtime.emit('stock_changed');
   try{
-    const x=await api('/api/orders',{method:'POST',body:JSON.stringify({cliente_id:targetClientId,itens,origem:'VENDEDOR',desconto_tipo:discType,desconto_valor:discVal,observacoes:obs}),headers:{'Idempotency-Key':'SELLER-'+crypto.randomUUID()}});
+    let sellerGeo = { lat: null, lng: null };
+    try { sellerGeo = await getSellerOrderLocation(); } catch(_) {}
+    const x=await api('/api/orders',{method:'POST',body:JSON.stringify({cliente_id:targetClientId,itens,origem:'VENDEDOR',desconto_tipo:discType,desconto_valor:discVal,observacoes:obs,origem_lat:sellerGeo?.lat??null,origem_lng:sellerGeo?.lng??null}),headers:{'Idempotency-Key':'SELLER-'+crypto.randomUUID()}});
     toastRole(x.offline?'Pedido salvo offline.':'✓ Pedido '+x.item.numero+' criado e PDF gerado!');
     roleRealtimeRefresh('orders_changed');
   }catch(e){toastRole(e.message,true)}

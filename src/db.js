@@ -131,6 +131,8 @@ if(!hasColumn('pedidos','cancelled_at')) db.exec("ALTER TABLE pedidos ADD COLUMN
 if(!hasColumn('pedidos','cancelled_by')) db.exec("ALTER TABLE pedidos ADD COLUMN cancelled_by TEXT REFERENCES usuarios(id)");
 if(!hasColumn('pedidos','cancel_reason')) db.exec("ALTER TABLE pedidos ADD COLUMN cancel_reason TEXT");
 if(!hasColumn('pedidos','cancelled_snapshot_json')) db.exec("ALTER TABLE pedidos ADD COLUMN cancelled_snapshot_json TEXT");
+if(!hasColumn('pedidos','origem_lat')) db.exec("ALTER TABLE pedidos ADD COLUMN origem_lat REAL");
+if(!hasColumn('pedidos','origem_lng')) db.exec("ALTER TABLE pedidos ADD COLUMN origem_lng REAL");
 if(!hasColumn('audit_logs','integrity_hash')) db.exec("ALTER TABLE audit_logs ADD COLUMN integrity_hash TEXT");
 if(!hasColumn('tabela_preco_itens','quantidade_minima')) db.exec("ALTER TABLE tabela_preco_itens ADD COLUMN quantidade_minima INTEGER NOT NULL DEFAULT 1");
 if(!hasColumn('clientes','tabela_preco_individual_id')) db.exec("ALTER TABLE clientes ADD COLUMN tabela_preco_individual_id TEXT REFERENCES tabelas_preco(id)");
