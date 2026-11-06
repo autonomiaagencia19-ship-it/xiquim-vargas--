@@ -5261,25 +5261,26 @@ h4 {
   justify-content: space-between !important;
 }
 
+/* 1. Padroniza o contêiner da imagem no catálogo (Vendedor e Loja Online) */
 .product-thumb,
 .product-card .product-thumb {
-  height: 220px !important;
-  min-height: 220px !important;
-  max-height: 220px !important;
   width: 100% !important;
-  padding: 0 !important;
-  background: #ffffff !important;
-  border: none !important;
-  box-shadow: none !important;
-  border-radius: 12px !important;
+  height: 180px !important;
+  min-height: 180px !important;
+  max-height: 180px !important;
+  background-color: #ffffff !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  box-sizing: border-box !important;
   overflow: hidden !important;
-  margin-bottom: 12px !important;
+  padding: 12px !important; /* Cria o respiro elegante para não colar no topo */
+  box-sizing: border-box !important;
+  border: none !important;
+  box-shadow: none !important;
+  margin-bottom: 10px !important;
 }
 
+/* 2. Controla a imagem para proporção perfeita sem distorcer */
 .product-thumb img,
 .product-card .product-thumb img {
   max-width: 100% !important;
@@ -5290,9 +5291,7 @@ h4 {
   object-position: center !important;
   display: block !important;
   margin: auto !important;
-  border-radius: 8px !important;
-  background: #ffffff !important;
-  mix-blend-mode: normal !important;
+  background-color: transparent !important;
 }
 
 .product-image-fallback {
