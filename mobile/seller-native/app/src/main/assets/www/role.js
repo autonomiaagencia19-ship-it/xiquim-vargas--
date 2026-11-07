@@ -867,6 +867,90 @@ function getSellerDiscountCalculations(subtotal){
   return {type,val,discountAmount,total};
 }
 
+
+function getSellerCartStorageKey(clientId){
+  const sellerId = (window.me && window.me.id) ? window.me.id : 'default';
+  return 'xv_seller_cart_' + sellerId + '_' + clientId;
+}
+
+async function saveSellerDraftCart(clientId){
+  const targetId = clientId || window.sellerCurrentClientId;
+  if(!targetId) return;
+  const items = [...(window.sellerOrderItems?.values() || [])]
+    .filter(x => Number(x.quantidade) > 0)
+    .map(x => ({
+      produto_id: x.produto_id,
+      quantidade: Number(x.quantidade)
+    }));
+  const discType = window._sellerCurrentDiscountType || $('#sellerDiscountType')?.value || $('#sellerFloatingDiscountType')?.value || 'VALOR';
+  const discVal = Number(window._sellerCurrentDiscountVal !== undefined ? window._sellerCurrentDiscountVal : ($('#sellerDiscount')?.value || $('#sellerFloatingDiscount')?.value || 0));
+  const obs = (window._sellerCurrentObs !== undefined ? window._sellerCurrentObs : ($('#sellerObs')?.value || $('#sellerFloatingObs')?.value || '')).trim();
+
+  const key = getSellerCartStorageKey(targetId);
+  if(!items.length && !discVal && !obs){
+    try { localStorage.removeItem(key); } catch(_) {}
+    try { await offlinePut('kv', key, null); } catch(_) {}
+    return;
+  }
+
+  const draft = {
+    clientId: targetId,
+    items,
+    discountVal: discVal,
+    discountType: discType,
+    obs,
+    updatedAt: new Date().toISOString()
+  };
+
+  try { localStorage.setItem(key, JSON.stringify(draft)); } catch(_) {}
+  try { await offlinePut('kv', key, draft); } catch(_) {}
+}
+
+async function loadSellerDraftCart(clientId){
+  if(!clientId) return null;
+  const key = getSellerCartStorageKey(clientId);
+  let draft = null;
+  try {
+    const raw = localStorage.getItem(key);
+    if(raw) draft = JSON.parse(raw);
+  } catch(_) {}
+  if(!draft){
+    try {
+      draft = await offlineGet('kv', key);
+    } catch(_) {}
+  }
+  return draft;
+}
+
+async function clearSellerDraftCart(clientId){
+  const targetId = clientId || window.sellerCurrentClientId;
+  if(!targetId) return;
+  const key = getSellerCartStorageKey(targetId);
+  try { localStorage.removeItem(key); } catch(_) {}
+  try { await offlinePut('kv', key, null); } catch(_) {}
+}
+
+async function sellerClearCartAndDraft(){
+  if((window.sellerOrderItems && window.sellerOrderItems.size > 0) || window._sellerCurrentObs || window._sellerCurrentDiscountVal){
+    if(!confirm('Deseja realmente limpar todos os itens e observações deste carrinho?')) return;
+  }
+  window.sellerOrderItems = new Map();
+  window._sellerCurrentDiscountVal = 0;
+  window._sellerCurrentDiscountType = 'VALOR';
+  window._sellerCurrentObs = '';
+  const d1 = $('#sellerDiscount'); if(d1) d1.value = 0;
+  const t1 = $('#sellerDiscountType'); if(t1) t1.value = 'VALOR';
+  const o1 = $('#sellerObs'); if(o1) o1.value = '';
+  const d2 = $('#sellerFloatingDiscount'); if(d2) d2.value = 0;
+  const t2 = $('#sellerFloatingDiscountType'); if(t2) t2.value = 'VALOR';
+  const o2 = $('#sellerFloatingObs'); if(o2) o2.value = '';
+  await clearSellerDraftCart(window.sellerCurrentClientId);
+  renderSellerNewOrderCart();
+  updateFloatingCartTotals();
+  if($('#sellerFloatingCartModal')) openSellerFloatingCart();
+  toastRole('Carrinho limpo.');
+}
+
 async function sellerNewOrder(clientOrId){
   try { getSellerOrderLocation().catch(()=>{}); } catch(_) {}
 
@@ -925,11 +1009,11 @@ async function sellerNewOrder(clientOrId){
 function sellerRender(items){const el=$('#sellerProducts');if(el)el.innerHTML=items.map(p=>{const tName=esc(p.tabela_preco_nome||p.tabela_nome||'Oferta');const hasMin=p.preco_tabela!=null&&Number(p.quantidade_minima)>1;const maxSt=p.quantidade_disponivel||99999;return `<article class="product-card" data-seller-product-id="${esc(p.id)}">${productThumbHtml(p,p.marca||'PRODUTO')}<h4>${esc(p.nome)}</h4><div class="muted">${esc(p.tamanho||p.sabor||p.sku||'')}</div>${hasMin?`<div class="promo-label" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap" onclick="selectSellerMinQty('${p.id}',${Number(p.quantidade_minima)},${maxSt})" title="Clique para selecionar ${p.quantidade_minima} un. com preço ${tName}"><span>🏷️ ${tName}: <strong>${money(p.preco_tabela)}</strong> (a partir de ${p.quantidade_minima} un.)</span><span style="background:rgba(255,255,255,0.25);padding:2px 7px;border-radius:6px;font-size:11px;font-weight:800;text-decoration:underline">Selecionar ${p.quantidade_minima} un.</span></div>`:(p.preco_tabela!=null?`<div class="promo-label">🏷️ ${tName}: ${money(p.preco_tabela)}</div>`:'')}<div class="product-price" id="seller_price_${esc(p.id)}">${money(p.preco_aplicado ?? p.preco_base)}</div>${Number(p.esgotado)?'<div class="promo-label" style="background:#b42318">ESGOTADO</div><button class="btn" disabled>Indisponível</button>':`<div class="muted" style="margin-bottom:6px">Estoque disponível: ${p.quantidade_disponivel ?? 'N/A'}</div><div class="seller-card-qty-row"><span class="seller-card-qty-label">Qtd:</span><div class="seller-qty-stepper"><button type="button" aria-label="Diminuir quantidade" onclick="stepSellerCardQty('${p.id}',-1,${maxSt})">−</button><input type="number" id="seller_qty_${esc(p.id)}" value="1" min="1" max="${maxSt}" step="1" inputmode="numeric" onchange="sanitizeSellerCardQty(this,${maxSt},'${p.id}')" oninput="updateSellerCardPriceDisplay('${p.id}')"><button type="button" aria-label="Aumentar quantidade" onclick="stepSellerCardQty('${p.id}',1,${maxSt})">＋</button></div></div><button class="btn primary seller-add-btn" style="width:100%" onclick="addSellerNewOrderItemWithQty('${p.id}')">Adicionar ao carrinho</button>`}</article>`}).join('')}
 function updateSellerCardPriceDisplay(id){const p=(window.sellerProducts||[]).find(x=>x.id===id);const el=document.getElementById('seller_qty_'+id);const priceEl=document.getElementById('seller_price_'+id);if(!p||!priceEl)return;const q=Math.max(1,parseInt(el?.value,10)||1);priceEl.textContent=money(priceForLine(p,q))}
 function selectSellerMinQty(id,minQty,maxStock){const el=document.getElementById('seller_qty_'+id);if(!el)return;const max=Number(maxStock)||99999;const target=Math.max(1,Math.min(max,Number(minQty)||1));el.value=target;updateSellerCardPriceDisplay(id);const p=(window.sellerProducts||[]).find(x=>x.id===id);const tName=p?.tabela_preco_nome||p?.tabela_nome||'Oferta';if(target<Number(minQty)){toastRole(`Estoque máximo disponível: ${max} un.`,true)}else{toastRole(`✓ ${target} un. selecionadas — ${tName}: ${money(priceForLine(p,target))}/un`)}}
-function setSellerCartMinQty(id,minQty){const item=window.sellerOrderItems?.get(id);if(!item)return;const max=item.estoque||99999;const next=Math.max(1,Math.min(max,Number(minQty)||1));item.quantidade=next;item.preco=priceForLine(item,next);renderSellerNewOrderCart();updateFloatingCartTotals();if($('#sellerFloatingCartModal'))openSellerFloatingCart();toastRole(`✓ Quantidade ajustada para ${next} un. (${money(item.preco)}/un)`)}
+function setSellerCartMinQty(id,minQty){const item=window.sellerOrderItems?.get(id);if(!item)return;const max=item.estoque||99999;const next=Math.max(1,Math.min(max,Number(minQty)||1));item.quantidade=next;item.preco=priceForLine(item,next);renderSellerNewOrderCart();updateFloatingCartTotals();saveSellerDraftCart();if($('#sellerFloatingCartModal'))openSellerFloatingCart();toastRole(`✓ Quantidade ajustada para ${next} un. (${money(item.preco)}/un)`)}
 function stepSellerCardQty(id,delta,maxStock){const el=document.getElementById('seller_qty_'+id);if(!el)return;const cur=parseInt(el.value,10)||1,max=Number(maxStock)||99999;el.value=Math.max(1,Math.min(max,cur+delta));updateSellerCardPriceDisplay(id)}
 function sanitizeSellerCardQty(el,maxStock,id){if(!el)return;let v=parseInt(el.value,10),max=Number(maxStock)||99999;if(isNaN(v)||v<1)v=1;if(v>max){v=max;toastRole(`Estoque máximo disponível: ${max} un.`,true)}el.value=v;if(id)updateSellerCardPriceDisplay(id)}
 function addSellerNewOrderItemWithQty(id){const el=document.getElementById('seller_qty_'+id);const qty=parseInt(el?.value,10)||1;addSellerNewOrderItem(id,qty);if(el){el.value=1;updateSellerCardPriceDisplay(id)}}
-function addSellerNewOrderItem(id,qty=1){const p=(window.sellerProducts||[]).find(x=>x.id===id);if(!p||Number(p.esgotado))return;if(!window.sellerOrderItems)window.sellerOrderItems=new Map();const current=window.sellerOrderItems.get(id);const addQty=Math.max(1,Number(qty)||1);const maxStock=Number(p.quantidade_disponivel??99999);const next=Math.min(maxStock,Number(current?.quantidade||0)+addQty);window.sellerOrderItems.set(id,{...p,produto_id:id,quantidade:next,nome:p.nome,preco:priceForLine(p,next),estoque:Number(p.quantidade_disponivel||0)});renderSellerNewOrderCart();updateSellerCartFloating();flashSellerProductAdded(id)}
+function addSellerNewOrderItem(id,qty=1){const p=(window.sellerProducts||[]).find(x=>x.id===id);if(!p||Number(p.esgotado))return;if(!window.sellerOrderItems)window.sellerOrderItems=new Map();const current=window.sellerOrderItems.get(id);const addQty=Math.max(1,Number(qty)||1);const maxStock=Number(p.quantidade_disponivel??99999);const next=Math.min(maxStock,Number(current?.quantidade||0)+addQty);window.sellerOrderItems.set(id,{...p,produto_id:id,quantidade:next,nome:p.nome,preco:priceForLine(p,next),estoque:Number(p.quantidade_disponivel||0)});renderSellerNewOrderCart();updateSellerCartFloating();flashSellerProductAdded(id);saveSellerDraftCart();}
 function flashSellerProductAdded(id){const card=document.querySelector(`[data-seller-product-id="${CSS.escape(id)}"]`);if(!card)return;card.classList.remove('seller-product-added');void card.offsetWidth;card.classList.add('seller-product-added');const btn=card.querySelector('.seller-add-btn');if(btn){const original=btn.textContent;btn.textContent='✓ Adicionado';btn.classList.add('seller-add-confirm');clearTimeout(btn._confirmTimer);btn._confirmTimer=setTimeout(()=>{btn.textContent=original;btn.classList.remove('seller-add-confirm')},900)}}
 function updateSellerCartFloating(){const count=[...(window.sellerOrderItems?.values()||[])].reduce((n,i)=>n+i.quantidade,0);const el=$('#sellerFloatingCartCount');if(el)el.textContent=count;const label=$('#sellerFloatingCartLabel');if(label)label.textContent=count?`${count} ${count===1?'item':'itens'}`:'Carrinho'}
 function openSellerFloatingCart(){
@@ -939,7 +1023,7 @@ function openSellerFloatingCart(){
   const calc=getSellerDiscountCalculations(subtotal);
   const existing=$('#sellerFloatingCartModal');
   if(existing)existing.remove();
-  document.body.insertAdjacentHTML('beforeend',`<div id="sellerFloatingCartModal" class="seller-cart-overlay seller-cart-fullscreen-overlay"><aside class="seller-floating-cart seller-cart-fullscreen"><div class="panel-title seller-cart-fullscreen-header"><button type="button" class="btn seller-cart-back-btn" onclick="closeSellerFloatingCart()">← Voltar</button><h2>🛒 Carrinho do pedido</h2><button type="button" class="btn" aria-label="Fechar carrinho" onclick="closeSellerFloatingCart()">✕</button></div><div class="seller-cart-fullscreen-body"><div class="seller-floating-count"><strong>${count} ${count===1?'item selecionado':'itens selecionados'}</strong></div><div class="seller-floating-items">${items.length?items.map(i=>{const tName=esc(i.tabela_preco_nome||i.tabela_nome||'Oferta');const hasMin=i.preco_tabela!=null&&Number(i.quantidade_minima)>1;return `<div class="seller-floating-line"><div><strong>${esc(i.nome)}</strong><div class="muted">${money(i.preco)} · estoque ${i.estoque}</div>${hasMin&&i.quantidade<Number(i.quantidade_minima)?`<button type="button" class="btn" style="margin-top:4px;padding:2px 8px;font-size:11px;font-weight:750;background:#fff7ed;color:var(--xv-orange,#fd5e02);border:1px solid #fdba74" onclick="setSellerCartMinQty('${i.produto_id}',${Number(i.quantidade_minima)})">🏷️ ${tName}: ${money(i.preco_tabela)} (mín. ${i.quantidade_minima} un.) · Aplicar</button>`:(hasMin?`<small style="color:#16a34a;font-weight:750;display:block">✓ ${tName} aplicado (${money(i.preco_tabela)}/un)</small>`:'')}</div><div class="seller-floating-controls"><button type="button" class="btn" onclick="changeSellerNewOrderQty('${i.produto_id}',-1);openSellerFloatingCart()">−</button><strong>${i.quantidade}</strong><button type="button" class="btn" onclick="changeSellerNewOrderQty('${i.produto_id}',1);openSellerFloatingCart()">+</button><button type="button" class="btn danger" onclick="removeSellerNewOrderItem('${i.produto_id}');openSellerFloatingCart()">Remover</button></div></div>`}).join(''):'<div class="empty-state">Nenhum produto adicionado.</div>'}</div><div class="form seller-floating-form"><div class="field"><label>Desconto</label><div class="seller-discount-row"><span>Tipo</span><select id="sellerFloatingDiscountType" onchange="syncSellerFloatingDiscount()"><option value="VALOR" ${calc.type==='VALOR'?'selected':''}>R$ valor</option><option value="PERCENTUAL" ${calc.type==='PERCENTUAL'?'selected':''}>%</option></select><input id="sellerFloatingDiscount" type="number" min="0" step="0.01" value="${calc.val||0}" oninput="syncSellerFloatingDiscount()"></div></div><div class="field"><label>Observação</label><textarea id="sellerFloatingObs" rows="2" oninput="syncSellerFloatingObs()">${esc(window._sellerCurrentObs||$('#sellerObs')?.value||'')}</textarea></div></div></div><div class="seller-cart-fullscreen-footer"><div class="seller-floating-summary-box" style="padding:12px;background:#f8fafc;border-radius:10px;margin-bottom:10px;border:1px solid #dfe5ed"><div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px"><span>Subtotal dos itens:</span><strong id="sellerFloatingSubtotal">${money(subtotal)}</strong></div><div id="sellerFloatingDiscountRow" style="display:${calc.discountAmount>0?'flex':'none'};justify-content:space-between;font-size:14px;color:#16a34a;margin-bottom:4px"><span>Desconto aplicado:</span><strong id="sellerFloatingDiscountDisplay">-${money(calc.discountAmount)}</strong></div><div class="seller-floating-total" style="display:flex;justify-content:space-between;font-size:17px;font-weight:800;border-top:1px solid #cbd5e1;padding-top:6px;color:var(--xv-brand-navy,#061a4f)"><span>Total a pagar:</span><strong id="sellerFloatingTotal" class="orange">${money(calc.total)}</strong></div></div><button class="btn primary seller-finalize" onclick="closeSellerFloatingCart();submitSellerOrder(window.sellerCurrentClientId)" ${items.length?'':'disabled'}>Finalizar pedido e gerar PDF</button></div></aside></div>`);
+  document.body.insertAdjacentHTML('beforeend',`<div id="sellerFloatingCartModal" class="seller-cart-overlay seller-cart-fullscreen-overlay"><aside class="seller-floating-cart seller-cart-fullscreen"><div class="panel-title seller-cart-fullscreen-header"><button type="button" class="btn seller-cart-back-btn" onclick="closeSellerFloatingCart()">← Voltar</button><h2>🛒 Carrinho do pedido</h2><div style="display:flex;gap:6px"><button type="button" class="btn" style="padding:4px 8px;font-size:12px;color:#b42318;border-color:#fecdca" onclick="sellerClearCartAndDraft()" title="Limpar carrinho">🗑️ Limpar</button><button type="button" class="btn" aria-label="Fechar carrinho" onclick="closeSellerFloatingCart()">✕</button></div></div><div class="seller-cart-fullscreen-body"><div class="seller-floating-count"><strong>${count} ${count===1?'item selecionado':'itens selecionados'}</strong></div><div class="seller-floating-items">${items.length?items.map(i=>{const tName=esc(i.tabela_preco_nome||i.tabela_nome||'Oferta');const hasMin=i.preco_tabela!=null&&Number(i.quantidade_minima)>1;return `<div class="seller-floating-line"><div><strong>${esc(i.nome)}</strong><div class="muted">${money(i.preco)} · estoque ${i.estoque}</div>${hasMin&&i.quantidade<Number(i.quantidade_minima)?`<button type="button" class="btn" style="margin-top:4px;padding:2px 8px;font-size:11px;font-weight:750;background:#fff7ed;color:var(--xv-orange,#fd5e02);border:1px solid #fdba74" onclick="setSellerCartMinQty('${i.produto_id}',${Number(i.quantidade_minima)})">🏷️ ${tName}: ${money(i.preco_tabela)} (mín. ${i.quantidade_minima} un.) · Aplicar</button>`:(hasMin?`<small style="color:#16a34a;font-weight:750;display:block">✓ ${tName} aplicado (${money(i.preco_tabela)}/un)</small>`:'')}</div><div class="seller-floating-controls"><button type="button" class="btn" onclick="changeSellerNewOrderQty('${i.produto_id}',-1);openSellerFloatingCart()">−</button><strong>${i.quantidade}</strong><button type="button" class="btn" onclick="changeSellerNewOrderQty('${i.produto_id}',1);openSellerFloatingCart()">+</button><button type="button" class="btn danger" onclick="removeSellerNewOrderItem('${i.produto_id}');openSellerFloatingCart()">Remover</button></div></div>`}).join(''):'<div class="empty-state">Nenhum produto adicionado.</div>'}</div><div class="form seller-floating-form"><div class="field"><label>Desconto</label><div class="seller-discount-row"><span>Tipo</span><select id="sellerFloatingDiscountType" onchange="syncSellerFloatingDiscount()"><option value="VALOR" ${calc.type==='VALOR'?'selected':''}>R$ valor</option><option value="PERCENTUAL" ${calc.type==='PERCENTUAL'?'selected':''}>%</option></select><input id="sellerFloatingDiscount" type="number" min="0" step="0.01" value="${calc.val||0}" oninput="syncSellerFloatingDiscount()"></div></div><div class="field"><label>Observação</label><textarea id="sellerFloatingObs" rows="2" oninput="syncSellerFloatingObs()">${esc(window._sellerCurrentObs||$('#sellerObs')?.value||'')}</textarea></div></div></div><div class="seller-cart-fullscreen-footer"><div class="seller-floating-summary-box" style="padding:12px;background:#f8fafc;border-radius:10px;margin-bottom:10px;border:1px solid #dfe5ed"><div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px"><span>Subtotal dos itens:</span><strong id="sellerFloatingSubtotal">${money(subtotal)}</strong></div><div id="sellerFloatingDiscountRow" style="display:${calc.discountAmount>0?'flex':'none'};justify-content:space-between;font-size:14px;color:#16a34a;margin-bottom:4px"><span>Desconto aplicado:</span><strong id="sellerFloatingDiscountDisplay">-${money(calc.discountAmount)}</strong></div><div class="seller-floating-total" style="display:flex;justify-content:space-between;font-size:17px;font-weight:800;border-top:1px solid #cbd5e1;padding-top:6px;color:var(--xv-brand-navy,#061a4f)"><span>Total a pagar:</span><strong id="sellerFloatingTotal" class="orange">${money(calc.total)}</strong></div></div><button class="btn primary seller-finalize" onclick="closeSellerFloatingCart();submitSellerOrder(window.sellerCurrentClientId)" ${items.length?'':'disabled'}>Finalizar pedido e gerar PDF</button></div></aside></div>`);
 }
 function closeSellerFloatingCart(){document.querySelector('#sellerFloatingCartModal')?.remove()}
 function syncSellerFloatingDiscount(){
@@ -995,8 +1079,8 @@ function updateFloatingCartTotals(){
   }
   if(tot)tot.textContent=money(calc.total);
 }
-function changeSellerNewOrderQty(id,delta){const item=window.sellerOrderItems?.get(id);if(!item)return;const next=Math.max(0,Math.min(item.estoque||99999,item.quantidade+delta));if(!next)window.sellerOrderItems.delete(id);else{item.quantidade=next;item.preco=priceForLine(item,next)}renderSellerNewOrderCart();updateFloatingCartTotals()}
-function removeSellerNewOrderItem(id){window.sellerOrderItems?.delete(id);renderSellerNewOrderCart();updateFloatingCartTotals()}
+function changeSellerNewOrderQty(id,delta){const item=window.sellerOrderItems?.get(id);if(!item)return;const next=Math.max(0,Math.min(item.estoque||99999,item.quantidade+delta));if(!next)window.sellerOrderItems.delete(id);else{item.quantidade=next;item.preco=priceForLine(item,next)}renderSellerNewOrderCart();updateFloatingCartTotals();saveSellerDraftCart();}
+function removeSellerNewOrderItem(id){window.sellerOrderItems?.delete(id);renderSellerNewOrderCart();updateFloatingCartTotals();saveSellerDraftCart();}
 function renderSellerNewOrderCart(){
   const host=$('#sellerCartItems');
   if(!host)return;
