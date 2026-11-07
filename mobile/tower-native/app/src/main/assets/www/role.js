@@ -667,6 +667,7 @@ function renderSellerClientsUI() {
                       <button class="btn" title="Repetir último pedido" style="padding:6px 9px;font-size:12px;" onclick="sellerRepeatClient('${x.id}')">↻ Repetir</button>
                       <button class="btn" title="Linha do Tempo CRM e Registro de Contatos" style="padding:6px 9px;font-size:12px;" onclick="crmInteractionsModal('${x.id}', parseJsonArg('${jsonArg(x.razao_social||x.nome_fantasia)}'))">📝 CRM</button>
                       <button class="btn primary" title="Novo Pedido" style="padding:6px 10px;font-size:12px;" onclick="sellerNewOrder('${x.id}')">＋ Pedido</button>
+                      <button class="btn danger" title="Excluir este cliente da carteira" style="padding:6px 9px;font-size:12px;" onclick="sellerDeleteClient('${x.id}', parseJsonArg('${jsonArg(x.razao_social||x.nome_fantasia)}'))">🗑️</button>
                     </div>
                   </td>
                 </tr>
@@ -718,6 +719,7 @@ function renderSellerClientsUI() {
               <button class="btn" style="font-size:12px;padding:6px 10px;" onclick="sellerRepeatClient('${x.id}')">↻ Repetir</button>
               <button class="btn" style="font-size:12px;padding:6px 10px;" onclick="sellerClientProfile('${x.id}')">Perfil</button>
               <button class="btn primary" style="font-size:12px;padding:6px 10px;" onclick="sellerNewOrder('${x.id}')">Novo pedido ›</button>
+              <button class="btn danger" style="font-size:12px;padding:6px 10px;" onclick="sellerDeleteClient('${x.id}', parseJsonArg('${jsonArg(x.razao_social||x.nome_fantasia)}'))" title="Excluir este cliente da carteira">🗑️ Excluir</button>
             </div>
           </article>
         `).join('') || '<div class="empty-state">Nenhum cliente encontrado.</div>'}
@@ -775,7 +777,36 @@ function addSellerOrderItem(id,qtyToAdd=1){const p=(window.sellerOrderCatalog||[
 function productThumbHtml(p,label){return `<div class="product-thumb">${p.foto_url?`<img src="${esc(p.foto_url)}" alt="${esc(p.nome)}" loading="lazy" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='grid'"><span class="product-image-fallback" style="display:none"></span>`:`<span class="product-image-fallback" style="display:grid"></span>`}</div>`}
 
 async function sellerNewClient(){const bairros=await loadCityBairrosForRole();document.body.innerHTML=`<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Adicionar cliente',`${esc(me.nome)} · Vendedor externo`)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="seller()">← Voltar para clientes</button></div><form id="sellerClientForm" class="mobile-card form" style="margin-top:15px"><div class="field"><label>Nome fantasia</label><input name="nome_fantasia" required></div><div class="field"><label>Razão social (opcional)</label><input name="razao_social"></div><div class="field"><label>CNPJ/CPF</label><input name="cnpj_cpf"></div><div class="field"><label>Email</label><input name="email" type="email"></div><div class="field"><label>Telefone</label><input name="telefone"></div><div class="field"><label>Endereço</label><input name="endereco" required></div><div class="field"><label>Bairro (Governador Valadares - MG)</label><select name="bairro" required><option value="" disabled selected>Selecione o bairro...</option>${bairros.map(b=>`<option value="${esc(b)}">${esc(b)}</option>`).join('')}</select></div><div class="field"><label>Cidade</label><select name="cidade" required><option value="Governador Valadares" selected>Governador Valadares - MG</option></select></div><div class="field"><label>Estado (UF)</label><select name="estado" required><option value="MG" selected>MG</option></select></div><div class="actions"><button class="btn" type="button" onclick="seller()">Cancelar</button><button class="btn primary">Salvar cliente</button></div></form></div></div>`;$('#sellerClientForm').onsubmit=async e=>{e.preventDefault();try{const x=await api('/api/clients',{method:'POST',headers:{'Idempotency-Key':'CLIENT-'+crypto.randomUUID()},body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});if(x.offline){alert('Cliente salvo no aparelho e será enviado quando a rede voltar.');return seller()}alert('Cliente cadastrado.');seller()}catch(err){alert(err.message)}}}
-async function sellerClientProfile(id){try{const x=await api('/api/clients/'+id+'/profile');document.body.innerHTML=`<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Perfil do cliente',`${esc(me.nome)} · ${esc(x.client.razao_social)}`)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="seller()">← Carteira</button><button class="btn primary" onclick="sellerNewOrder('${x.client?.id||id}')">＋ Novo pedido</button><button class="btn" onclick="sellerRepeatClient('${id}')">↻ Repetir último pedido</button><button class="btn" onclick="crmInteractionsModal('${id}', parseJsonArg('${jsonArg(x.client.razao_social||x.client.nome_fantasia)}'))">📝 CRM</button>${x.client.telefone?`<button class="btn-crm-wpp" onclick="openCrmWhatsApp('${x.client.telefone}', parseJsonArg('${jsonArg(x.client.razao_social||x.client.nome_fantasia)}'), null, parseJsonArg('${jsonArg(JSON.stringify((x.topProdutos||[]).map(p=>p.nome)))}'))">📲 WhatsApp</button>`:''}</div><div class="grid"><div class="mobile-card"><small>Pedidos</small><h2>${x.summary?.pedidos||0}</h2></div><div class="mobile-card"><small>Faturado</small><h2>${money(x.summary?.faturado)}</h2></div><div class="mobile-card"><small>Em aberto</small><h2>${money(x.summary?.em_aberto)}</h2></div></div><div class="mobile-card"><h3>${esc(x.client.razao_social)}</h3><p class="muted">${esc(x.client.endereco||'')} · ${esc(x.client.bairro||'')} · ${esc(x.client.cidade||'')} ${x.client.telefone?'· Tel: '+esc(x.client.telefone):''}</p></div><div class="mobile-card"><h3>Mais comprados</h3>${x.topProdutos.map(p=>`<p><strong>${esc(p.nome)}</strong> — ${p.quantidade} un. (${money(p.faturamento)})</p>`).join('')||'<p class="muted">Sem histórico concluído.</p>'}</div><div class="mobile-card"><h3>Histórico de pedidos</h3>${x.orders.map(o=>`<p><strong>${esc(o.numero)}</strong> · <span class="badge status-${String(o.status).toLowerCase()}">${esc(o.status)}</span> · <strong>${money(o.total)}</strong> <button class="btn" onclick="downloadAuthFile('/api/orders/${o.id}/pdf','pedido-${o.numero}.pdf')">PDF</button></p>`).join('')||'<p class="muted">Nenhum pedido realizado.</p>'}</div></div>${bottom('clients')}</div>`}catch(e){alert(e.message)}}
+async function sellerDeleteClient(id, nome) {
+  if (!id || id === 'CLIENTE-BALCAO') {
+    return alert('O cliente balcão padrão não pode ser excluído.');
+  }
+  const clientName = nome || 'este cliente';
+  if (!confirm(`Tem certeza que deseja excluir o cliente "${clientName}" da sua carteira?\n\nEle será removido da sua lista de clientes e do CRM.`)) return;
+
+  try {
+    const res = await api('/api/clients/' + encodeURIComponent(id), { method: 'DELETE' });
+    if (res?.offline) {
+      alert('Exclusão salva no aparelho e será sincronizada quando a conexão for restabelecida.');
+    } else {
+      toastRole('Cliente excluído com sucesso.');
+    }
+    if (window.sellerClients) {
+      window.sellerClients = window.sellerClients.filter(c => c.id !== id);
+      try { await offlinePut('kv', 'sellerClients', window.sellerClients); } catch(_) {}
+    }
+    if (window.sellerCrmData?.items) {
+      window.sellerCrmData.items = window.sellerCrmData.items.filter(c => c.id !== id);
+      try { await offlinePut('kv', 'sellerCrm', window.sellerCrmData); } catch(_) {}
+    }
+    seller();
+  } catch (err) {
+    alert(err.message || 'Erro ao excluir cliente.');
+  }
+}
+window.sellerDeleteClient = sellerDeleteClient;
+
+async function sellerClientProfile(id){try{const x=await api('/api/clients/'+id+'/profile');document.body.innerHTML=`<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Perfil do cliente',`${esc(me.nome)} · ${esc(x.client.razao_social)}`)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="seller()">← Carteira</button><button class="btn primary" onclick="sellerNewOrder('${x.client?.id||id}')">＋ Novo pedido</button><button class="btn" onclick="sellerRepeatClient('${id}')">↻ Repetir último pedido</button><button class="btn" onclick="crmInteractionsModal('${id}', parseJsonArg('${jsonArg(x.client.razao_social||x.client.nome_fantasia)}'))">📝 CRM</button>${x.client.telefone?`<button class="btn-crm-wpp" onclick="openCrmWhatsApp('${x.client.telefone}', parseJsonArg('${jsonArg(x.client.razao_social||x.client.nome_fantasia)}'), null, parseJsonArg('${jsonArg(JSON.stringify((x.topProdutos||[]).map(p=>p.nome)))}'))">📲 WhatsApp</button>`:''}<button class="btn danger" onclick="sellerDeleteClient('${x.client?.id||id}', parseJsonArg('${jsonArg(x.client.razao_social||x.client.nome_fantasia)}'))">🗑️ Excluir cliente</button></div><div class="grid"><div class="mobile-card"><small>Pedidos</small><h2>${x.summary?.pedidos||0}</h2></div><div class="mobile-card"><small>Faturado</small><h2>${money(x.summary?.faturado)}</h2></div><div class="mobile-card"><small>Em aberto</small><h2>${money(x.summary?.em_aberto)}</h2></div></div><div class="mobile-card"><h3>${esc(x.client.razao_social)}</h3><p class="muted">${esc(x.client.endereco||'')} · ${esc(x.client.bairro||'')} · ${esc(x.client.cidade||'')} ${x.client.telefone?'· Tel: '+esc(x.client.telefone):''}</p></div><div class="mobile-card"><h3>Mais comprados</h3>${x.topProdutos.map(p=>`<p><strong>${esc(p.nome)}</strong> — ${p.quantidade} un. (${money(p.faturamento)})</p>`).join('')||'<p class="muted">Sem histórico concluído.</p>'}</div><div class="mobile-card"><h3>Histórico de pedidos</h3>${x.orders.map(o=>`<p><strong>${esc(o.numero)}</strong> · <span class="badge status-${String(o.status).toLowerCase()}">${esc(o.status)}</span> · <strong>${money(o.total)}</strong> <button class="btn" onclick="downloadAuthFile('/api/orders/${o.id}/pdf','pedido-${o.numero}.pdf')">PDF</button></p>`).join('')||'<p class="muted">Nenhum pedido realizado.</p>'}</div></div>${bottom('clients')}</div>`}catch(e){alert(e.message)}}
 
 function getSellerDiscountCalculations(subtotal){
   const type=window._sellerCurrentDiscountType||'VALOR';

@@ -142,4 +142,120 @@ describe('Clients API', () => {
     expect(adminS2List.body.items.some(c => c.id === s2ClientId)).toBe(true);
     expect(adminS2List.body.items.every(c => c.vendedor_id === 'test-seller-2' && c.id !== 'CLIENTE-BALCAO')).toBe(true);
   });
+
+  it('should not allow deleting CLIENTE-BALCAO', async () => {
+    const res = await request(server)
+      .delete('/api/clients/CLIENTE-BALCAO')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/cliente balcão/i);
+  });
+
+  it('seller should NOT be able to delete another seller client', async () => {
+    const s2ClientRes = await request(server)
+      .post('/api/clients')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        razao_social: 'Cliente Protegido Seller 2',
+        cnpj_cpf: `777${Date.now().toString().slice(-8)}`,
+        endereco: 'Rua Proibida, 50',
+        vendedor_id: 'test-seller-2'
+      });
+    expect(s2ClientRes.status).toBe(201);
+    const targetId = s2ClientRes.body.item.id;
+
+    // Seller 1 attempts to delete Seller 2's client
+    const delRes = await request(server)
+      .delete(`/api/clients/${targetId}`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(delRes.status).toBe(403);
+    expect(delRes.body.error).toMatch(/própria carteira/i);
+  });
+
+  it('seller should be able to delete their own client', async () => {
+    const s1ClientRes = await request(server)
+      .post('/api/clients')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({
+        razao_social: 'Cliente Para Excluir Seller 1',
+        cnpj_cpf: `666${Date.now().toString().slice(-8)}`,
+        endereco: 'Rua do Excluido, 10'
+      });
+    expect(s1ClientRes.status).toBe(201);
+    const targetId = s1ClientRes.body.item.id;
+
+    const delRes = await request(server)
+      .delete(`/api/clients/${targetId}`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(delRes.status).toBe(200);
+    expect(delRes.body.ok).toBe(true);
+
+    // Should no longer appear in seller clients list
+    const listRes = await request(server)
+      .get('/api/clients')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(listRes.body.items.some(c => c.id === targetId)).toBe(false);
+  });
+
+  it('admin should be able to delete client and preserve audit with soft delete when client has past orders', async () => {
+    const clientRes = await request(server)
+      .post('/api/clients')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        razao_social: 'Cliente Com Pedido Concluido',
+        cnpj_cpf: `555${Date.now().toString().slice(-8)}`,
+        endereco: 'Rua com Historico, 20'
+      });
+    expect(clientRes.status).toBe(201);
+    const cid = clientRes.body.item.id;
+
+    // Insert a concluded order for this client directly
+    db.prepare(`
+      INSERT INTO pedidos (id, numero, cliente_id, operador_id, origem, status, total, modalidade_entrega)
+      VALUES ('ped-test-${Date.now()}', 'P-TEST-${Date.now().toString().slice(-4)}', ?, 'test-admin-6', 'BALCAO', 'CONCLUIDO', 150.0, 'RETIRADA')
+    `).run(cid);
+
+    const delRes = await request(server)
+      .delete(`/api/clients/${cid}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(delRes.status).toBe(200);
+    expect(delRes.body.ok).toBe(true);
+    expect(delRes.body.logical_delete).toBe(true);
+
+    // Client should not appear in active clients list
+    const listRes = await request(server)
+      .get('/api/clients')
+      .set('Authorization', `Bearer ${token}`);
+    expect(listRes.body.items.some(c => c.id === cid)).toBe(false);
+
+    // In DB, ativo should be 0
+    const inDb = db.prepare('SELECT id, ativo, cnpj_cpf FROM clientes WHERE id=?').get(cid);
+    expect(inDb.ativo).toBe(0);
+    expect(inDb.cnpj_cpf).toContain('-EXCLUIDO-');
+  });
+
+  it('should prevent deleting client with pending active orders', async () => {
+    const clientRes = await request(server)
+      .post('/api/clients')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        razao_social: 'Cliente Com Pedido Pendente',
+        cnpj_cpf: `444${Date.now().toString().slice(-8)}`,
+        endereco: 'Rua Pendente, 30'
+      });
+    expect(clientRes.status).toBe(201);
+    const cid = clientRes.body.item.id;
+
+    // Insert a pending order
+    db.prepare(`
+      INSERT INTO pedidos (id, numero, cliente_id, operador_id, origem, status, total, modalidade_entrega)
+      VALUES ('ped-test-pend-${Date.now()}', 'P-PEND-${Date.now().toString().slice(-4)}', ?, 'test-admin-6', 'BALCAO', 'PENDENTE', 200.0, 'ENTREGA')
+    `).run(cid);
+
+    const delRes = await request(server)
+      .delete(`/api/clients/${cid}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(delRes.status).toBe(400);
+    expect(delRes.body.error).toMatch(/pedidos em andamento/i);
+  });
 });
