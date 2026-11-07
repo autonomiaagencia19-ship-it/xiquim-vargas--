@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import { one } from './db.js';
+import { formatBrasiliaDateTime } from './timezone.js';
 const CP1252={'€':'\x80','‚':'\x82','ƒ':'\x83','„':'\x84','…':'\x85','†':'\x86','‡':'\x87','ˆ':'\x88','‰':'\x89','Š':'\x8A','‹':'\x8B','Œ':'\x8C','Ž':'\x8E','‘':'\x91','’':'\x92','“':'\x93','”':'\x94','•':'\x95','–':'\x96','—':'\x97','˜':'\x98','™':'\x99','š':'\x9A','›':'\x9B','œ':'\x9C','ž':'\x9E','Ÿ':'\x9F'};
 function win1252(s){return String(s??'').normalize('NFC').replace(/[€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ]/g,c=>CP1252[c]).replace(/[\u0100-\uFFFF]/g,'?')}
 function esc(s){return win1252(s).replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)')}
@@ -99,7 +100,7 @@ function makeThermalOrderPdf(order,items,file){
     '========================================',
     '            CUPOM DE VENDA              ',
     '----------------------------------------',
-    `EMISSAO: ${new Date(order.created_at).toLocaleString('pt-BR')}`,
+    `EMISSAO: ${formatBrasiliaDateTime(order.created_at)}`,
     '----------------------------------------',
     ...wrap(`CLIENTE: ${order.cliente_nome||'Cliente Balcao'}`,40),
     ...wrap(`ENDERECO: ${addr}`,40),
@@ -178,7 +179,7 @@ export function makeOrderPdf(order,items,file){
   const lines=[
     'XIQUIM VARGAS - DISTRIBUIDORA DE BEBIDAS',
     '',
-    `Emissão: ${new Date(order.created_at).toLocaleString('pt-BR')}`,
+    `Emissão: ${formatBrasiliaDateTime(order.created_at)}`,
     `Cliente: ${order.cliente_nome}`,
     `Endereço: ${formatOrderAddress(order)}`,
     '',
@@ -228,8 +229,8 @@ export function makeOrderPdf(order,items,file){
   buildPdf(paginate(lines.filter(l=>l!==null&&l!==undefined),54,94),file,{fontSize:9.5,lineHeight:14,leftMargin:28,topMargin:810});
 }
 
-export function makeCatalogPdf(items,file){const sep='-'.repeat(116);const lines=['XIQUIM VARGAS','CATÁLOGO DE PRODUTOS',`Gerado em: ${new Date().toLocaleString('pt-BR')}`,`Total de produtos: ${items.length}`,'','PRODUTO                                          | SKU              | CATEGORIA        | SUBCATEGORIA     | PREÇO | PROMOÇÃO',sep];for(const x of items)lines.push(`${String(x.nome||'').slice(0,48).padEnd(48)} | ${String(x.sku||'').slice(0,16).padEnd(16)} | ${String(x.categoria_nome||'-').slice(0,16).padEnd(16)} | ${String(x.subcategoria_nome||'-').slice(0,16).padEnd(16)} | R$ ${Number(x.preco_base||0).toFixed(2)} | ${x.promocao_preco==null?'-':'R$ '+Number(x.promocao_preco).toFixed(2)}`);buildPdf(paginate(lines,72,116),file,{fontSize:8,lineHeight:11,leftMargin:14,topMargin:824})}
-export function makeStockPdf(items,file){const sep='-'.repeat(116);const lines=['XIQUIM VARGAS','RELATÓRIO DE ESTOQUE INTELIGENTE',`Gerado em: ${new Date().toLocaleString('pt-BR')}`,`Total de produtos: ${items.length}`,'','PRODUTO                                                  | SKU             | DISPONÍVEL | RESERVADO | MÍNIMO | STATUS',sep];for(const x of items)lines.push(`${String(x.nome||'').slice(0,56).padEnd(56)} | ${String(x.sku||'').slice(0,15).padEnd(15)} | ${String(x.quantidade_disponivel).padStart(10)} | ${String(x.quantidade_reservada).padStart(9)} | ${String(x.estoque_minimo).padStart(6)} | ${x.status||'-'}`);buildPdf(paginate(lines,72,116),file,{fontSize:8,lineHeight:11,leftMargin:14,topMargin:824})}
+export function makeCatalogPdf(items,file){const sep='-'.repeat(116);const lines=['XIQUIM VARGAS','CATÁLOGO DE PRODUTOS',`Gerado em: ${formatBrasiliaDateTime(new Date())}`,`Total de produtos: ${items.length}`,'','PRODUTO                                          | SKU              | CATEGORIA        | SUBCATEGORIA     | PREÇO | PROMOÇÃO',sep];for(const x of items)lines.push(`${String(x.nome||'').slice(0,48).padEnd(48)} | ${String(x.sku||'').slice(0,16).padEnd(16)} | ${String(x.categoria_nome||'-').slice(0,16).padEnd(16)} | ${String(x.subcategoria_nome||'-').slice(0,16).padEnd(16)} | R$ ${Number(x.preco_base||0).toFixed(2)} | ${x.promocao_preco==null?'-':'R$ '+Number(x.promocao_preco).toFixed(2)}`);buildPdf(paginate(lines,72,116),file,{fontSize:8,lineHeight:11,leftMargin:14,topMargin:824})}
+export function makeStockPdf(items,file){const sep='-'.repeat(116);const lines=['XIQUIM VARGAS','RELATÓRIO DE ESTOQUE INTELIGENTE',`Gerado em: ${formatBrasiliaDateTime(new Date())}`,`Total de produtos: ${items.length}`,'','PRODUTO                                                  | SKU             | DISPONÍVEL | RESERVADO | MÍNIMO | STATUS',sep];for(const x of items)lines.push(`${String(x.nome||'').slice(0,56).padEnd(56)} | ${String(x.sku||'').slice(0,15).padEnd(15)} | ${String(x.quantidade_disponivel).padStart(10)} | ${String(x.quantidade_reservada).padStart(9)} | ${String(x.estoque_minimo).padStart(6)} | ${x.status||'-'}`);buildPdf(paginate(lines,72,116),file,{fontSize:8,lineHeight:11,leftMargin:14,topMargin:824})}
 
 export function makeLoadingListPdf(data, file) {
   const sep = '-'.repeat(94);
@@ -237,7 +238,7 @@ export function makeLoadingListPdf(data, file) {
     'XIQUIM VARGAS - DISTRIBUIDORA DE BEBIDAS',
     'LISTA DE CARREGAMENTO LOGÍSTICO',
     ...(data.vendedor ? [`Vendedor: ${data.vendedor}`] : []),
-    `Gerado em: ${new Date().toLocaleString('pt-BR')}`,
+    `Gerado em: ${formatBrasiliaDateTime(new Date())}`,
     `Total de pedidos: ${data.total_pedidos || 0}`,
     `Total de volumes: ${data.total_produtos || 0}`,
     '',
@@ -277,7 +278,7 @@ export function makeBulkOrderPdf(ordersData, file) {
     const lines=[
       'XIQUIM VARGAS - DISTRIBUIDORA DE BEBIDAS',
       '',
-      `Emissão: ${new Date(order.created_at).toLocaleString('pt-BR')}`,
+      `Emissão: ${formatBrasiliaDateTime(order.created_at)}`,
       `Cliente: ${order.cliente_nome}`,
       `Endereço: ${formatOrderAddress(order)}`,
       '',

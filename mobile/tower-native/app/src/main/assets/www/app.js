@@ -1,3 +1,42 @@
+
+window.formatBrasiliaDateTime = function(val, options = {}) {
+  if (!val) return '-';
+  let s = String(val).trim();
+  if (!s) return '-';
+  if (/^\d{10,13}$/.test(s)) s = Number(s);
+  else if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d+)?$/.test(s)) s = s.replace(' ', 'T') + 'Z';
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return String(val);
+  return d.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', ...options });
+};
+
+window.formatBrasiliaDate = function(val, options = {}) {
+  return window.formatBrasiliaDateTime(val, { dateStyle: 'short', ...options });
+};
+
+window.formatBrasiliaTime = function(val, options = {}) {
+  return window.formatBrasiliaDateTime(val, { timeStyle: 'medium', ...options });
+};
+
+function getProductListForEdit(currentId){
+  const rows = Array.from(document.querySelectorAll('#catalogTable tbody tr'));
+  const visibleRows = rows.filter(r => r.style.display !== 'none');
+  const targetRows = visibleRows.length ? visibleRows : rows;
+  if(targetRows.length){
+    const visibleIds = targetRows.map(r => r.dataset.product).filter(Boolean);
+    const map = new Map((window.adminProducts?.items || []).map(p => [p.id, p]));
+    const list = visibleIds.map(id => map.get(id)).filter(Boolean);
+    if(list.length) return list;
+  }
+  return window.adminProducts?.items || [];
+}
+
+window.navigateToProductEdit = function(targetId){
+  const p = (window.adminProducts?.items || []).find(x => x.id === targetId);
+  if(!p) return toast('Produto não encontrado para navegação.', true);
+  editProduct(p);
+};
+
 function adminOfflineDb(){
   return new Promise((resolve,reject)=>{
     const r=indexedDB.open('xv-offline-admin-v1',1);
@@ -1194,10 +1233,105 @@ async function deleteProduct(id,nome){
   try{await api('/api/products/'+id,{method:'DELETE'})}catch(e){toast(e.message,true);refreshCurrentViewSilently('products_changed')}
 }
 function catalogFilter(input){const q=(input?.value??$('#pq')?.value??'').toLowerCase();const isSubView=!!document.getElementById('adminSubMin');let cat='';let sub='';let min=0;let max=Infinity;if(isSubView){cat=window.adminCurrentCatId||'';sub=window.adminCurrentSubId||'';min=Number($('#adminSubMin')?.value)||0;const maxRaw=$('#adminSubMax')?.value;max=maxRaw?Number(maxRaw):Infinity}else{cat=$('#catFilter')?.value||'';sub=$('#subFilter')?.value||''}document.querySelectorAll('#catalogTable tbody tr').forEach(r=>{const okText=r.innerText.toLowerCase().includes(q);const okCat=!cat||r.dataset.cat===cat;const okSub=!sub||r.dataset.sub===sub;const price=Number(r.dataset.price||0);const okPrice=(price>=min&&price<=max);r.style.display=okText&&okCat&&okSub&&okPrice?'':'none'})}
-function productFormHtml(x={}){const cats=window.catalogCategories||[],subs=window.catalogSubcategories||[];const isEdit=Boolean(x.id);return `<form id="productForm" class="form"><div class="field"><label>Nome</label><input name="nome" required maxlength="180" value="${esc(x.nome||'')}"></div><div class="field"><label>SKU (opcional)</label><input name="sku" maxlength="80" value="${esc(x.sku||'')}"></div><div class="field"><label>Código de barras</label><input name="codigo_barras" value="${esc(x.codigo_barras||'')}"></div><div class="field"><label>Marca</label><input name="marca" value="${esc(x.marca||'')}"></div><div class="field"><label>Sabor</label><input name="sabor" value="${esc(x.sabor||'')}"></div><div class="field"><label>Tamanho</label><input name="tamanho" value="${esc(x.tamanho||'')}"></div><div class="field"><label>Unidade</label><input name="unidade" value="${esc(x.unidade||'UN')}"></div><div class="field"><label>Categoria</label><select id="productCat" name="categoria_id"><option value="">Sem categoria</option>${cats.map(c=>`<option value="${c.id}" ${c.id===x.categoria_id?'selected':''}>${esc(c.nome)}</option>`).join('')}</select></div><div class="field"><label>Subcategoria</label><select id="productSub" name="subcategoria_id"><option value="">Sem subcategoria</option>${subs.map(z=>`<option data-cat="${z.categoria_id}" value="${z.id}" ${z.id===x.subcategoria_id?'selected':''}>${esc(z.nome)}</option>`).join('')}</select></div><div class="field"><label>Preço de venda (base)</label><input name="preco_base" type="number" min="0" step="0.01" value="${Number(x.preco_base||0)}"></div><div class="field"><label>Preço de Custo (R$) <span style="font-size:11px;color:var(--muted)">(visível apenas p/ admin)</span></label><input name="preco_custo" type="number" min="0" step="0.01" placeholder="0.00" value="${Number(x.preco_custo||0)}"></div>${isEdit?`<div class="field" style="grid-column:1/-1"><label>Motivo do ajuste manual de custo (opcional)</label><input name="motivo_custo" placeholder="Ex: Negociação especial, correção de frete..."></div>`:''}<div class="field" style="grid-column:1/-1"><label>Descrição</label><textarea name="descricao" rows="4">${esc(x.descricao||'')}</textarea></div><div class="field" style="grid-column:1/-1"><small class="muted">💡 <strong>Dica de custos:</strong> Se você usa o módulo de Compras, o preço de custo é alimentado e registrado no histórico automaticamente ao dar entrada nas compras na doca.</small></div><div class="actions"><button class="btn primary">Salvar produto</button></div></form>`}
+function productFormHtml(x={}){
+  const cats=window.catalogCategories||[],subs=window.catalogSubcategories||[];
+  const isEdit=Boolean(x.id);
+  let navHeaderHtml='';
+  let navFooterHtml='';
+  if(isEdit){
+    const editList=getProductListForEdit(x.id);
+    const curIdx=editList.findIndex(p=>p.id===x.id);
+    const prevProd=curIdx>0?editList[curIdx-1]:null;
+    const nextProd=(curIdx>=0&&curIdx<editList.length-1)?editList[curIdx+1]:null;
+    navHeaderHtml=`
+      <div class="product-edit-nav" style="display:flex;justify-content:space-between;align-items:center;background:#0d1624;padding:8px 12px;border-radius:8px;margin-bottom:14px;border:1px solid #1e2c3f">
+        <button type="button" class="btn" id="btnPrevProductTop" ${prevProd?`onclick="navigateToProductEdit('${prevProd.id}')"`:'disabled style="opacity:0.4;cursor:not-allowed"'} title="${prevProd?`Editar anterior: ${esc(prevProd.nome)}`:'Início da lista'}">
+          ◀ Anterior
+        </button>
+        <div style="text-align:center;padding:0 8px">
+          <small class="muted" style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">Navegação entre produtos</small>
+          <strong style="font-size:13px;color:#fff">${curIdx>=0?`${curIdx+1} de ${editList.length}`:''}</strong>
+        </div>
+        <button type="button" class="btn" id="btnNextProductTop" ${nextProd?`onclick="navigateToProductEdit('${nextProd.id}')"`:'disabled style="opacity:0.4;cursor:not-allowed"'} title="${nextProd?`Editar próximo: ${esc(nextProd.nome)}`:'Fim da lista'}">
+          Próximo ▶
+        </button>
+      </div>
+    `;
+    navFooterHtml=`
+      <div style="display:flex;gap:6px">
+        <button type="button" class="btn" ${prevProd?`onclick="navigateToProductEdit('${prevProd.id}')"`:'disabled style="opacity:0.4;cursor:not-allowed"'} title="${prevProd?`Editar anterior: ${esc(prevProd.nome)}`:'Início da lista'}">◀ Anterior</button>
+        <button type="button" class="btn" ${nextProd?`onclick="navigateToProductEdit('${nextProd.id}')"`:'disabled style="opacity:0.4;cursor:not-allowed"'} title="${nextProd?`Editar próximo: ${esc(nextProd.nome)}`:'Fim da lista'}">Próximo ▶</button>
+      </div>
+    `;
+  }
+  return `${navHeaderHtml}<form id="productForm" class="form"><div class="field"><label>Nome</label><input name="nome" required maxlength="180" value="${esc(x.nome||'')}"></div><div class="field"><label>SKU (opcional)</label><input name="sku" maxlength="80" value="${esc(x.sku||'')}"></div><div class="field"><label>Código de barras</label><input name="codigo_barras" value="${esc(x.codigo_barras||'')}"></div><div class="field"><label>Marca</label><input name="marca" value="${esc(x.marca||'')}"></div><div class="field"><label>Sabor</label><input name="sabor" value="${esc(x.sabor||'')}"></div><div class="field"><label>Tamanho</label><input name="tamanho" value="${esc(x.tamanho||'')}"></div><div class="field"><label>Unidade</label><input name="unidade" value="${esc(x.unidade||'UN')}"></div><div class="field"><label>Categoria</label><select id="productCat" name="categoria_id"><option value="">Sem categoria</option>${cats.map(c=>`<option value="${c.id}" ${c.id===x.categoria_id?'selected':''}>${esc(c.nome)}</option>`).join('')}</select></div><div class="field"><label>Subcategoria</label><select id="productSub" name="subcategoria_id"><option value="">Sem subcategoria</option>${subs.map(z=>`<option data-cat="${z.categoria_id}" value="${z.id}" ${z.id===x.subcategoria_id?'selected':''}>${esc(z.nome)}</option>`).join('')}</select></div><div class="field"><label>Preço de venda (base)</label><input name="preco_base" type="number" min="0" step="0.01" value="${Number(x.preco_base||0)}"></div><div class="field"><label>Preço de Custo (R$) <span style="font-size:11px;color:var(--muted)">(visível apenas p/ admin)</span></label><input name="preco_custo" type="number" min="0" step="0.01" placeholder="0.00" value="${Number(x.preco_custo||0)}"></div>${isEdit?`<div class="field" style="grid-column:1/-1"><label>Motivo do ajuste manual de custo (opcional)</label><input name="motivo_custo" placeholder="Ex: Negociação especial, correção de frete..."></div>`:''}<div class="field" style="grid-column:1/-1"><label>Descrição</label><textarea name="descricao" rows="4">${esc(x.descricao||'')}</textarea></div><div class="field" style="grid-column:1/-1"><small class="muted">💡 <strong>Dica de custos:</strong> Se você usa o módulo de Compras, o preço de custo é alimentado e registrado no histórico automaticamente ao dar entrada nas compras na doca.</small></div><div class="actions" style="grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-top:10px">${navFooterHtml||'<div></div>'}<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar produto</button></div></div></form>`}
 function newProduct(){modal('Novo produto',productFormHtml());$('#productCat').onchange=()=>filterSubOptions($('#productCat').value);filterSubOptions('');$('#productForm').onsubmit=async e=>{e.preventDefault();try{const x=await api('/api/products',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});closeModal();toast('Produto criado. Estoque inicial permanece zero até lançamento no módulo Estoque.');show('products')}catch(x){toast(x.message)}}}
 function filterSubOptions(cat){document.querySelectorAll('#productSub option[data-cat]').forEach(o=>o.hidden=!!cat&&o.dataset.cat!==cat);if($('#productSub')?.selectedOptions[0]?.hidden)$('#productSub').value=''}
-function editProduct(x){modal('Editar produto',productFormHtml(x));$('#productCat').onchange=()=>filterSubOptions($('#productCat').value);filterSubOptions(x.categoria_id||'');$('#productForm').onsubmit=async e=>{e.preventDefault();try{await api('/api/products/'+x.id,{method:'PUT',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});closeModal();toast('Produto atualizado sem alterar o estoque');show('products')}catch(z){toast(z.message)}}}
+function editProduct(x){
+  window._currentEditingProductId = x.id;
+  modal('Editar produto — ' + esc(x.nome), productFormHtml(x));
+  $('#productCat').onchange = () => filterSubOptions($('#productCat').value);
+  filterSubOptions(x.categoria_id || '');
+  $('#productForm').onsubmit = async e => {
+    e.preventDefault();
+    try {
+      const b = Object.fromEntries(new FormData(e.currentTarget));
+      await api('/api/products/' + x.id, {
+        method: 'PUT',
+        body: JSON.stringify(b)
+      });
+      closeModal();
+      toast('✓ Produto atualizado com sucesso!');
+
+      // Atualiza os dados locais de window.adminProducts
+      if (window.adminProducts?.items) {
+        const idx = window.adminProducts.items.findIndex(p => p.id === x.id);
+        if (idx !== -1) {
+          const old = window.adminProducts.items[idx];
+          const cat = (window.catalogCategories || []).find(c => c.id === b.categoria_id);
+          const sub = (window.catalogSubcategories || []).find(s => s.id === b.subcategoria_id);
+          window.adminProducts.items[idx] = {
+            ...old,
+            ...b,
+            categoria_nome: cat?.nome || old.categoria_nome,
+            subcategoria_nome: sub?.nome || old.subcategoria_nome,
+            preco_base: Number(b.preco_base || old.preco_base),
+            preco_custo: Number(b.preco_custo || old.preco_custo)
+          };
+        }
+      }
+
+      // Se a linha da tabela existe na tela, atualiza mantendo a posição e faz scroll suave
+      const existingRow = document.querySelector(`tr[data-product="${x.id}"]`);
+      if (existingRow && window.adminProducts?.items) {
+        const updated = window.adminProducts.items.find(p => p.id === x.id) || x;
+        const temp = document.createElement('tbody');
+        temp.innerHTML = catalogRow(updated);
+        const newRow = temp.firstElementChild;
+        if (newRow) {
+          existingRow.replaceWith(newRow);
+          // Rola suavemente até o produto e aplica destaque
+          newRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          newRow.classList.add('xv-flash-updated');
+          setTimeout(() => newRow.classList.remove('xv-flash-updated'), 2500);
+        }
+      } else {
+        // Se a visualização precisa ser recarregada
+        await products(document.getElementById('view'));
+        setTimeout(() => {
+          const r = document.querySelector(`tr[data-product="${x.id}"]`);
+          if (r) {
+            r.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            r.classList.add('xv-flash-updated');
+            setTimeout(() => r.classList.remove('xv-flash-updated'), 2500);
+          }
+        }, 120);
+      }
+    } catch(z) {
+      toast(z.message, true);
+    }
+  };
+}
 function manageProductImages(x){modal('Fotos do produto — '+esc(x.nome),`<div class="photo-manager"><div class="photo-upload" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px"><label class="btn primary photo-picker" style="cursor:pointer">+ Adicionar e Enquadrar Foto <input id="productPhotoInput" type="file" accept="image/png,image/jpeg,image/webp" hidden></label><span class="muted" style="font-size:12px">Mecanismo visual para mover, centralizar e ver exatamente a exibição no catálogo e loja.</span></div><div id="productPhotos" class="photo-grid">Carregando…</div></div>`,'780px');loadProductImages(x.id);$('#productPhotoInput').onchange=e=>{const f=e.target.files?.[0];if(!f)return;if(f.size>8*1024*1024)return toast('A imagem excede 8 MB');const r=new FileReader();r.onload=()=>{openImagePositionerModal(r.result,async(croppedDataUrl)=>{try{await api('/api/products/'+x.id+'/images',{method:'POST',body:JSON.stringify({data_url:croppedDataUrl,principal:true})});toast('Foto salva e definida como Principal!');loadProductImages(x.id);const [newP]=await Promise.all([api('/api/products?limit=100000')]);window.adminProducts=newP;if(document.getElementById('catalogTable'))catalogFilter()}catch(z){toast(z.message,true)}})};r.readAsDataURL(f)}}
 function openImagePositionerModal(dataUrl,onSaveCallback,aspectMode='square'){const isCover=aspectMode==='cover_banner';const positionerModal=document.createElement('div');positionerModal.id='imagePositionerModal';positionerModal.style='position:fixed;inset:0;background:rgba(0,0,0,0.88);display:grid;place-items:center;z-index:110';positionerModal.innerHTML=`<div class="panel" style="width:min(840px,96vw);max-height:94vh;overflow-y:auto;background:#0b1422;border:1px solid #23344a;box-shadow:0 24px 60px rgba(0,0,0,0.6)"><div class="top" style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1e2c3f;padding-bottom:12px;margin-bottom:14px"><div><h2 style="margin:0;font-size:1.3rem;color:#ffffff;font-weight:800">📐 Enquadrar e Centralizar ${isCover?'Foto de Capa da Loja':'Foto'}</h2><p style="margin:6px 0 0;font-size:13.5px;color:#ffffff !important;font-weight:600;opacity:0.95;line-height:1.4">Arraste a foto com o mouse ou toque para mover. Ajuste o zoom para o tamanho e posição perfeitos.</p></div><button class="btn" id="closePositionerBtn" style="padding:4px 10px;font-size:18px;color:#ffffff">×</button></div><div class="photo-crop-workspace"><div class="photo-cropper-viewport" id="cropperViewport" style="${isCover?'max-width:680px;height:240px;aspect-ratio:16/9;':'max-width:420px;height:300px;'}"><img id="cropperImage" src="${dataUrl}" alt="Ajuste" style="image-rendering:auto;mix-blend-mode:normal"><div class="photo-cropper-grid-overlay"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div></div><div class="photo-cropper-controls"><label style="color:#ffffff !important;font-size:13px;font-weight:700">🔍 Zoom: <input type="range" id="cropZoom" min="0.5" max="3.0" step="0.05" value="1.0" style="width:140px"><span id="zoomVal" style="color:#fd5e02;font-weight:bold;min-width:35px">100%</span></label><button type="button" class="btn" id="btnCenterCrop" style="font-size:12px;padding:6px 12px">🎯 Centralizar Foto</button><button type="button" class="btn" id="btnFitCrop" style="font-size:12px;padding:6px 12px">⛶ Ajustar às Bordas</button></div><div><strong style="display:block;font-size:13px;color:#ffffff;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;text-align:center">Como ela será exibida nos locais do sistema:</strong><div class="photo-preview-group">${isCover?`<div class="photo-preview-item" style="width:100%"><div style="width:100%;max-width:540px;height:160px;border-radius:12px;background:#021d60;border:2px solid var(--xv-brand-orange,#fd5e02);overflow:hidden;position:relative;display:flex;align-items:flex-end;box-shadow:0 8px 24px rgba(2,29,96,0.3)"><canvas id="previewCanvasCover" width="540" height="160" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></canvas><div style="position:relative;z-index:2;padding:12px;color:#fff;pointer-events:none;background:linear-gradient(90deg,rgba(2,29,96,0.9),rgba(2,29,96,0.3),transparent);width:100%"><strong style="font-size:16px;display:block">Catálogo Xiquim Vargas</strong><span style="font-size:11px;opacity:0.9">Card de Capa da Loja Online</span></div></div><span style="color:#ffffff !important">Card Oficial da Loja Online</span></div>`:`<div class="photo-preview-item"><div class="photo-preview-box-store"><canvas id="previewCanvasStore" width="140" height="140"></canvas></div><span style="color:#ffffff !important">Card da Loja Online & PDV</span></div><div class="photo-preview-item"><div class="photo-preview-box-mini"><canvas id="previewCanvasMini" width="48" height="48"></canvas></div><span style="color:#ffffff !important">Tabelas & Miniaturas</span></div>`}</div></div><div class="actions" style="justify-content:flex-end;margin-top:14px;border-top:1px solid #1e2c3f;padding-top:14px"><button type="button" class="btn" id="cancelPositionerBtn">Cancelar</button><button type="button" class="btn primary" id="confirmPositionerBtn" style="padding:10px 20px;font-weight:800">✓ Confirmar e Usar Esta Posição</button></div></div></div>`;document.body.appendChild(positionerModal);const vp=positionerModal.querySelector('#cropperViewport');const img=positionerModal.querySelector('#cropperImage');const zoomInput=positionerModal.querySelector('#cropZoom');const zoomVal=positionerModal.querySelector('#zoomVal');const cvsCover=positionerModal.querySelector('#previewCanvasCover');const cvsStore=positionerModal.querySelector('#previewCanvasStore');const cvsMini=positionerModal.querySelector('#previewCanvasMini');let scale=1.0;let posX=0;let posY=0;let isDragging=false;let startX=0;let startY=0;let initialImgW=0;let initialImgH=0;function updateTransform(){img.style.transform=`translate(${posX}px, ${posY}px) scale(${scale})`;zoomVal.textContent=Math.round(scale*100)+'%';renderLivePreviews()}function renderLivePreviews(){if(!initialImgW||!initialImgH)return;const vpRect=vp.getBoundingClientRect();const vpW=vpRect.width||(isCover?680:420);const vpH=vpRect.height||(isCover?240:300);const targets=isCover?[cvsCover]:[cvsStore,cvsMini];targets.forEach(cvs=>{if(!cvs)return;const ctx=cvs.getContext('2d');ctx.clearRect(0,0,cvs.width,cvs.height);ctx.fillStyle=isCover?'#021d60':'#ffffff';ctx.fillRect(0,0,cvs.width,cvs.height);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';const ratio=cvs.width/vpW;ctx.save();ctx.translate(cvs.width/2,cvs.height/2);ctx.translate(posX*ratio,posY*ratio);ctx.scale(scale*ratio,scale*ratio);ctx.drawImage(img,-initialImgW/2,-initialImgH/2,initialImgW,initialImgH);ctx.restore()})}img.onload=()=>{const vpRect=vp.getBoundingClientRect();const vpW=vpRect.width||(isCover?680:420);const vpH=vpRect.height||(isCover?240:300);initialImgW=img.naturalWidth;initialImgH=img.naturalHeight;img.style.width=initialImgW+'px';img.style.height=initialImgH+'px';scale=isCover?Math.max(vpW/initialImgW,vpH/initialImgH):Math.min((vpW*0.9)/(initialImgW||1),(vpH*0.9)/(initialImgH||1),1.0);zoomInput.value=scale;posX=0;posY=0;updateTransform()};if(img.complete)img.onload();vp.addEventListener('mousedown',e=>{isDragging=true;startX=e.clientX-posX;startY=e.clientY-posY});window.addEventListener('mousemove',e=>{if(!isDragging)return;posX=e.clientX-startX;posY=e.clientY-startY;updateTransform()});window.addEventListener('mouseup',()=>{isDragging=false});vp.addEventListener('touchstart',e=>{if(e.touches.length===1){isDragging=true;startX=e.touches[0].clientX-posX;startY=e.touches[0].clientY-posY}},{passive:true});window.addEventListener('touchmove',e=>{if(!isDragging||e.touches.length!==1)return;posX=e.touches[0].clientX-startX;posY=e.touches[0].clientY-startY;updateTransform()},{passive:true});window.addEventListener('touchend',()=>{isDragging=false});zoomInput.oninput=()=>{scale=parseFloat(zoomInput.value);updateTransform()};positionerModal.querySelector('#btnCenterCrop').onclick=()=>{posX=0;posY=0;updateTransform()};positionerModal.querySelector('#btnFitCrop').onclick=()=>{const vpRect=vp.getBoundingClientRect();const vpW=vpRect.width||(isCover?680:420);const vpH=vpRect.height||(isCover?240:300);scale=isCover?Math.max(vpW/initialImgW,vpH/initialImgH):Math.min((vpW*0.9)/(initialImgW||1),(vpH*0.9)/(initialImgH||1),1.0);zoomInput.value=scale;posX=0;posY=0;updateTransform()};const closeMe=()=>positionerModal.remove();positionerModal.querySelector('#closePositionerBtn').onclick=closeMe;positionerModal.querySelector('#cancelPositionerBtn').onclick=closeMe;positionerModal.querySelector('#confirmPositionerBtn').onclick=()=>{const outCanvas=document.createElement('canvas');const outW=isCover?1280:800;const outH=isCover?480:800;outCanvas.width=outW;outCanvas.height=outH;const ctx=outCanvas.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.fillStyle=isCover?'#021d60':'#ffffff';ctx.fillRect(0,0,outW,outH);const vpRect=vp.getBoundingClientRect();const vpW=vpRect.width||(isCover?680:420);const ratio=outW/vpW;ctx.save();ctx.translate(outW/2,outH/2);ctx.translate(posX*ratio,posY*ratio);ctx.scale(scale*ratio,scale*ratio);ctx.drawImage(img,-initialImgW/2,-initialImgH/2,initialImgW,initialImgH);ctx.restore();const isPng=dataUrl.startsWith('data:image/png')||(typeof img.src==='string'&&img.src.toLowerCase().includes('.png'));const outMime=isPng?'image/png':'image/jpeg';const outQuality=isPng?undefined:0.98;const resultDataUrl=outCanvas.toDataURL(outMime,outQuality);closeMe();onSaveCallback(resultDataUrl)}}
 async function loadProductImages(id){try{const x=await api('/api/products/'+id+'/images');$('#productPhotos').innerHTML=x.items.length?x.items.map(i=>`<div class="photo-item" style="display:flex;justify-content:space-between;align-items:center;background:#0d1624;padding:12px;border:1px solid #203248;border-radius:10px;margin-bottom:8px"><div style="display:flex;align-items:center;gap:12px"><img src="${i.url}" alt="" style="width:58px;height:58px;object-fit:contain;background:#fff;border-radius:8px;border:1px solid #cbd5e1"><div><span class="badge" style="background:${i.principal?'rgba(253,94,2,0.18)':'rgba(255,255,255,0.08)'};color:${i.principal?'#fd5e02':'#cbd5e1'};font-weight:700">${i.principal?'★ Principal (Loja e Catálogos)':'Foto Secundária'}</span></div></div><div class="actions" style="display:flex;gap:6px">${!i.principal?`<button type="button" class="btn" style="font-size:12px;padding:6px 10px;background:#0284c7;color:#fff;border:none" onclick="setPrimaryProductImage('${i.id}','${id}')">★ Tornar Principal</button>`:''}<button type="button" class="btn" style="font-size:12px;padding:6px 10px" onclick="repositionProductImage('${i.url}', '${id}', '${i.id}')">📐 Ajustar / Mover</button><button class="btn danger" style="font-size:12px;padding:6px 10px" onclick="deleteProductImage('${i.id}',${id?`'${id}'`:'null'})">Excluir</button></div></div>`).join(''):'<div class="empty-state">Nenhuma foto cadastrada.</div>'}catch(e){$('#productPhotos').textContent=e.message}}
@@ -3472,7 +3606,7 @@ async function sellers(v) {
                   return `
                   <tr>
                     <td><strong>${esc(o.numero)}</strong></td>
-                    <td>${o.created_at ? new Date(o.created_at).toLocaleString('pt-BR') : '-'}</td>
+                    <td>${o.created_at ? formatBrasiliaDateTime(o.created_at) : '-'}</td>
                     <td><strong>${esc(o.nome_fantasia || o.razao_social || '-')}</strong>${o.bairro ? `<br><small class="muted">${esc(o.bairro)}</small>` : ''}</td>
                     <td>
                       ${hasGeo ? `
@@ -3825,7 +3959,7 @@ async function logistics(v){
       const phone = x.telefone || x.cliente_telefone || '';
       const orderTotal = Number(x.total != null ? x.total : x.pedido_total || 0);
       const isLiberado = curStatus === 'SEPARACAO';
-      const dateStr = x.created_at ? new Date(x.created_at).toLocaleString('pt-BR') : '-';
+      const dateStr = x.created_at ? formatBrasiliaDateTime(x.created_at) : '-';
 
       return `<tr>
         <td style="white-space:nowrap">

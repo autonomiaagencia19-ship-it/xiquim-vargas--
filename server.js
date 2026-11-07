@@ -1,5 +1,7 @@
+process.env.TZ = 'America/Sao_Paulo';
 import http from 'node:http';import crypto from 'node:crypto';import fs from 'node:fs';import path from 'node:path';import {spawn} from 'node:child_process';import {URL} from 'node:url';
 import {db,one,all,run,tx,id,audit,setAuditCallback,STORAGE} from './src/db.js';
+import {formatBrasiliaDateTime, formatBrasiliaDate, formatBrasiliaTime, getBrasiliaNow, BRASILIA_TZ} from './src/timezone.js';
 import {getSetupStatus, consumeSetupToken, setupUrl} from './src/setup.js';import {hashPassword,verifyPassword,sign,auth,requireRole as baseRequireRole} from './src/auth.js';import {makeOrderPdf,makeCatalogPdf,makeStockPdf,makeLoadingListPdf} from './src/pdf.js';import {assertString,assertInt,assertMoney,assertEmail,assertEnum,assertCoordinate,slugify} from './src/security.js';
 import {askAdministrativeAI, getGroqConfig} from './src/ai.js';
 import {calculateRouteSequence} from './src/routing.js';
@@ -127,8 +129,9 @@ function ensureBairroInCityList(bairro){const val=String(bairro||'').trim();if(!
 async function route(req,res){const u=new URL(req.url,`http://${req.headers.host}`);const p=u.pathname;const method=req.method;
 if(method==='OPTIONS'){res.writeHead(204,{'access-control-allow-origin':'*','access-control-allow-methods':'GET, POST, PUT, DELETE, OPTIONS','access-control-allow-headers':'content-type, authorization, x-request-id, idempotency-key, x-setup-token','access-control-max-age':'86400','cache-control':'no-store'});return res.end();}
 rateLimit(req);
-if(method==='GET'&&p==='/health')return send(res,200,{ok:true,service:'xiquim-vargas-erp',version:SERVER_VERSION,time:new Date().toISOString(),uptime_seconds:Math.floor((Date.now()-metrics.startedAt)/1000),database:'sqlite-wal',pid:process.pid});
+if(method==='GET'&&p==='/health')return send(res,200,{ok:true,service:'xiquim-vargas-erp',version:SERVER_VERSION,time:new Date().toISOString(),brasilia_time:formatBrasiliaDateTime(new Date()),timezone:'America/Sao_Paulo',uptime_seconds:Math.floor((Date.now()-metrics.startedAt)/1000),database:'sqlite-wal',pid:process.pid});
 if(method==='GET'&&p==='/ready')return send(res,200,{ok:true,ready:true,version:SERVER_VERSION});
+if(method==='GET'&&p==='/api/system/time')return send(res,200,{ok:true,...getBrasiliaNow()});
 if(method==='POST'&&p==='/api/events/ticket'){
   const user=requireRole(req,['admin','seller','cashier','driver','web_client']);
   const ticket=crypto.randomBytes(32).toString('base64url');
