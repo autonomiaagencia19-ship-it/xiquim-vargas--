@@ -5258,14 +5258,18 @@ async function generateLoadingList(){
     <div>
       <strong>Produtos para carregamento</strong>
       ${sellerName?`<div style="font-size:13px; color:var(--xv-primary,#fd5e02); margin-top:2px;">👤 <strong>Vendedor:</strong> ${esc(sellerName)}</div>`:''}
-      <div style="font-size:12px; color:var(--muted); margin-top:2px;">${ids.length} pedido(s) selecionado(s) · Total: ${x.total_produtos || 0} unidades</div>
+      <div style="font-size:12px; color:var(--muted); margin-top:2px;">${ids.length} pedido(s) selecionado(s) · Total: ${x.total_produtos || 0} volumes</div>
     </div>
     <div style="display:flex; gap:8px; flex-wrap:wrap">
       <button class="btn primary" onclick="downloadAuthPost('/api/logistics/loading-list/pdf',{pedido_ids:parseJsonArg('${jsonArg(ids)}'),vendedor:parseJsonArg('${jsonArg(sellerName)}')},'Lista_Carregamento.pdf')">Gerar PDF</button>
       <button class="btn" onclick="downloadAuthPost('/api/logistics/loading-list/orders-pdf',{pedido_ids:parseJsonArg('${jsonArg(ids)}')},'Pedidos_Carregamento.pdf')">🖨️ Imprimir Pedidos em PDF</button>
     </div>
   </div>
-  <div class="tablewrap"><table class="table"><thead><tr><th style="width:140px">Quantidade</th><th>Descrição do Produto</th></tr></thead><tbody>${x.produtos.map(p=>`<tr><td style="width:140px;font-size:1.15em"><strong style="color:var(--xv-primary,#fd5e02)">${p.quantidade_total} un</strong></td><td style="font-size:1.05em;font-weight:750">${esc(p.produto_nome)}</td></tr>`).join('')}</tbody></table></div>
+  <div class="tablewrap"><table class="table"><thead><tr><th style="width:130px">Quantidade</th><th>Descrição do Produto</th></tr></thead><tbody>${x.produtos.map(p=>{
+    const u = String(p.unidade || 'UN').trim().toUpperCase();
+    const unitTag = (u === 'UND' || u === 'UNIDADE' || u === 'UNIDADES') ? 'UN' : (u || 'UN');
+    return `<tr><td style="width:130px;font-size:1.15em;white-space:nowrap"><strong style="color:var(--xv-primary,#fd5e02)">${p.quantidade_total}</strong> <span style="font-size:11px;font-weight:800;background:#edf2f8;color:#061a4f;border:1px solid #cbd5e1;padding:2px 6px;border-radius:4px;margin-left:4px;display:inline-block;letter-spacing:0.5px">${esc(unitTag)}</span></td><td style="font-size:1.05em;font-weight:750">${esc(p.produto_nome)}</td></tr>`;
+  }).join('')}</tbody></table></div>
   <div class="panel" style="margin-top:16px; margin-bottom:0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; border-top:1px solid var(--border)">
     <div style="font-size:13px; color:var(--muted)">
       Finalização dos pedidos desta lista:

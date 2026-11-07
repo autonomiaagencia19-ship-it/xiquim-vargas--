@@ -14,7 +14,7 @@ console.log(`Rebuilding ${orders.length} order PDFs...`);
 let count = 0;
 for (const order of orders) {
   const items = all(`
-    SELECT pi.*, pr.nome as produto_nome
+    SELECT pi.*, pr.nome as produto_nome, pr.unidade
     FROM pedido_itens pi
     JOIN produtos pr ON pi.produto_id = pr.id
     WHERE pi.pedido_id = ?

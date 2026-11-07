@@ -1,5 +1,6 @@
 param(
-    [string]$DestinationPath = ""
+    [string]$DestinationPath = "",
+    [string]$BackupName = "app xiquim vargas final"
 )
 
 $ErrorActionPreference = "Stop"
@@ -11,11 +12,15 @@ if (-not $desktop -or -not (Test-Path $desktop)) {
 }
 
 if (-not $DestinationPath) {
-    $DestinationPath = Join-Path $desktop "ERP AUTONOMIA SYSTEM VERSAO FINAL.zip"
+    if (-not $BackupName.EndsWith('.zip', [System.StringComparison]::OrdinalIgnoreCase)) {
+        $BackupName = "$BackupName.zip"
+    }
+    $DestinationPath = Join-Path $desktop $BackupName
 }
 
-$rootCopyPath = Join-Path $root "ERP AUTONOMIA SYSTEM VERSAO FINAL.zip"
-$tempZip = Join-Path $desktop "erp_temp_pack.zip"
+$zipFileName = [System.IO.Path]::GetFileName($DestinationPath)
+$rootCopyPath = Join-Path $root $zipFileName
+$tempZip = Join-Path $desktop "erp_temp_pack_$([guid]::NewGuid().ToString('N')).zip"
 
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host " CRIACAO DO BACKUP COMPLETO DA PASTA RAIZ (SEM EXCLUSOES)" -ForegroundColor Cyan
