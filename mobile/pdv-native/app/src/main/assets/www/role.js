@@ -154,45 +154,56 @@ async function roleRealtimeRefresh(type,payload){
           }
         }
       }else if(role==='Vendedor Externo'){
-        const host=document.querySelector('.mobile-content');
-        if(host&&host.innerHTML.includes('Meus pedidos')){
+        // 1. Prioridade absoluta: se estiver montando pedido ou navegando catalogo, NUNCA redirecionar a tela
+        if(window.sellerCatalogMode || document.getElementById('sellerCatalogRoot')){
+          if(type==='stock_changed'||type==='products_changed'||type==='prices_changed'||type==='orders_changed'||type==='tab_focused'){
+            try{
+              const [p,s]=await Promise.all([
+                api('/api/products'+(window.sellerCurrentClientId?'?cliente_id='+encodeURIComponent(window.sellerCurrentClientId):'')),
+                api('/api/seller/stock')
+              ]);
+              const sm=new Map(s.items.map(x=>[x.id,x]));
+              const items=p.items.map(x=>({...x,...(sm.get(x.id)||{})}));
+              if(window.sellerCatalogMode==='DEMO'){
+                window.sellerCatalogItems=items;
+                if(typeof sellerCatalogRender==='function')sellerCatalogRender(items);
+              }else{
+                window.sellerProducts=items;
+                const prodEl = $('#sellerProducts');
+                if(prodEl && typeof sellerRender==='function'){
+                  let filtered = items;
+                  if(window.sellerCurrentCatId) filtered = filtered.filter(x => x.categoria_id === window.sellerCurrentCatId);
+                  if(window.sellerCurrentSubId) filtered = filtered.filter(x => x.subcategoria_id === window.sellerCurrentSubId);
+                  sellerRender(filtered);
+                }
+                if(typeof renderSellerNewOrderCart==='function')renderSellerNewOrderCart();
+              }
+            }catch(e){
+              console.warn('Erro ao atualizar produtos em segundo plano no pedido do vendedor:', e);
+            }
+          }
+        }else if(document.getElementById('sellerStockList') || (document.querySelector('.mobile-header h1')?.textContent === 'Estoque disponível')){
+          // 2. Apenas atualiza o estoque se a tela de estoque estiver REALMENTE aberta
+          if(type==='stock_changed'||type==='products_changed'||type==='orders_changed'||type==='tab_focused'){
+            try{
+              const x=await api('/api/seller/stock');
+              const listEl=$('#sellerStockList');
+              if(listEl){
+                listEl.innerHTML=x.items.map(sellerStockRow).join('');
+                const search=$('#sellerStockSearch');
+                if(search&&search.value.trim())sellerStockFilter(search);
+              }
+            }catch(e){}
+          }
+        }else if(document.querySelector('.mobile-header h1')?.textContent === 'Meus pedidos'){
           if(type==='orders_changed'||type==='returns_changed'||type==='tab_focused'){
             sellerOrders();
           }
-        }else if(host&&host.innerHTML.includes('Painel do mês')){
+        }else if(document.querySelector('.mobile-header h1')?.textContent === 'Painel do mês'){
           if(type==='orders_changed'||type==='returns_changed'||type==='tab_focused'){
             sellerDashboard();
           }
-        }else if(host&&host.innerHTML.includes('Estoque disponível')){
-          if(type==='stock_changed'||type==='products_changed'||type==='orders_changed'||type==='tab_focused'){
-            const x=await api('/api/seller/stock');
-            const listEl=$('#sellerStockList');
-            if(listEl){
-              listEl.innerHTML=x.items.map(sellerStockRow).join('');
-              const search=$('#sellerStockSearch');
-              if(search&&search.value.trim())sellerStockFilter(search);
-            }else{
-              sellerStock();
-            }
-          }
-        }else if(window.sellerCatalogMode){
-          if(type==='stock_changed'||type==='products_changed'||type==='prices_changed'||type==='orders_changed'||type==='tab_focused'){
-            const [p,s]=await Promise.all([
-              api('/api/products'+(window.sellerCurrentClientId?'?cliente_id='+encodeURIComponent(window.sellerCurrentClientId):'')),
-              api('/api/seller/stock')
-            ]);
-            const sm=new Map(s.items.map(x=>[x.id,x]));
-            const items=p.items.map(x=>({...x,...(sm.get(x.id)||{})}));
-            if(window.sellerCatalogMode==='DEMO'){
-              window.sellerCatalogItems=items;
-              if(typeof sellerCatalogRender==='function')sellerCatalogRender(items);
-            }else{
-              window.sellerProducts=items;
-              if(typeof sellerRender==='function')sellerRender(items);
-              if(typeof renderSellerNewOrderCart==='function')renderSellerNewOrderCart();
-            }
-          }
-        }else if(host&&host.innerHTML.includes('Minhas Rotas')){
+        }else if(document.querySelector('.mobile-header h1')?.textContent === 'Minhas Rotas'){
           if(type==='routes_changed'||type==='tab_focused'){
             sellerMyRoutes();
           }
