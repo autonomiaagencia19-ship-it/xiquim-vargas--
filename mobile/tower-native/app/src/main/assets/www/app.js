@@ -1244,23 +1244,23 @@ function productFormHtml(x={}){
     const prevProd=curIdx>0?editList[curIdx-1]:null;
     const nextProd=(curIdx>=0&&curIdx<editList.length-1)?editList[curIdx+1]:null;
     navHeaderHtml=`
-      <div class="product-edit-nav" style="display:flex;justify-content:space-between;align-items:center;background:#ffffff;padding:10px 14px;border-radius:10px;margin-bottom:16px;border:1px solid #cbd5e1;box-shadow:0 1px 3px rgba(0,0,0,0.05)">
-        <button type="button" class="btn" id="btnPrevProductTop" ${prevProd?`onclick="navigateToProductEdit('${prevProd.id}')"`:'disabled style="opacity:0.4;cursor:not-allowed"'} title="${prevProd?`Editar anterior: ${esc(prevProd.nome)}`:'Início da lista'}">
+      <div class="product-edit-nav" style="display:flex;justify-content:space-between;align-items:center;background:#ffffff;padding:10px 14px;border-radius:10px;margin-bottom:16px;border:1px solid #cbd5e1;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
+        <button type="button" class="btn" id="btnPrevProductTop" ${prevProd?`onclick="navigateToProductEdit('${prevProd.id}')"`:'disabled style="opacity:0.35;cursor:not-allowed;background:#ffffff;color:#64748b;border:1px solid #e2e8f0"'} style="background:#ffffff;color:#0f172a;border:1px solid #cbd5e1;font-weight:700" title="${prevProd?`Editar anterior: ${esc(prevProd.nome)}`:'Início da lista'}">
           ◀ Anterior
         </button>
         <div style="text-align:center;padding:0 8px">
           <small style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#64748b">Navegação entre produtos</small>
           <strong style="font-size:14px;font-weight:800;color:#0f172a">${curIdx>=0?`${curIdx+1} de ${editList.length}`:''}</strong>
         </div>
-        <button type="button" class="btn" id="btnNextProductTop" ${nextProd?`onclick="navigateToProductEdit('${nextProd.id}')"`:'disabled style="opacity:0.4;cursor:not-allowed"'} title="${nextProd?`Editar próximo: ${esc(nextProd.nome)}`:'Fim da lista'}">
+        <button type="button" class="btn" id="btnNextProductTop" ${nextProd?`onclick="navigateToProductEdit('${nextProd.id}')"`:'disabled style="opacity:0.35;cursor:not-allowed;background:#ffffff;color:#64748b;border:1px solid #e2e8f0"'} style="background:#ffffff;color:#0f172a;border:1px solid #cbd5e1;font-weight:700" title="${nextProd?`Editar próximo: ${esc(nextProd.nome)}`:'Fim da lista'}">
           Próximo ▶
         </button>
       </div>
     `;
     navFooterHtml=`
       <div style="display:flex;gap:6px">
-        <button type="button" class="btn" ${prevProd?`onclick="navigateToProductEdit('${prevProd.id}')"`:'disabled style="opacity:0.4;cursor:not-allowed"'} title="${prevProd?`Editar anterior: ${esc(prevProd.nome)}`:'Início da lista'}">◀ Anterior</button>
-        <button type="button" class="btn" ${nextProd?`onclick="navigateToProductEdit('${nextProd.id}')"`:'disabled style="opacity:0.4;cursor:not-allowed"'} title="${nextProd?`Editar próximo: ${esc(nextProd.nome)}`:'Fim da lista'}">Próximo ▶</button>
+        <button type="button" class="btn" ${prevProd?`onclick="navigateToProductEdit('${prevProd.id}')"`:'disabled style="opacity:0.35;cursor:not-allowed;background:#ffffff;color:#64748b;border:1px solid #e2e8f0"'} style="background:#ffffff;color:#0f172a;border:1px solid #cbd5e1;font-weight:700" title="${prevProd?`Editar anterior: ${esc(prevProd.nome)}`:'Início da lista'}">◀ Anterior</button>
+        <button type="button" class="btn" ${nextProd?`onclick="navigateToProductEdit('${nextProd.id}')"`:'disabled style="opacity:0.35;cursor:not-allowed;background:#ffffff;color:#64748b;border:1px solid #e2e8f0"'} style="background:#ffffff;color:#0f172a;border:1px solid #cbd5e1;font-weight:700" title="${nextProd?`Editar próximo: ${esc(nextProd.nome)}`:'Fim da lista'}">Próximo ▶</button>
       </div>
     `;
   }

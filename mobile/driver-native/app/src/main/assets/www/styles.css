@@ -3713,6 +3713,8 @@ body[data-role="Motorista"] .empty-state,
 }
 
 #modal>.panel {
+  background: #ffffff !important;
+  color: #0f172a !important;
   box-shadow: 0 30px 80px rgba(0, 0, 0, .28);
   border: 1px solid #d9e2ee
 }
