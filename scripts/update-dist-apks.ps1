@@ -25,9 +25,11 @@ foreach ($item in $map.GetEnumerator()) {
 
     Write-Host "Atualizando APKs de $name a partir de $src..."
 
-    # dist-apks
+    # Preserva versao anterior como 1.8.4 antes de atualizar a 1.8.5
+    if (Test-Path "dist-apks\XiquimVargas-$name-1.8.5.apk") {
+        Copy-Item -Path "dist-apks\XiquimVargas-$name-1.8.5.apk" -Destination "dist-apks\XiquimVargas-$name-1.8.4.apk" -Force
+    }
     Copy-Item -Path $src -Destination "dist-apks\XiquimVargas-$name-1.8.5.apk" -Force
-    Copy-Item -Path $src -Destination "dist-apks\XiquimVargas-$name-1.8.4.apk" -Force
 
     # mobile\apks
     Copy-Item -Path $src -Destination "mobile\apks\XiquimVargas-$name.apk" -Force
@@ -36,17 +38,23 @@ foreach ($item in $map.GetEnumerator()) {
     Copy-Item -Path $src -Destination "apks versao final\XiquimVargas-$name.apk" -Force
 
     # pasta raiz
+    if (Test-Path "XiquimVargas-$name-1.8.5.apk") {
+        Copy-Item -Path "XiquimVargas-$name-1.8.5.apk" -Destination "XiquimVargas-$name-1.8.4.apk" -Force
+    }
     Copy-Item -Path $src -Destination "XiquimVargas-$name-1.8.5.apk" -Force
-    Copy-Item -Path $src -Destination "XiquimVargas-$name-1.8.4.apk" -Force
     Copy-Item -Path $src -Destination "XiquimVargas-$name.apk" -Force
 
     if ($name -eq 'PDV') {
+        if (Test-Path "dist-apks\XiquimVargas-Caixa-1.8.5.apk") {
+            Copy-Item -Path "dist-apks\XiquimVargas-Caixa-1.8.5.apk" -Destination "dist-apks\XiquimVargas-Caixa-1.8.4.apk" -Force
+        }
         Copy-Item -Path $src -Destination "dist-apks\XiquimVargas-Caixa-1.8.5.apk" -Force
-        Copy-Item -Path $src -Destination "dist-apks\XiquimVargas-Caixa-1.8.4.apk" -Force
         Copy-Item -Path $src -Destination "mobile\apks\XiquimVargas-Caixa.apk" -Force
         Copy-Item -Path $src -Destination "apks versao final\XiquimVargas-Caixa.apk" -Force
+        if (Test-Path "XiquimVargas-Caixa-1.8.5.apk") {
+            Copy-Item -Path "XiquimVargas-Caixa-1.8.5.apk" -Destination "XiquimVargas-Caixa-1.8.4.apk" -Force
+        }
         Copy-Item -Path $src -Destination "XiquimVargas-Caixa-1.8.5.apk" -Force
-        Copy-Item -Path $src -Destination "XiquimVargas-Caixa-1.8.4.apk" -Force
         Copy-Item -Path $src -Destination "XiquimVargas-Caixa.apk" -Force
     }
 }
