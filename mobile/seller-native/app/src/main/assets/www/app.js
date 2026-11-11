@@ -1184,58 +1184,171 @@ async function home(v){
   window.renderTopProdutos(st.mode || 'geral', '');
 }
 async function products(v){const [p,c,promo]=await Promise.all([api('/api/products?limit=100000'),api('/api/categories'),api('/api/promotions')]);window.adminProducts=p;window.adminCategories=c;window.catalogCategories=c.categorias;window.catalogSubcategories=c.subcategorias;window.adminPromotions=promo;renderAdminCatalog(v)}
+function isCatalogProductRecent(dt, maxDays = 21){
+  if(!dt) return false;
+  const d = new Date(String(dt).trim().replace(' ', 'T'));
+  if(isNaN(d.getTime())) return false;
+  const diffDays = (Date.now() - d.getTime()) / (1000 * 3600 * 24);
+  return diffDays >= 0 && diffDays <= maxDays;
+}
 function renderAdminCatalogToolbar(){
-  const cats=window.adminCategories?.categorias||[];
-  const subs=window.adminCategories?.subcategorias||[];
-  const soldOutCount=(window.adminProducts?.items||[]).filter(x=>Number(x.esgotado)).length;
-  return `<div class="panel catalog-toolbar"><div class="actions"><input id="pq" class="search" placeholder="Pesquisar por nome, SKU ou código de barras" oninput="catalogFilter(this)"><button class="btn primary" onclick="newProduct()">+ Produto</button><button class="btn" onclick="newCategory()">+ Categoria</button><button class="btn" onclick="newSubcategory()">+ Subcategoria</button><button class="btn" onclick="exportCatalogPdf()">⇩ PDF do catálogo</button></div><div class="catalog-filters" style="flex-wrap:wrap"><select id="catFilter" class="field-input" onchange="onAdminCatFilterChange(this.value)"><option value="">Todas as categorias</option>${cats.map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join('')}</select><select id="subFilter" class="field-input" onchange="catalogFilter()"><option value="">Todas as subcategorias</option>${subs.map(x=>`<option data-cat="${x.categoria_id}" value="${x.id}">${esc(x.nome)}</option>`).join('')}</select><select id="soldOutFilter" class="field-input" onchange="onSoldOutFilterChange(this.value)" style="min-width:190px"><option value="">Todos os status</option><option value="ESGOTADO">⊘ Somente Esgotados (${soldOutCount})</option><option value="DISPONIVEL">✔ Somente Disponíveis</option></select><button type="button" id="btnQuickSoldOutFilter" class="btn" onclick="toggleQuickSoldOutFilter()" style="${soldOutCount>0?'border-color:#f5b5b5;color:#b42318;background:#fff5f5;':''}" title="Mostrar apenas produtos marcados como esgotados">⊘ Esgotados (<span id="quickSoldOutCount">${soldOutCount}</span>)</button></div></div>`;
+  const cats = window.adminCategories?.categorias || [];
+  const subs = window.adminCategories?.subcategorias || [];
+  const items = window.adminProducts?.items || [];
+  const soldOutCount = items.filter(x => Number(x.esgotado)).length;
+  const promoCount = items.filter(x => x.promocao_preco != null).length;
+  const recentCount = items.filter(x => isCatalogProductRecent(x.created_at)).length;
+  return `<div class="panel catalog-toolbar"><div class="actions"><input id="pq" class="search" placeholder="Pesquisar por nome, SKU ou código de barras" oninput="catalogFilter(this)"><button class="btn primary" onclick="newProduct()">+ Produto</button><button class="btn" onclick="newCategory()">+ Categoria</button><button class="btn" onclick="newSubcategory()">+ Subcategoria</button><button class="btn" onclick="exportCatalogPdf()">⇩ PDF do catálogo</button></div><div class="catalog-filters" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><select id="catFilter" class="field-input" onchange="onAdminCatFilterChange(this.value)"><option value="">Todas as categorias</option>${cats.map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join('')}</select><select id="subFilter" class="field-input" onchange="catalogFilter()"><option value="">Todas as subcategorias</option>${subs.map(x=>`<option data-cat="${x.categoria_id}" value="${x.id}">${esc(x.nome)}</option>`).join('')}</select><select id="promoFilter" class="field-input" onchange="onPromoFilterChange(this.value)" style="min-width:175px"><option value="">Todas as promoções</option><option value="PROMO">🏷 Somente Promoções (${promoCount})</option><option value="SEM_PROMO">Sem promoção (preço regular)</option></select><select id="recentFilter" class="field-input" onchange="onRecentFilterChange(this.value)" style="min-width:170px"><option value="">Todas as datas</option><option value="RECENT">⏱ Somente Recentes (${recentCount})</option><option value="RECENT_30">⏱ Últimos 30 dias</option></select><select id="soldOutFilter" class="field-input" onchange="onSoldOutFilterChange(this.value)" style="min-width:175px"><option value="">Todos os status</option><option value="ESGOTADO">⊘ Somente Esgotados (${soldOutCount})</option><option value="DISPONIVEL">✔ Somente Disponíveis</option></select><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" id="btnQuickPromoFilter" class="btn" onclick="toggleQuickPromoFilter()" style="${promoCount>0?'border-color:#fed7aa;color:#c2410c;background:#fff7ed;':''}" title="Filtrar produtos com promoção ativa">🏷 Promoções (<span id="quickPromoCount">${promoCount}</span>)</button><button type="button" id="btnQuickRecentFilter" class="btn" onclick="toggleQuickRecentFilter()" style="${recentCount>0?'border-color:#bae6fd;color:#0284c7;background:#f0f9ff;':''}" title="Filtrar produtos adicionados recentemente">⏱ Recentes (<span id="quickRecentCount">${recentCount}</span>)</button><button type="button" id="btnQuickSoldOutFilter" class="btn" onclick="toggleQuickSoldOutFilter()" style="${soldOutCount>0?'border-color:#f5b5b5;color:#b42318;background:#fff5f5;':''}" title="Filtrar produtos marcados como esgotados">⊘ Esgotados (<span id="quickSoldOutCount">${soldOutCount}</span>)</button><button type="button" class="btn" onclick="clearCatalogFilters()" title="Limpar todos os filtros e buscas" style="font-size:12px;padding:6px 10px">✕ Limpar</button></div></div></div>`;
+}
+function onPromoFilterChange(val){
+  const btn = $('#btnQuickPromoFilter');
+  if(btn){
+    if(val === 'PROMO'){
+      btn.style.background = '#ea580c';
+      btn.style.color = '#fff';
+      btn.style.borderColor = '#ea580c';
+    }else{
+      const cnt = (window.adminProducts?.items || []).filter(x => x.promocao_preco != null).length;
+      btn.style.background = cnt > 0 ? '#fff7ed' : '';
+      btn.style.color = cnt > 0 ? '#c2410c' : '';
+      btn.style.borderColor = cnt > 0 ? '#fed7aa' : '';
+    }
+  }
+  catalogFilter();
+}
+function toggleQuickPromoFilter(){
+  const sel = $('#promoFilter');
+  if(!sel) return;
+  sel.value = (sel.value === 'PROMO') ? '' : 'PROMO';
+  onPromoFilterChange(sel.value);
+  if(sel.value === 'PROMO'){
+    const tbl = document.getElementById('catalogTable');
+    if(tbl) tbl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+function onRecentFilterChange(val){
+  const btn = $('#btnQuickRecentFilter');
+  if(btn){
+    if(val === 'RECENT' || val === 'RECENT_30'){
+      btn.style.background = '#0284c7';
+      btn.style.color = '#fff';
+      btn.style.borderColor = '#0284c7';
+    }else{
+      const cnt = (window.adminProducts?.items || []).filter(x => isCatalogProductRecent(x.created_at)).length;
+      btn.style.background = cnt > 0 ? '#f0f9ff' : '';
+      btn.style.color = cnt > 0 ? '#0284c7' : '';
+      btn.style.borderColor = cnt > 0 ? '#bae6fd' : '';
+    }
+  }
+  catalogFilter();
+}
+function toggleQuickRecentFilter(){
+  const sel = $('#recentFilter');
+  if(!sel) return;
+  sel.value = (sel.value === 'RECENT') ? '' : 'RECENT';
+  onRecentFilterChange(sel.value);
+  if(sel.value === 'RECENT'){
+    const tbl = document.getElementById('catalogTable');
+    if(tbl) tbl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 }
 function onSoldOutFilterChange(val){
-  const btn=$('#btnQuickSoldOutFilter');
+  const btn = $('#btnQuickSoldOutFilter');
   if(btn){
-    if(val==='ESGOTADO'){
-      btn.style.background='#b42318';
-      btn.style.color='#fff';
-      btn.style.borderColor='#b42318';
+    if(val === 'ESGOTADO'){
+      btn.style.background = '#b42318';
+      btn.style.color = '#fff';
+      btn.style.borderColor = '#b42318';
     }else{
-      const cnt=(window.adminProducts?.items||[]).filter(x=>Number(x.esgotado)).length;
-      btn.style.background=cnt>0?'#fff5f5':'';
-      btn.style.color=cnt>0?'#b42318':'';
-      btn.style.borderColor=cnt>0?'#f5b5b5':'';
+      const cnt = (window.adminProducts?.items || []).filter(x => Number(x.esgotado)).length;
+      btn.style.background = cnt > 0 ? '#fff5f5' : '';
+      btn.style.color = cnt > 0 ? '#b42318' : '';
+      btn.style.borderColor = cnt > 0 ? '#f5b5b5' : '';
     }
   }
   catalogFilter();
 }
 function toggleQuickSoldOutFilter(){
-  const sel=$('#soldOutFilter');
-  if(!sel)return;
-  sel.value=(sel.value==='ESGOTADO')?'':'ESGOTADO';
+  const sel = $('#soldOutFilter');
+  if(!sel) return;
+  sel.value = (sel.value === 'ESGOTADO') ? '' : 'ESGOTADO';
   onSoldOutFilterChange(sel.value);
-  if(sel.value==='ESGOTADO'){
-    const tbl=document.getElementById('catalogTable');
-    if(tbl)tbl.scrollIntoView({behavior:'smooth',block:'start'});
+  if(sel.value === 'ESGOTADO'){
+    const tbl = document.getElementById('catalogTable');
+    if(tbl) tbl.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
-function updateCatalogSoldOutCounts(){
-  const cnt=(window.adminProducts?.items||[]).filter(x=>Number(x.esgotado)).length;
-  const opt=document.querySelector('#soldOutFilter option[value="ESGOTADO"]');
-  if(opt)opt.textContent=`⊘ Somente Esgotados (${cnt})`;
-  const qEl=$('#quickSoldOutCount');
-  if(qEl)qEl.textContent=cnt;
-  const sEl=$('#catalogSoldOutSummaryCount');
-  if(sEl)sEl.textContent=cnt;
-  const btn=$('#btnQuickSoldOutFilter');
-  if(btn&&$('#soldOutFilter')?.value!=='ESGOTADO'){
-    btn.style.background=cnt>0?'#fff5f5':'';
-    btn.style.color=cnt>0?'#b42318':'';
-    btn.style.borderColor=cnt>0?'#f5b5b5':'';
+function clearCatalogFilters(){
+  const pq = $('#pq'); if(pq) pq.value = '';
+  const catSel = $('#catFilter'); if(catSel){ catSel.value = ''; onAdminCatFilterChange(''); }
+  const subSel = $('#subFilter'); if(subSel) subSel.value = '';
+  const pSel = $('#promoFilter'); if(pSel){ pSel.value = ''; onPromoFilterChange(''); }
+  const rSel = $('#recentFilter'); if(rSel){ rSel.value = ''; onRecentFilterChange(''); }
+  const sSel = $('#soldOutFilter'); if(sSel){ sSel.value = ''; onSoldOutFilterChange(''); }
+  const minInput = $('#adminSubMin'); if(minInput) minInput.value = '';
+  const maxInput = $('#adminSubMax'); if(maxInput) maxInput.value = '';
+  catalogFilter();
+}
+function updateCatalogSpecialCounts(){
+  const items = window.adminProducts?.items || [];
+  const soldOut = items.filter(x => Number(x.esgotado)).length;
+  const promo = items.filter(x => x.promocao_preco != null).length;
+  const recent = items.filter(x => isCatalogProductRecent(x.created_at)).length;
+
+  const optSoldOut = document.querySelector('#soldOutFilter option[value="ESGOTADO"]');
+  if(optSoldOut) optSoldOut.textContent = `⊘ Somente Esgotados (${soldOut})`;
+  const optPromo = document.querySelector('#promoFilter option[value="PROMO"]');
+  if(optPromo) optPromo.textContent = `🏷 Somente Promoções (${promo})`;
+  const optRecent = document.querySelector('#recentFilter option[value="RECENT"]');
+  if(optRecent) optRecent.textContent = `⏱ Somente Recentes (${recent})`;
+
+  const qSoldOut = $('#quickSoldOutCount'); if(qSoldOut) qSoldOut.textContent = soldOut;
+  const qPromo = $('#quickPromoCount'); if(qPromo) qPromo.textContent = promo;
+  const qRecent = $('#quickRecentCount'); if(qRecent) qRecent.textContent = recent;
+
+  const sSoldOut = $('#catalogSoldOutSummaryCount'); if(sSoldOut) sSoldOut.textContent = soldOut;
+  const sPromo = $('#catalogPromoSummaryCount'); if(sPromo) sPromo.textContent = promo;
+  const sRecent = $('#catalogRecentSummaryCount'); if(sRecent) sRecent.textContent = recent;
+
+  const btnSoldOut = $('#btnQuickSoldOutFilter');
+  if(btnSoldOut && $('#soldOutFilter')?.value !== 'ESGOTADO'){
+    btnSoldOut.style.background = soldOut > 0 ? '#fff5f5' : '';
+    btnSoldOut.style.color = soldOut > 0 ? '#b42318' : '';
+    btnSoldOut.style.borderColor = soldOut > 0 ? '#f5b5b5' : '';
+  }
+  const btnPromo = $('#btnQuickPromoFilter');
+  if(btnPromo && $('#promoFilter')?.value !== 'PROMO'){
+    btnPromo.style.background = promo > 0 ? '#fff7ed' : '';
+    btnPromo.style.color = promo > 0 ? '#c2410c' : '';
+    btnPromo.style.borderColor = promo > 0 ? '#fed7aa' : '';
+  }
+  const btnRecent = $('#btnQuickRecentFilter');
+  if(btnRecent && $('#recentFilter')?.value !== 'RECENT'){
+    btnRecent.style.background = recent > 0 ? '#f0f9ff' : '';
+    btnRecent.style.color = recent > 0 ? '#0284c7' : '';
+    btnRecent.style.borderColor = recent > 0 ? '#bae6fd' : '';
   }
 }
+function updateCatalogSoldOutCounts(){ updateCatalogSpecialCounts(); }
 function onAdminCatFilterChange(catId){const subSel=document.getElementById('subFilter');if(subSel){subSel.querySelectorAll('option[data-cat]').forEach(opt=>{opt.hidden=!!catId&&opt.dataset.cat!==catId});if(subSel.selectedOptions[0]?.hidden)subSel.value=''}catalogFilter()}
-function renderAdminCatalog(v){window.adminCurrentCatId='';window.adminCurrentSubId='';const p=window.adminProducts;const c=window.adminCategories;const promo=window.adminPromotions;const cats=c.categorias;const catCards=cats.length?`<div class="grid" style="margin-top:14px;margin-bottom:24px;">${cats.map(cat=>{const count=(p.items||[]).filter(x=>x.categoria_id===cat.id).length;const subCount=c.subcategorias.filter(s=>s.categoria_id===cat.id).length;return `<div class="card" style="cursor:pointer;position:relative" onclick="adminSubcategorias('${cat.id}')"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><h3 style="margin:0">${esc(cat.nome)}</h3><div style="display:flex;gap:4px;flex-shrink:0" onclick="event.stopPropagation()"><button class="btn" style="padding:4px 8px;font-size:12px" title="Editar categoria" onclick="editCategory(parseJsonArg('${jsonArg(cat)}'))">✏</button><button class="btn" style="padding:4px 8px;font-size:12px;color:#b42318" title="Excluir categoria" onclick="deleteCategory('${cat.id}',parseJsonArg('${jsonArg(cat.nome)}'))">🗑</button></div></div><p class="muted" style="margin-top:8px">${count} produtos · ${subCount} subcategorias</p></div>`}).join('')}</div>`:'';v.innerHTML=`${renderAdminCatalogToolbar()}<div class="catalog-summary"><span><b>${p.total}</b> produtos ativos</span><span><b>${cats.length}</b> categorias</span><span><b>${c.subcategorias.length}</b> subdivisões</span><span><b>${promo.items.length}</b> promoções ativas</span><span style="cursor:pointer;${(p.items||[]).some(x=>Number(x.esgotado))?'border-color:#f5b5b5;color:#b42318;background:#fff5f5;':''}" onclick="toggleQuickSoldOutFilter()" title="Clique para filtrar somente produtos esgotados"><b id="catalogSoldOutSummaryCount">${(p.items||[]).filter(x=>Number(x.esgotado)).length}</b> esgotado(s) ⊘</span></div><div class="panel-title" style="margin-top:16px;"><h2>Categorias do Catálogo</h2></div>${catCards}<div class="panel-title" style="margin-top:24px;"><h2>Todos os Produtos</h2></div><div id="catalogTable" class="tablewrap"><table class="table"><thead><tr><th>Produto</th><th>SKU</th><th>Categoria</th><th>Subcategoria</th><th>Preço</th><th>Promoção</th><th>Ações</th></tr></thead><tbody>${p.items.map(x=>catalogRow(x)).join('')}</tbody></table></div><div class="panel category-panel" style="margin-top:24px"><div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div><h3>Estrutura do catálogo</h3><span class="badge">Editável pela Torre</span></div><div class="actions" style="display:flex;gap:8px"><button class="btn" onclick="newCategory()">+ Categoria</button><button class="btn" onclick="newSubcategory()">+ Subcategoria</button></div></div><div class="category-tree">${cats.map(cat=>{const subs=c.subcategorias.filter(s=>s.categoria_id===cat.id);return `<div class="category-node" style="display:flex;flex-direction:column;gap:10px;align-items:stretch"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap"><div><strong style="font-size:15px">${esc(cat.nome)}</strong><small>${esc(cat.descricao||'Sem descrição')}</small></div><div class="category-actions" style="display:flex;gap:6px"><button class="btn" style="padding:4px 8px;font-size:12px" onclick="editCategory(parseJsonArg('${jsonArg(cat)}'))">✏ Editar</button><button class="btn" style="padding:4px 8px;font-size:12px;color:#b42318" onclick="deleteCategory('${cat.id}',parseJsonArg('${jsonArg(cat.nome)}'))">🗑 Excluir</button><button class="btn primary" style="padding:4px 8px;font-size:12px" onclick="newSubcategory('${cat.id}')">+ Subcategoria</button></div></div><div style="display:flex;flex-wrap:wrap;gap:8px;padding-top:8px;border-top:1px solid #1e2c40"><span class="muted" style="font-size:11px;align-self:center;text-transform:uppercase;letter-spacing:0.5px">Subcategorias:</span>${subs.length?subs.map(s=>`<span class="badge" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:#f1f5f9;border:1px solid #cbd5e1;color:#000000;font-size:12px"><span>${esc(s.nome)}</span><button type="button" title="Editar subcategoria" style="background:none;border:none;color:#94a3b8;cursor:pointer;padding:0 2px;font-size:12px" onmouseover="this.style.color='#f97316'" onmouseout="this.style.color='#94a3b8'" onclick="editSubcategory(parseJsonArg('${jsonArg(s)}'))">✏</button><button type="button" title="Excluir subcategoria" style="background:none;border:none;color:#f87171;cursor:pointer;padding:0 2px;font-size:12px" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#f87171'" onclick="deleteSubcategory('${s.id}',parseJsonArg('${jsonArg(s.nome)}'),'${cat.id}')">✕</button></span>`).join(''):'<span class="muted" style="font-size:12px">Sem subdivisões</span>'}</div></div>`}).join('')}</div></div>`}
+function renderAdminCatalog(v){
+  window.adminCurrentCatId='';window.adminCurrentSubId='';
+  const p=window.adminProducts;const c=window.adminCategories;const promo=window.adminPromotions;const cats=c.categorias;
+  const items=p.items||[];
+  const promoCount=items.filter(x=>x.promocao_preco!=null).length;
+  const recentCount=items.filter(x=>isCatalogProductRecent(x.created_at)).length;
+  const soldOutCount=items.filter(x=>Number(x.esgotado)).length;
+  const catCards=cats.length?`<div class="grid" style="margin-top:14px;margin-bottom:24px;">${cats.map(cat=>{const count=(p.items||[]).filter(x=>x.categoria_id===cat.id).length;const subCount=c.subcategorias.filter(s=>s.categoria_id===cat.id).length;return `<div class="card" style="cursor:pointer;position:relative" onclick="adminSubcategorias('${cat.id}')"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><h3 style="margin:0">${esc(cat.nome)}</h3><div style="display:flex;gap:4px;flex-shrink:0" onclick="event.stopPropagation()"><button class="btn" style="padding:4px 8px;font-size:12px" title="Editar categoria" onclick="editCategory(parseJsonArg('${jsonArg(cat)}'))">✏</button><button class="btn" style="padding:4px 8px;font-size:12px;color:#b42318" title="Excluir categoria" onclick="deleteCategory('${cat.id}',parseJsonArg('${jsonArg(cat.nome)}'))">🗑</button></div></div><p class="muted" style="margin-top:8px">${count} produtos · ${subCount} subcategorias</p></div>`}).join('')}</div>`:'';
+  v.innerHTML=`${renderAdminCatalogToolbar()}<div class="catalog-summary"><span><b>${p.total}</b> produtos ativos</span><span><b>${cats.length}</b> categorias</span><span><b>${c.subcategorias.length}</b> subdivisões</span><span style="cursor:pointer;${promoCount>0?'border-color:#fed7aa;color:#c2410c;background:#fff7ed;':''}" onclick="toggleQuickPromoFilter()" title="Clique para filtrar produtos em promoção"><b id="catalogPromoSummaryCount">${promoCount}</b> em promoção 🏷</span><span style="cursor:pointer;${recentCount>0?'border-color:#bae6fd;color:#0284c7;background:#f0f9ff;':''}" onclick="toggleQuickRecentFilter()" title="Clique para filtrar produtos adicionados recentemente"><b id="catalogRecentSummaryCount">${recentCount}</b> recente(s) ⏱</span><span style="cursor:pointer;${soldOutCount>0?'border-color:#f5b5b5;color:#b42318;background:#fff5f5;':''}" onclick="toggleQuickSoldOutFilter()" title="Clique para filtrar somente produtos esgotados"><b id="catalogSoldOutSummaryCount">${soldOutCount}</b> esgotado(s) ⊘</span></div><div class="panel-title" style="margin-top:16px;"><h2>Categorias do Catálogo</h2></div>${catCards}<div class="panel-title" style="margin-top:24px;"><h2>Todos os Produtos</h2></div><div id="catalogTable" class="tablewrap"><table class="table"><thead><tr><th>Produto</th><th>SKU</th><th>Categoria</th><th>Subcategoria</th><th>Preço</th><th>Promoção</th><th>Ações</th></tr></thead><tbody>${p.items.map(x=>catalogRow(x)).join('')}</tbody></table></div><div class="panel category-panel" style="margin-top:24px"><div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div><h3>Estrutura do catálogo</h3><span class="badge">Editável pela Torre</span></div><div class="actions" style="display:flex;gap:8px"><button class="btn" onclick="newCategory()">+ Categoria</button><button class="btn" onclick="newSubcategory()">+ Subcategoria</button></div></div><div class="category-tree">${cats.map(cat=>{const subs=c.subcategorias.filter(s=>s.categoria_id===cat.id);return `<div class="category-node" style="display:flex;flex-direction:column;gap:10px;align-items:stretch"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap"><div><strong style="font-size:15px">${esc(cat.nome)}</strong><small>${esc(cat.descricao||'Sem descrição')}</small></div><div class="category-actions" style="display:flex;gap:6px"><button class="btn" style="padding:4px 8px;font-size:12px" onclick="editCategory(parseJsonArg('${jsonArg(cat)}'))">✏ Editar</button><button class="btn" style="padding:4px 8px;font-size:12px;color:#b42318" onclick="deleteCategory('${cat.id}',parseJsonArg('${jsonArg(cat.nome)}'))">🗑 Excluir</button><button class="btn primary" style="padding:4px 8px;font-size:12px" onclick="newSubcategory('${cat.id}')">+ Subcategoria</button></div></div><div style="display:flex;flex-wrap:wrap;gap:8px;padding-top:8px;border-top:1px solid #1e2c40"><span class="muted" style="font-size:11px;align-self:center;text-transform:uppercase;letter-spacing:0.5px">Subcategorias:</span>${subs.length?subs.map(s=>`<span class="badge" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:#f1f5f9;border:1px solid #cbd5e1;color:#000000;font-size:12px"><span>${esc(s.nome)}</span><button type="button" title="Editar subcategoria" style="background:none;border:none;color:#94a3b8;cursor:pointer;padding:0 2px;font-size:12px" onmouseover="this.style.color='#f97316'" onmouseout="this.style.color='#94a3b8'" onclick="editSubcategory(parseJsonArg('${jsonArg(s)}'))">✏</button><button type="button" title="Excluir subcategoria" style="background:none;border:none;color:#f87171;cursor:pointer;padding:0 2px;font-size:12px" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#f87171'" onclick="deleteSubcategory('${s.id}',parseJsonArg('${jsonArg(s.nome)}'),'${cat.id}')">✕</button></span>`).join(''):'<span class="muted" style="font-size:12px">Sem subdivisões</span>'}</div></div>`}).join('')}</div></div>`;
+}
 function adminSubcategorias(catId){const v=$('#view');window.adminCurrentCatId=catId;window.adminCurrentSubId='';const cat=window.adminCategories.categorias.find(c=>c.id===catId);const subs=window.adminCategories.subcategorias.filter(s=>s.categoria_id===catId);const p=window.adminProducts;const catItems=(p.items||[]).filter(x=>x.categoria_id===catId);v.innerHTML=`${renderAdminCatalogToolbar()}<div class="mobile-nav" style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><button class="btn" onclick="renderAdminCatalog(document.getElementById('view'))">← Voltar a Todas as Categorias</button><div style="display:flex;gap:6px">${cat?`<button class="btn" onclick="editCategory(parseJsonArg('${jsonArg(cat)}'))">✏ Editar Categoria</button><button class="btn" style="color:#b42318" onclick="deleteCategory('${cat.id}',parseJsonArg('${jsonArg(cat.nome)}'))">🗑 Excluir Categoria</button>`:''}<button class="btn primary" onclick="newSubcategory('${catId}')">+ Nova Subcategoria</button></div></div><div class="panel-title"><h2>Categoria: ${esc(cat?.nome||'')}</h2><span class="badge">${catItems.length} produtos cadastrados</span></div><div class="grid" style="margin-top:14px;margin-bottom:24px;"><div class="card" style="cursor:pointer;border-left:4px solid #f97316" onclick="adminProdutosSub('','Todos os Produtos (${catItems.length})','${catId}')"><h3>Todos os Produtos</h3><p class="muted">Exibir todos os ${catItems.length} produtos desta categoria</p></div>${subs.length?subs.map(s=>{const count=(p.items||[]).filter(x=>x.subcategoria_id===s.id).length;return `<div class="card" style="cursor:pointer;position:relative" onclick="adminProdutosSub('${s.id}','${esc(s.nome).replace(/'/g,"\\'").replace(/"/g,"&quot;")}','${catId}')"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><h3 style="margin:0">${esc(s.nome)}</h3><div style="display:flex;gap:4px;flex-shrink:0" onclick="event.stopPropagation()"><button class="btn" style="padding:4px 8px;font-size:12px" title="Editar subcategoria" onclick="editSubcategory(parseJsonArg('${jsonArg(s)}'))">✏</button><button class="btn" style="padding:4px 8px;font-size:12px;color:#b42318" title="Excluir subcategoria" onclick="deleteSubcategory('${s.id}',parseJsonArg('${jsonArg(s.nome)}'),'${catId}')">🗑</button></div></div><p class="muted" style="margin-top:8px">${count} produtos</p></div>`}).join(''):'<p class="muted">Nenhuma subcategoria encontrada.</p>'}</div><div class="panel-title" style="margin-top:20px"><h2>Produtos em ${esc(cat?.nome||'')}</h2></div><div id="catalogTable" class="tablewrap"><table class="table"><thead><tr><th>Produto</th><th>SKU</th><th>Categoria</th><th>Subcategoria</th><th>Preço</th><th>Promoção</th><th>Ações</th></tr></thead><tbody>${catItems.map(x=>catalogRow(x)).join('')}</tbody></table></div>`;const cf=$('#catFilter');if(cf){cf.value=catId;onAdminCatFilterChange(catId)}}
 function adminProdutosSub(subId,subName,catId){const v=$('#view');window.adminCurrentSubId=subId;window.adminCurrentCatId=catId;const p=window.adminProducts;const sub=subId?(window.adminCategories?.subcategorias||[]).find(s=>s.id===subId):null;const items=(p.items||[]).filter(x=>{if(catId&&x.categoria_id!==catId)return false;if(subId&&x.subcategoria_id!==subId)return false;return true});v.innerHTML=`${renderAdminCatalogToolbar()}<div class="mobile-nav" style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="display:flex;gap:8px"><button class="btn" onclick="adminSubcategorias('${catId||''}')">← Subcategorias</button><button class="btn" onclick="renderAdminCatalog(document.getElementById('view'))">🏠 Catálogo Geral</button></div>${sub?`<div style="display:flex;gap:6px"><button class="btn" onclick="editSubcategory(parseJsonArg('${jsonArg(sub)}'))">✏ Editar Subcategoria</button><button class="btn" style="color:#b42318" onclick="deleteSubcategory('${sub.id}',parseJsonArg('${jsonArg(sub.nome)}'),'${catId}')">🗑 Excluir Subcategoria</button></div>`:''}</div><div class="panel-title"><h2>${esc(subName)}</h2><span class="badge">${items.length} produtos</span></div><div class="form" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;"><div class="field"><label>Menor preço</label><input type="number" step="0.01" id="adminSubMin" class="search" placeholder="R$ 0,00" oninput="catalogFilter()"></div><div class="field"><label>Maior preço</label><input type="number" step="0.01" id="adminSubMax" class="search" placeholder="Sem limite" oninput="catalogFilter()"></div></div><div id="catalogTable" class="tablewrap"><table class="table"><thead><tr><th>Produto</th><th>SKU</th><th>Categoria</th><th>Subcategoria</th><th>Preço</th><th>Promoção</th><th>Ações</th></tr></thead><tbody>${items.map(x=>catalogRow(x)).join('')}</tbody></table></div>`;const cf=$('#catFilter');if(cf){cf.value=catId||'';onAdminCatFilterChange(catId||'');if(subId&&$('#subFilter'))$('#subFilter').value=subId}catalogFilter()}
-function catalogRow(x){return `<tr data-product="${x.id}" data-cat="${x.categoria_id||''}" data-sub="${x.subcategoria_id||''}" data-sold-out="${Number(x.esgotado)?'1':'0'}" data-price="${x.promocao_preco!=null?Number(x.promocao_preco):Number(x.preco_base)}"><td><div class="catalog-product-cell">${x.foto_url?`<img class="catalog-mini-photo" src="${esc(x.foto_url)}" alt="" onerror="this.onerror=null;this.replaceWith(Object.assign(document.createElement('div'),{className:'catalog-mini-photo placeholder',textContent:'XV'}))">`:'<div class="catalog-mini-photo placeholder">XV</div>'}<div><strong>${esc(x.nome)}</strong>${Number(x.esgotado)?' <span class="badge" style="background:#fde2e2;color:#b42318;border-color:#f5b5b5">ESGOTADO</span>':''}<br><small>${esc([x.marca,x.sabor,x.tamanho].filter(Boolean).join(' · '))}</small></div></div></td><td>${esc(x.sku)}</td><td>${esc(x.categoria_nome||'-')}</td><td>${esc(x.subcategoria_nome||'-')}</td><td>${brl(x.preco_base)}</td><td>${x.promocao_preco!=null?`<strong class="orange">${brl(x.promocao_preco)}</strong>`:'—'}</td><td><button class="btn" onclick="editProduct(parseJsonArg('${jsonArg(x)}'))">Editar</button> <button class="btn" onclick="productCostHistoryModal('${x.id}',parseJsonArg('${jsonArg(x.nome)}'))" title="Ver linha do tempo de custos e lucros">💰 Custos & Lucro</button> <button class="btn" onclick="manageProductImages(parseJsonArg('${jsonArg(x)}'))">Fotos</button> <button class="btn" onclick="managePromotion(parseJsonArg('${jsonArg(x)}'))">Promoção</button> <button class="btn" onclick="productSuppliersModal('${x.id}',parseJsonArg('${jsonArg(x.nome)}'))">🏢 Fornecedores</button> <button class="btn" onclick="toggleSoldOut('${x.id}',${Number(x.esgotado)?0:1})">${Number(x.esgotado)?'✔ Disponível':'⊘ Esgotado'}</button> <button class="btn" style="color:#b42318" onclick="deleteProduct('${x.id}',parseJsonArg('${jsonArg(x.nome)}'))">🗑 Excluir</button></td></tr>`}
+function catalogRow(x){
+  const isSoldOut = Number(x.esgotado);
+  const isPromo = x.promocao_preco != null;
+  const isRecent = isCatalogProductRecent(x.created_at);
+  return `<tr data-product="${x.id}" data-cat="${x.categoria_id||''}" data-sub="${x.subcategoria_id||''}" data-sold-out="${isSoldOut?'1':'0'}" data-promo="${isPromo?'1':'0'}" data-recent="${isRecent?'1':'0'}" data-created="${x.created_at||''}" data-price="${isPromo?Number(x.promocao_preco):Number(x.preco_base)}"><td><div class="catalog-product-cell">${x.foto_url?`<img class="catalog-mini-photo" src="${esc(x.foto_url)}" alt="" onerror="this.onerror=null;this.replaceWith(Object.assign(document.createElement('div'),{className:'catalog-mini-photo placeholder',textContent:'XV'}))">`:'<div class="catalog-mini-photo placeholder">XV</div>'}<div><strong>${esc(x.nome)}</strong>${isSoldOut?' <span class="badge badge-sold-out" style="background:#fde2e2;color:#b42318;border-color:#f5b5b5">ESGOTADO</span>':''}${isPromo?' <span class="badge badge-promo" style="background:#fff7ed;color:#c2410c;border-color:#fed7aa">PROMOÇÃO</span>':''}${isRecent?' <span class="badge badge-recent" style="background:#f0f9ff;color:#0284c7;border-color:#bae6fd">NOVO</span>':''}<br><small>${esc([x.marca,x.sabor,x.tamanho].filter(Boolean).join(' · '))}</small></div></div></td><td>${esc(x.sku)}</td><td>${esc(x.categoria_nome||'-')}</td><td>${esc(x.subcategoria_nome||'-')}</td><td>${brl(x.preco_base)}</td><td>${x.promocao_preco!=null?`<strong class="orange">${brl(x.promocao_preco)}</strong>`:'—'}</td><td><button class="btn" onclick="editProduct(parseJsonArg('${jsonArg(x)}'))">Editar</button> <button class="btn" onclick="productCostHistoryModal('${x.id}',parseJsonArg('${jsonArg(x.nome)}'))" title="Ver linha do tempo de custos e lucros">💰 Custos & Lucro</button> <button class="btn" onclick="manageProductImages(parseJsonArg('${jsonArg(x)}'))">Fotos</button> <button class="btn" onclick="managePromotion(parseJsonArg('${jsonArg(x)}'))">Promoção</button> <button class="btn" onclick="productSuppliersModal('${x.id}',parseJsonArg('${jsonArg(x.nome)}'))">🏢 Fornecedores</button> <button class="btn" onclick="toggleSoldOut('${x.id}',${Number(x.esgotado)?0:1})">${Number(x.esgotado)?'✔ Disponível':'⊘ Esgotado'}</button> <button class="btn" style="color:#b42318" onclick="deleteProduct('${x.id}',parseJsonArg('${jsonArg(x.nome)}'))">🗑 Excluir</button></td></tr>`;
+}
 async function toggleSoldOut(id,flag){
   const row=document.querySelector(`tr[data-product="${id}"]`);
   const btn=row?.querySelector(`button[onclick*="toggleSoldOut('${id}'"]`);
@@ -1259,7 +1372,7 @@ async function toggleSoldOut(id,flag){
   }
   const prod=(window.adminProducts?.items||[]).find(p=>p.id===id);
   if(prod)prod.esgotado=flag?1:0;
-  updateCatalogSoldOutCounts();
+  updateCatalogSpecialCounts();
   catalogFilter();
   toast(flag?'Produto marcado como esgotado':'Produto disponível novamente');
   Realtime.emit('products_changed',{id,esgotado:!!flag});
@@ -1276,7 +1389,8 @@ async function deleteProduct(id,nome){
     window.adminProducts.items=window.adminProducts.items.filter(p=>p.id!==id);
     window.adminProducts.total=Math.max(0,(window.adminProducts.total||1)-1);
     const sumEl=document.querySelector('.catalog-summary b');if(sumEl)sumEl.textContent=window.adminProducts.total;
-    updateCatalogSoldOutCounts();
+    updateCatalogSpecialCounts();
+    catalogFilter();
   }
   toast(`Produto "${nome}" excluído do catálogo`);
   Realtime.emit('products_changed',{id,deleted:true});
@@ -1295,6 +1409,8 @@ function catalogFilter(input){
     cat=$('#catFilter')?.value||'';sub=$('#subFilter')?.value||'';
   }
   const soldOutVal=$('#soldOutFilter')?.value||'';
+  const promoVal=$('#promoFilter')?.value||'';
+  const recentVal=$('#recentFilter')?.value||'';
   let visibleCount=0;
   const rows=document.querySelectorAll('#catalogTable tbody tr[data-product]');
   rows.forEach(r=>{
@@ -1305,7 +1421,11 @@ function catalogFilter(input){
     const okPrice=(price>=min&&price<=max);
     const isSoldOut=r.dataset.soldOut==='1';
     const okSoldOut=!soldOutVal||(soldOutVal==='ESGOTADO'&&isSoldOut)||(soldOutVal==='DISPONIVEL'&&!isSoldOut);
-    const showRow=okText&&okCat&&okSub&&okPrice&&okSoldOut;
+    const isPromo=r.dataset.promo==='1';
+    const okPromo=!promoVal||(promoVal==='PROMO'&&isPromo)||(promoVal==='SEM_PROMO'&&!isPromo);
+    const isRecent=r.dataset.recent==='1';
+    const okRecent=!recentVal||(recentVal==='RECENT'&&isRecent)||(recentVal==='RECENT_30'&&isCatalogProductRecent(r.dataset.created,30));
+    const showRow=okText&&okCat&&okSub&&okPrice&&okSoldOut&&okPromo&&okRecent;
     r.style.display=showRow?'':'none';
     if(showRow)visibleCount++;
   });
@@ -1316,7 +1436,7 @@ function catalogFilter(input){
       if(!emptyRow){
         emptyRow=document.createElement('tr');
         emptyRow.className='catalog-empty-filter-row';
-        emptyRow.innerHTML='<td colspan="7" class="empty-state" style="text-align:center;padding:20px;color:#64748b">Nenhum produto encontrado para os filtros selecionados.</td>';
+        emptyRow.innerHTML='<td colspan="7" class="empty-state" style="text-align:center;padding:24px;color:#64748b"><div>Nenhum produto encontrado para os filtros selecionados.</div><button type="button" class="btn" style="margin-top:10px;font-size:12px;padding:5px 12px" onclick="clearCatalogFilters()">✕ Limpar todos os filtros</button></td>';
         tbody.appendChild(emptyRow);
       }
       emptyRow.style.display='';
