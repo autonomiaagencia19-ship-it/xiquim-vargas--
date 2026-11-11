@@ -1550,7 +1550,173 @@ async function loadProductImages(id){try{const x=await api('/api/products/'+id+'
 async function setPrimaryProductImage(imageId, productId){try{await api('/api/product-images/'+imageId+'/set-primary',{method:'POST'});toast('Foto definida como Principal da Loja e Catálogo!');loadProductImages(productId);const [newP]=await Promise.all([api('/api/products?limit=100000')]);window.adminProducts=newP;if(document.getElementById('catalogTable'))catalogFilter()}catch(e){toast(e.message,true)}}
 function repositionProductImage(imageUrl, productId, imageId){openImagePositionerModal(imageUrl, async(croppedDataUrl)=>{try{await api('/api/products/'+productId+'/images',{method:'POST',body:JSON.stringify({data_url:croppedDataUrl,principal:true,substituir_imagem_id:imageId||null})});toast('Novo enquadramento salvo e definido como Principal!');loadProductImages(productId);const [newP]=await Promise.all([api('/api/products?limit=100000')]);window.adminProducts=newP;if(document.getElementById('catalogTable'))catalogFilter()}catch(z){toast(z.message,true)}})}
 async function deleteProductImage(imageId,productId){if(!confirm('Excluir esta foto?'))return;try{await api('/api/product-images/'+imageId,{method:'DELETE'});toast('Foto excluída');loadProductImages(productId);const [newP]=await Promise.all([api('/api/products?limit=100000')]);window.adminProducts=newP;if(document.getElementById('catalogTable'))catalogFilter()}catch(e){toast(e.message,true)}}
-function managePromotion(x){modal('Promoção — '+esc(x.nome),`<form id="promoForm" class="form"><div class="field"><label>Nome da promoção</label><input name="nome" value="${esc(x.promocao_nome||'Oferta especial')}" required></div><div class="field"><label>Preço promocional</label><input name="preco_promocional" type="number" min="0" step="0.01" required value="${x.promocao_preco!=null?Number(x.promocao_preco):''}"></div><div class="field"><label>Início</label><input name="inicio" type="datetime-local"></div><div class="field"><label>Término</label><input name="termino" type="datetime-local"></div><div class="actions"><button class="btn primary">Publicar promoção</button></div></form><div class="panel"><p class="muted">A promoção altera o preço exibido/comercializado no catálogo e loja, sem alterar estoque.</p></div>`);$('#promoForm').onsubmit=async e=>{e.preventDefault();try{await api('/api/products/'+x.id+'/promotions',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});closeModal();toast('Promoção publicada');show('products')}catch(z){toast(z.message)}}}
+function managePromotion(x){
+  const isPromo = x.promocao_preco != null;
+  const formatDt = dt => {
+    if (!dt) return '';
+    const s = String(dt).trim().replace(' ', 'T');
+    return s.length >= 16 ? s.slice(0, 16) : s;
+  };
+  const modalHtml = `
+    <div style="background:#0d1624;border:1px solid #203248;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+      <div>
+        <span class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;display:block">Preço Base de Tabela</span>
+        <strong style="font-size:18px;color:#f8fafc">${brl(x.preco_base)}</strong>
+      </div>
+      <div>
+        ${isPromo ? `
+          <span style="font-size:11px;color:#fd5e02;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;display:block">Promoção Atual Vigente</span>
+          <strong style="font-size:18px;color:#fd5e02">${brl(x.promocao_preco)}</strong>
+        ` : `
+          <span class="badge" style="background:rgba(255,255,255,0.06);color:#94a3b8;border:1px solid #334155;font-size:12px">Sem promoção ativa</span>
+        `}
+      </div>
+    </div>
+
+    <form id="promoForm" class="form">
+      <div class="field">
+        <label>Nome da promoção</label>
+        <input name="nome" value="${esc(x.promocao_nome||'Oferta especial')}" required maxlength="120" placeholder="Ex: Oferta da semana, Queima de estoque">
+      </div>
+      <div class="field">
+        <label>Novo Preço Promocional (R$)</label>
+        <input name="preco_promocional" type="number" min="0.01" step="0.01" required value="${x.promocao_preco!=null?Number(x.promocao_preco):''}" placeholder="0,00">
+      </div>
+      <div class="field">
+        <label>Data/Hora Início (opcional)</label>
+        <input name="inicio" type="datetime-local" value="${formatDt(x.promocao_inicio)}">
+      </div>
+      <div class="field">
+        <label>Data/Hora Término (opcional)</label>
+        <input name="termino" type="datetime-local" value="${formatDt(x.promocao_termino)}">
+      </div>
+
+      <div class="actions" style="grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-top:14px;border-top:1px solid #1e2c3f;padding-top:14px">
+        ${isPromo ? `
+          <button type="button" class="btn" style="background:#fee2e2;color:#b42318;border-color:#fca5a5;font-weight:750" onclick="cancelProductPromotion('${x.id}', parseJsonArg('${jsonArg(x.nome)}'))">
+            🗑 Cancelar Promoção (Retornar ao Preço Base)
+          </button>
+        ` : '<div></div>'}
+        <div style="display:flex;gap:8px">
+          <button type="button" class="btn" onclick="closeModal()">Cancelar</button>
+          <button class="btn primary" style="font-weight:750">
+            ${isPromo ? '💾 Salvar Alterações da Promoção' : '🏷 Publicar Promoção'}
+          </button>
+        </div>
+      </div>
+    </form>
+    <div class="panel" style="margin-top:12px;padding:10px 14px;background:rgba(2,132,199,0.06);border:1px dashed #0284c7;border-radius:8px">
+      <p class="muted" style="margin:0;font-size:12px;line-height:1.4">
+        ℹ️ Ao salvar uma alteração, a promoção anterior é substituída e o novo preço entra em vigor imediatamente em todos os canais (Loja, Catálogo, PDV e Vendedor). Ao cancelar, o produto retorna instantaneamente ao preço base de <b>${brl(x.preco_base)}</b>.
+      </p>
+    </div>
+  `;
+
+  modal('Promoção — ' + esc(x.nome), modalHtml);
+
+  $('#promoForm').onsubmit = async e => {
+    e.preventDefault();
+    try {
+      const raw = Object.fromEntries(new FormData(e.currentTarget));
+      const res = await api('/api/products/' + x.id + '/promotions', {
+        method: 'POST',
+        body: JSON.stringify(raw)
+      });
+      closeModal();
+      const pItem = res.item || {};
+      const newPrice = Number(pItem.preco_promocional ?? raw.preco_promocional);
+      const newNome = String(pItem.nome ?? raw.nome ?? 'Oferta especial');
+      const newInicio = pItem.inicio ?? (raw.inicio || null);
+      const newTermino = pItem.termino ?? (raw.termino || null);
+      const newId = pItem.id ?? null;
+
+      toast(`✓ Promoção salva! Novo preço: ${brl(newPrice)}`);
+
+      if (window.adminProducts?.items) {
+        const idx = window.adminProducts.items.findIndex(p => p.id === x.id);
+        if (idx !== -1) {
+          window.adminProducts.items[idx] = {
+            ...window.adminProducts.items[idx],
+            promocao_preco: newPrice,
+            promocao_nome: newNome,
+            promocao_inicio: newInicio,
+            promocao_termino: newTermino,
+            promocao_id: newId
+          };
+        }
+      }
+
+      const existingRow = document.querySelector(`tr[data-product="${x.id}"]`);
+      if (existingRow && window.adminProducts?.items) {
+        const updated = window.adminProducts.items.find(p => p.id === x.id);
+        if (updated) {
+          const temp = document.createElement('tbody');
+          temp.innerHTML = catalogRow(updated);
+          const newRow = temp.firstElementChild;
+          if (newRow) {
+            existingRow.replaceWith(newRow);
+            newRow.classList.add('xv-flash-updated');
+            setTimeout(() => newRow.classList.remove('xv-flash-updated'), 2500);
+          }
+        }
+      }
+
+      updateCatalogSpecialCounts();
+      catalogFilter();
+    } catch(z) {
+      toast(z.message, true);
+    }
+  };
+}
+
+async function cancelProductPromotion(productId, productName){
+  const prod = (window.adminProducts?.items || []).find(p => p.id === productId);
+  const basePriceFormatted = prod?.preco_base != null ? brl(prod.preco_base) : '';
+  const confirmMsg = `Deseja realmente cancelar a promoção de "${productName}"?\n\nO produto voltará imediatamente ao seu preço base de tabela (${basePriceFormatted}).`;
+  if (!confirm(confirmMsg)) return;
+
+  try {
+    await api('/api/products/' + productId + '/promotions', {
+      method: 'DELETE'
+    });
+    closeModal();
+    toast(`✓ Promoção cancelada! "${productName}" retornou ao preço base (${basePriceFormatted}).`);
+
+    if (window.adminProducts?.items) {
+      const idx = window.adminProducts.items.findIndex(p => p.id === productId);
+      if (idx !== -1) {
+        window.adminProducts.items[idx] = {
+          ...window.adminProducts.items[idx],
+          promocao_preco: null,
+          promocao_nome: null,
+          promocao_inicio: null,
+          promocao_termino: null,
+          promocao_id: null
+        };
+      }
+    }
+
+    const existingRow = document.querySelector(`tr[data-product="${productId}"]`);
+    if (existingRow && window.adminProducts?.items) {
+      const updated = window.adminProducts.items.find(p => p.id === productId);
+      if (updated) {
+        const temp = document.createElement('tbody');
+        temp.innerHTML = catalogRow(updated);
+        const newRow = temp.firstElementChild;
+        if (newRow) {
+          existingRow.replaceWith(newRow);
+          newRow.classList.add('xv-flash-updated');
+          setTimeout(() => newRow.classList.remove('xv-flash-updated'), 2500);
+        }
+      }
+    }
+
+    updateCatalogSpecialCounts();
+    catalogFilter();
+  } catch(e) {
+    toast(e.message, true);
+  }
+}
 function exportCatalogPdf(){downloadAuthFile('/api/admin/export/catalog.pdf','xiquim-vargas-catalogo.pdf')}
 function newCategory(){modal('Nova categoria',`<form id="categoryForm" class="form"><div class="field"><label>Nome</label><input name="nome" required maxlength="120"></div><div class="field"><label>Slug (opcional)</label><input name="slug"></div><div class="field" style="grid-column:1/-1"><label>Descrição</label><textarea name="descricao"></textarea></div><div class="actions"><button class="btn primary">Criar categoria</button></div></form>`);$('#categoryForm').onsubmit=async e=>{e.preventDefault();try{await api('/api/categories',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});closeModal();toast('Categoria criada');show('products')}catch(x){toast(x.message)}}}
 function editCategory(x){modal('Editar categoria',`<form id="categoryForm" class="form"><div class="field"><label>Nome</label><input name="nome" value="${esc(x.nome)}" required></div><div class="field"><label>Slug</label><input name="slug" value="${esc(x.slug)}"></div><div class="field"><label>Ordem</label><input name="ordem" type="number" value="${x.ordem||0}"></div><div class="field"><label>Status</label><select name="ativo"><option value="1" ${x.ativo?'selected':''}>Ativa</option><option value="0" ${!x.ativo?'selected':''}>Inativa</option></select></div><div class="field" style="grid-column:1/-1"><label>Descrição</label><textarea name="descricao">${esc(x.descricao||'')}</textarea></div><div class="actions" style="grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;margin-top:14px"><button type="button" class="btn" style="color:#b42318;border-color:#f5b5b5" onclick="deleteCategory('${x.id}',parseJsonArg('${jsonArg(x.nome)}'))">🗑 Excluir categoria</button><div style="display:flex;gap:8px"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar categoria</button></div></div></form>`);$('#categoryForm').onsubmit=async e=>{e.preventDefault();try{await api('/api/categories/'+x.id,{method:'PUT',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});closeModal();toast('Categoria atualizada');show('products')}catch(z){toast(z.message)}}}
