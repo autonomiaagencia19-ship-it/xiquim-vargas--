@@ -121,6 +121,8 @@ window.syncAdminOutbox=syncAdminOutbox;
 
 const NATIVE_BASE = (typeof window !== 'undefined' && window.AndroidApp && typeof window.AndroidApp.getBaseUrl === 'function') ? window.AndroidApp.getBaseUrl() : '';
 const API = (typeof window !== 'undefined' && (window.location.protocol === 'file:' || !window.location.origin || window.location.origin === 'null')) ? (NATIVE_BASE || 'https://xiquim-vargas-erp.onrender.com') : '';let token=localStorage.getItem('xv_token');let me=null;const $=s=>document.querySelector(s);
+function safeStorageSet(key,value){try{localStorage.setItem(key,value);return true}catch(err){console.warn(`[Storage] Cota excedida ao gravar "${key}". Limpando caches...`,err);try{const toRemove=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k!=='xv_token'&&k!=='xv_user'){toRemove.push(k)}}toRemove.forEach(k=>localStorage.removeItem(k));localStorage.setItem(key,value);return true}catch(err2){try{const curToken=(key==='xv_token')?value:localStorage.getItem('xv_token');const curUser=(key==='xv_user')?value:localStorage.getItem('xv_user');localStorage.clear();if(curToken)localStorage.setItem('xv_token',curToken);if(curUser)localStorage.setItem('xv_user',curUser);localStorage.setItem(key,value);return true}catch(err3){console.error('[Storage] Falha irrecuperavel no localStorage:',err3);return false}}}}
+try{const staleCaches=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('xv_cache_'))staleCaches.push(k)}staleCaches.forEach(k=>localStorage.removeItem(k))}catch(_){}
 function jsonArg(value){const bytes=new TextEncoder().encode(JSON.stringify(value));let binary='';for(const byte of bytes)binary+=String.fromCharCode(byte);return btoa(binary)}
 function parseJsonArg(encoded){return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(encoded),c=>c.charCodeAt(0))))}
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -142,7 +144,12 @@ async function api(path,opt={}){
     const data=r.headers.get('content-type')?.includes('application/json')?await r.json():await r.blob();
     if(method==='GET'&&typeof data==='object'&&!(data instanceof Blob)){
       adminOfflinePut('kv',path,data);
-      try{localStorage.setItem('xv_cache_'+(me?.id||'admin')+'_'+path,JSON.stringify(data))}catch{}
+      try{
+        const str=JSON.stringify(data);
+        if(str.length < 20480){
+          localStorage.setItem('xv_cache_'+(me?.id||'admin')+'_'+path,str);
+        }
+      }catch{}
     }
     return data;
   }catch(err){
@@ -500,8 +507,8 @@ async function login(e){
     }
     token=x.token;
     me=x.user;
-    localStorage.setItem('xv_token',token);
-    localStorage.setItem('xv_user',JSON.stringify(x.user||{}));
+    safeStorageSet('xv_token',token);
+    safeStorageSet('xv_user',JSON.stringify(x.user||{}));
     if(me?.role!=='admin'){
       localStorage.removeItem('xv_token');
       localStorage.removeItem('xv_user');
@@ -558,7 +565,7 @@ async function boot(){
       throw Object.assign(new Error('Sessão inválida'),{status:401});
     }
     me=m.user;
-    localStorage.setItem('xv_user',JSON.stringify(me));
+    safeStorageSet('xv_user',JSON.stringify(me));
     if(me.role!=='admin'){
       localStorage.removeItem('xv_token');
       localStorage.removeItem('xv_user');
@@ -581,7 +588,7 @@ async function boot(){
     logout();
   }
 }
-function setupPage(status){const q=new URLSearchParams(location.search);const setupToken=q.get('setup')||'';document.body.innerHTML=`<div class="login"><div class="loginbox"><img class="xv-logo" src="/assets/institucional/01_Logo_Xiquim_Vargas_HD.png" alt="Xiquim Vargas"><h1>Primeiro acesso</h1><p style="color:#ffffff">Este ERP ainda não foi configurado. Crie agora o administrador principal. Não existe uma senha fixa de fábrica.</p>${setupToken?`<form id="setupForm"><div class="field"><label>Nome do administrador</label><input name="nome" required maxlength="180"></div><br><div class="field"><label>E-mail</label><input name="email" type="email" required autocomplete="email"></div><br><div class="field"><label>Senha</label><div style="display:flex;gap:6px"><input name="password" type="password" minlength="10" required autocomplete="new-password" style="flex:1"><button type="button" class="btn" tabindex="-1" onclick="const x=this.previousElementSibling; x.type=x.type==='password'?'text':'password'">👁</button></div><small style="display:block;margin-top:6px;color:#e2e8f0">Use pelo menos 10 caracteres.</small></div><br><button class="btn primary" style="width:100%">Criar administrador e entrar</button></form>`:`<div class="panel" style="margin-top:18px"><strong>Configuração inicial protegida</strong><p style="color:#ffffff">Abra o link de primeiro acesso exibido nos logs do serviço no Render. Esse link é criado uma única vez e deixa de funcionar depois que o administrador é criado.</p></div>`}<div id="toast" class="toast"></div></div></div>`;if(setupToken){$('#setupForm').onsubmit=async e=>{e.preventDefault();const b=Object.fromEntries(new FormData(e.currentTarget));b.setup_token=setupToken;try{const x=await fetch('/api/setup/initialize',{method:'POST',headers:{'content-type':'application/json','x-setup-token':setupToken},body:JSON.stringify(b)});const out=await x.json();if(!x.ok)throw new Error(out.error||'Não foi possível concluir a configuração');token=out.token;localStorage.setItem('xv_token',token);history.replaceState({},'', '/admin');location.reload()}catch(err){toast(err.message)}}}}
+function setupPage(status){const q=new URLSearchParams(location.search);const setupToken=q.get('setup')||'';document.body.innerHTML=`<div class="login"><div class="loginbox"><img class="xv-logo" src="/assets/institucional/01_Logo_Xiquim_Vargas_HD.png" alt="Xiquim Vargas"><h1>Primeiro acesso</h1><p style="color:#ffffff">Este ERP ainda não foi configurado. Crie agora o administrador principal. Não existe uma senha fixa de fábrica.</p>${setupToken?`<form id="setupForm"><div class="field"><label>Nome do administrador</label><input name="nome" required maxlength="180"></div><br><div class="field"><label>E-mail</label><input name="email" type="email" required autocomplete="email"></div><br><div class="field"><label>Senha</label><div style="display:flex;gap:6px"><input name="password" type="password" minlength="10" required autocomplete="new-password" style="flex:1"><button type="button" class="btn" tabindex="-1" onclick="const x=this.previousElementSibling; x.type=x.type==='password'?'text':'password'">👁</button></div><small style="display:block;margin-top:6px;color:#e2e8f0">Use pelo menos 10 caracteres.</small></div><br><button class="btn primary" style="width:100%">Criar administrador e entrar</button></form>`:`<div class="panel" style="margin-top:18px"><strong>Configuração inicial protegida</strong><p style="color:#ffffff">Abra o link de primeiro acesso exibido nos logs do serviço no Render. Esse link é criado uma única vez e deixa de funcionar depois que o administrador é criado.</p></div>`}<div id="toast" class="toast"></div></div></div>`;if(setupToken){$('#setupForm').onsubmit=async e=>{e.preventDefault();const b=Object.fromEntries(new FormData(e.currentTarget));b.setup_token=setupToken;try{const x=await fetch('/api/setup/initialize',{method:'POST',headers:{'content-type':'application/json','x-setup-token':setupToken},body:JSON.stringify(b)});const out=await x.json();if(!x.ok)throw new Error(out.error||'Não foi possível concluir a configuração');token=out.token;safeStorageSet('xv_token',token);history.replaceState({},'', '/admin');location.reload()}catch(err){toast(err.message)}}}}
 
 const menu=[['Visão Geral','home'],['Catálogo','products'],['Tabelas de preço','prices'],['Estoque Inteligente','stock'],['Clientes & CRM','clients'],['Pedidos','orders'],['Logística','logistics'],['Fornecedores','suppliers'],['Compra e Recebimento de Mercadorias','inbound'],['Vendedores','sellers'],['Relatórios','reports'],['Auditoria','audit'],['Usuários','users'],['IA Administrativa','ai']];
 function shell(){const dot='•';const groups=[['Operação',[[dot,'Visão Geral','home'],[dot,'Pedidos','orders'],[dot,'Catálogo','products'],[dot,'Loja Online','store'],[dot,'Estoque Inteligente','stock'],[dot,'Clientes & CRM','clients'],[dot,'Logística','logistics']]],['Suprimentos',[[dot,'Fornecedores','suppliers'],[dot,'Compra e Recebimento de Mercadorias','inbound']]],['Gestão',[[dot,'Vendedores','sellers'],[dot,'Usuários','users'],[dot,'Tabelas de preço','prices'],[dot,'Relatórios','reports']]],['Governança',[[dot,'Auditoria','audit'],[dot,'IA Administrativa','ai']]]];return `<div class="app"><aside class="sidebar"><img class="xv-logo" src="/assets/institucional/01_Logo_Xiquim_Vargas_HD.png" alt="Xiquim Vargas ERP"><div class="group">Torre de Controle</div>${groups.map(([title,items])=>`<div class="group">${title}</div><div class="nav">${items.map(([i,l,k])=>`<button data-view="${k}"><span style="width:16px;text-align:center;font-size:16px;line-height:1;display:inline-block">${i}</span>${l}</button>`).join('')}</div>`).join('')}<div class="group">Sessão & Backup</div><div class="nav"><button onclick="downloadDatabaseBackup()"><span style="width:16px;text-align:center;font-size:16px;line-height:1;display:inline-block">•</span>Baixar Banco de Dados</button><button onclick="logout()"><span style="width:16px;text-align:center;font-size:16px;line-height:1;display:inline-block">•</span>Sair</button></div></aside><main class="main"><div class="topbar"><div class="brand-dark"><button class="mobile-back-btn btn" onclick="window.showSidebar()">← Voltar</button><div><h1 id="title">Visão Geral</h1></div></div><div class="topbar-actions"><button type="button" class="btn" style="padding:5px 10px;font-size:12px;margin-right:6px" onclick="downloadDatabaseBackup()" title="Baixar cópia completa do banco de dados SQLite ativo">Baixar Banco de Dados</button><span id="offlineIndicator" style="display:${navigator.onLine?'none':'inline-flex'};background:#e11d48;color:#fff;font-weight:700;font-size:11px;padding:3px 8px;border-radius:12px;margin-right:6px">OFFLINE</span><span class="badge">${esc(ROLE_LABELS[me?.role]||me?.role||'Administrador')}</span></div></div><div id="view"></div></main></div><div id="toast" class="toast"></div>`}
