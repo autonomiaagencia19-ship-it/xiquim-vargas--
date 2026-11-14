@@ -2613,11 +2613,103 @@ async function orders(v){
       </select>
     `;
     let batchBtnHtml = '';
-    let thCb = '';
+    let selectAllOrdersHtml = '';
     if(status === 'PENDENTE'){
+      selectAllOrdersHtml = `
+        <label style="cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px;font-weight:700;color:#061a4f;background:#f8fafc;padding:7px 12px;border:1px solid #cbd5e1;border-radius:6px;margin-left:8px">
+          <input type="checkbox" onchange="toggleAllOrders(this.checked)"> Selecionar todos
+        </label>
+      `;
       batchBtnHtml = `<button id="ordersBatchBtn" class="btn primary" style="margin-left:8px" onclick="advanceSelectedOrders()">Avançar Selecionados</button>`;
-      thCb = `<th style="width:40px"><input type="checkbox" onchange="toggleAllOrders(this.checked)"></th>`;
     }
+
+    // Agrupamento por bairro para todos os status
+    const groupsMap = new Map();
+    for(const x of filtered){
+      let b = (x.bairro || '').trim();
+      if(!b){
+        if(x.origem === 'BALCAO' && x.modalidade_entrega !== 'ENTREGA'){
+          b = 'Balcão / Retirada no Local';
+        } else {
+          b = 'Sem bairro cadastrado';
+        }
+      }
+      if(!groupsMap.has(b)) groupsMap.set(b, []);
+      groupsMap.get(b).push(x);
+    }
+    const sortedBairros = Array.from(groupsMap.keys()).sort((a,b) => {
+      const isSpecA = a.startsWith('Balcão') || a.startsWith('Sem bairro');
+      const isSpecB = b.startsWith('Balcão') || b.startsWith('Sem bairro');
+      if(isSpecA && !isSpecB) return 1;
+      if(!isSpecA && isSpecB) return -1;
+      return a.localeCompare(b, 'pt-BR');
+    });
+
+    const neighborhoodCardsHtml = sortedBairros.length ? sortedBairros.map(bName => {
+      const bOrders = groupsMap.get(bName) || [];
+      const bTotal = bOrders.reduce((acc, cur) => acc + Number(cur.total || 0), 0);
+      return `
+        <div class="card orders-neighborhood-card" data-neighborhood="${esc(bName)}" style="margin-top:16px; margin-bottom:18px; border-radius:12px; border-left:4px solid #10b981; background:#ffffff; box-shadow:0 3px 12px rgba(6,26,79,0.05); padding:16px">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px; border-bottom:1px solid #f1f5f9; padding-bottom:10px">
+            <div style="display:flex; align-items:center; gap:10px">
+              <strong style="color:#059669; font-size:16px">📍 ${esc(bName)}</strong>
+              <span class="badge" style="background:rgba(16,185,129,0.12); color:#059669; font-weight:750; border:1px solid rgba(16,185,129,0.25)">
+                ${bOrders.length} pedido(s) · ${brl(bTotal)}
+              </span>
+            </div>
+            ${status === 'PENDENTE' ? `
+              <label style="cursor:pointer; font-size:12px; display:flex; align-items:center; gap:6px; font-weight:600; color:#17233d">
+                <input type="checkbox" onchange="toggleNeighborhoodOrders(this)">
+                Selecionar todos deste bairro
+              </label>
+            ` : ''}
+          </div>
+          <div class="tablewrap" style="overflow-x:auto">
+            <table class="table" style="margin:0">
+              <thead>
+                <tr>
+                  ${status === 'PENDENTE' ? '<th style="width:40px">Sel.</th>' : ''}
+                  <th>Número</th>
+                  <th>Cliente</th>
+                  <th>Origem / Vendedor</th>
+                  <th>Total</th>
+                  <th>Desconto</th>
+                  <th>Pagamento</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${bOrders.map(x => {
+                  let tdCb = '';
+                  if(status === 'PENDENTE') tdCb = `<td><input type="checkbox" class="order-cb" value="${x.id}"></td>`;
+                  const sellerName = x.vendedor_nome || x.operador_nome || '';
+                  return `
+                    <tr data-order-search="${esc([x.numero, x.nome_fantasia || x.cliente_nome, x.origem, sellerName, bName].join(' ').toLowerCase())}" data-order-origin="${esc(x.origem || '')}" data-order-seller="${esc(sellerName)}">
+                      ${tdCb}
+                      <td><strong>${esc(x.numero)}</strong></td>
+                      <td>${esc(x.nome_fantasia || x.cliente_nome || 'Cliente não identificado')}</td>
+                      <td>${esc(x.origem || '-')}${x.origem === 'VENDEDOR' && sellerName ? `<br><small style="color:var(--xv-brand-orange,#f45a08);font-weight:650">👤 ${esc(sellerName)}</small>` : ''}${x.origem === 'BALCAO' ? `<br><small style="color:${x.modalidade_entrega === 'ENTREGA' ? '#7c3aed' : '#059669'};font-weight:700">${x.modalidade_entrega === 'ENTREGA' ? '🚚 Balcão — Entrega' : '🏪 Retirada no Balcão'}${x.operador_nome ? ' · ' + esc(x.operador_nome) : ''}</small>` : ''}</td>
+                      <td>${brl(x.total)}</td>
+                      <td>${x.desconto_tipo === 'PERCENTUAL' ? Number(x.desconto_valor || 0) + '%' : brl(x.desconto_valor || 0)}</td>
+                      <td>${esc(x.forma_pagamento || '-')} · <button class="btn ${x.pagamento_status === 'RECEBIDO' ? 'good' : 'danger'}" onclick="togglePaymentStatus('${x.id}', '${x.pagamento_status}', '${esc(x.numero)}')">${x.pagamento_status === 'RECEBIDO' ? 'Recebido' : 'Não recebido'}</button></td>
+                      <td><span class="badge status-${String(x.status || '').toLowerCase()}">${esc(x.status || '—')}</span></td>
+                      <td class="order-actions">
+                        ${x.status === 'PENDENTE' ? `<button class="btn" onclick="orderDetail('${x.id}')">Editar</button>` : '<span class="muted">Edição bloqueada</span>'}
+                        <button class="btn" onclick="downloadAuthFile('/api/orders/${x.id}/pdf','pedido-${esc(x.numero)}.pdf')">PDF</button>
+                        ${x.status === 'PENDENTE' ? `<button class="btn" onclick="advance('${x.id}','${x.status}')">Avançar → separação</button>` : ''}
+                        ${['PENDENTE','SEPARACAO'].includes(x.status) ? `<button class="btn danger" onclick="cancelOrder('${x.id}','${esc(x.numero)}')">Cancelar pedido</button>` : ''}
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }).join('') : `<div class="empty-state" style="margin-top:14px">Nenhum pedido encontrado.</div>`;
+
     v.innerHTML = `
       <div class="panel orders-toolbar">
         <div class="panel-title">
@@ -2630,44 +2722,16 @@ async function orders(v){
           </div>
         </div>
         <div class="orders-filters" style="margin-top:14px;display:flex;align-items:center;flex-wrap:wrap;gap:8px">
-          <input id="ordersSearch" class="search" style="flex:1;max-width:400px" placeholder="Buscar por número, cliente, vendedor..." oninput="filterTowerOrders()">
+          <input id="ordersSearch" class="search" style="flex:1;max-width:400px" placeholder="Buscar por número, cliente, bairro, vendedor..." oninput="filterTowerOrders()">
           ${filterOriginHtml}
+          ${selectAllOrdersHtml}
           ${batchBtnHtml}
         </div>
       </div>
       <div id="ordersSellerDashboardContainer" style="display:none"></div>
       <div id="ordersActiveSellerBar" style="display:none;margin-top:14px;margin-bottom:14px;align-items:center;gap:12px;background:#fff;padding:12px 18px;border:1px solid var(--xv-brand-line);border-radius:var(--xv-brand-radius);box-shadow:0 3px 12px rgba(6,26,79,0.03);"></div>
-      <div id="ordersTableContainer" class="tablewrap" style="margin-top:14px">
-        <table class="table">
-          <thead>
-            <tr>${thCb}<th>Número</th><th>Cliente</th><th>Origem / Vendedor</th><th>Total</th><th>Desconto</th><th>Pagamento</th><th>Status</th><th>Ações</th></tr>
-          </thead>
-          <tbody id="towerOrdersBody">
-            ${filtered.map(x => {
-              let tdCb = '';
-              if(status === 'PENDENTE') tdCb = `<td><input type="checkbox" class="order-cb" value="${x.id}"></td>`;
-              const sellerName = x.vendedor_nome || x.operador_nome || '';
-              return `
-                <tr data-order-search="${esc([x.numero, x.nome_fantasia || x.cliente_nome, x.origem, sellerName].join(' ').toLowerCase())}" data-order-origin="${esc(x.origem || '')}" data-order-seller="${esc(sellerName)}">
-                  ${tdCb}
-                  <td><strong>${esc(x.numero)}</strong></td>
-                  <td>${esc(x.nome_fantasia || x.cliente_nome || 'Cliente não identificado')}</td>
-                  <td>${esc(x.origem || '-')}${x.origem === 'VENDEDOR' && sellerName ? `<br><small style="color:var(--xv-brand-orange,#f45a08);font-weight:650">👤 ${esc(sellerName)}</small>` : ''}${x.origem === 'BALCAO' ? `<br><small style="color:${x.modalidade_entrega === 'ENTREGA' ? '#7c3aed' : '#059669'};font-weight:700">${x.modalidade_entrega === 'ENTREGA' ? '🚚 Balcão — Entrega' : '🏪 Retirada no Balcão'}${x.operador_nome ? ' · ' + esc(x.operador_nome) : ''}</small>` : ''}</td>
-                  <td>${brl(x.total)}</td>
-                  <td>${x.desconto_tipo === 'PERCENTUAL' ? Number(x.desconto_valor || 0) + '%' : brl(x.desconto_valor || 0)}</td>
-                  <td>${esc(x.forma_pagamento || '-')} · <button class="btn ${x.pagamento_status === 'RECEBIDO' ? 'good' : 'danger'}" onclick="togglePaymentStatus('${x.id}', '${x.pagamento_status}', '${esc(x.numero)}')">${x.pagamento_status === 'RECEBIDO' ? 'Recebido' : 'Não recebido'}</button></td>
-                  <td><span class="badge status-${String(x.status || '').toLowerCase()}">${esc(x.status || '—')}</span></td>
-                  <td class="order-actions">
-                    ${x.status === 'PENDENTE' ? `<button class="btn" onclick="orderDetail('${x.id}')">Editar</button>` : '<span class="muted">Edição bloqueada</span>'}
-                    <button class="btn" onclick="downloadAuthFile('/api/orders/${x.id}/pdf','pedido-${esc(x.numero)}.pdf')">PDF</button>
-                    ${x.status === 'PENDENTE' ? `<button class="btn" onclick="advance('${x.id}','${x.status}')">Avançar → separação</button>` : ''}
-                    ${['PENDENTE','SEPARACAO'].includes(x.status) ? `<button class="btn danger" onclick="cancelOrder('${x.id}','${esc(x.numero)}')">Cancelar pedido</button>` : ''}
-                  </td>
-                </tr>
-              `;
-            }).join('') || `<tr><td colspan="${status==='PENDENTE'?9:8}" class="empty-state">Nenhum pedido encontrado.</td></tr>`}
-          </tbody>
-        </table>
+      <div id="ordersTableContainer" style="margin-top:14px">
+        ${neighborhoodCardsHtml}
       </div>
       <div id="ordersNoMatch" class="empty-state" hidden>Nenhum pedido corresponde aos filtros.</div>
     `;
@@ -2733,7 +2797,7 @@ function filterTowerOrders(){
   }
 
   let visible = 0;
-  document.querySelectorAll('#towerOrdersBody tr[data-order-search]').forEach(row => {
+  document.querySelectorAll('#ordersTableContainer tr[data-order-search]').forEach(row => {
     const okText = !q || row.dataset.orderSearch.includes(q);
     const rowOrigin = row.dataset.orderOrigin;
     const rowSeller = row.dataset.orderSeller || '';
@@ -2747,6 +2811,12 @@ function filterTowerOrders(){
     row.hidden = !ok;
     if(ok) visible++;
   });
+
+  document.querySelectorAll('#ordersTableContainer .orders-neighborhood-card').forEach(card => {
+    const visibleInCard = card.querySelectorAll('tbody tr[data-order-search]:not([hidden])').length;
+    card.style.display = (visibleInCard > 0) ? 'block' : 'none';
+  });
+
   const empty = $('#ordersNoMatch'); if(empty) empty.hidden = (visible !== 0);
 
   const subTitle = document.querySelector('.orders-toolbar .muted');
@@ -2758,36 +2828,58 @@ function filterTowerOrders(){
     }
   }
 }
-window.toggleAllOrders=function(checked){document.querySelectorAll('.order-cb').forEach(cb=>{if(!cb.closest('tr').hidden)cb.checked=checked})};
-window.advanceSelectedOrders=async function(){
- const cbs=document.querySelectorAll('.order-cb:checked');
- if(!cbs.length)return toast('Selecione ao menos um pedido.');
- const ids=Array.from(cbs).map(cb=>cb.value);
- if(!confirm(`Avançar ${ids.length} pedido(s) para separação?`))return;
- cbs.forEach(cb=>{
-   const row=cb.closest('tr');
-   if(row){
-     row.style.transition='all 0.25s ease';row.style.opacity='0';row.style.transform='translateX(20px)';
-     setTimeout(()=>row.remove(),250);
-   }
- });
- for(const id of ids){
-   const order=(window._ordersItems||[]).find(o=>o.id===id);
-   if(order)order.status='SEPARACAO';
- }
- setTimeout(()=>{
-   const remaining=document.querySelectorAll('#towerOrdersBody tr[data-order-search]').length;
-   const subTitle=document.querySelector('.orders-toolbar .muted');
-   if(subTitle)subTitle.textContent=`${remaining} pedido(s) listado(s)`;
-   if(!remaining){
-     const tbody=$('#towerOrdersBody');if(tbody)tbody.innerHTML='<tr><td colspan="9" class="empty-state">Nenhum pedido encontrado.</td></tr>';
-   }
- },260);
- toast(`${ids.length} pedido(s) avançado(s) para separação!`);
- Realtime.emit('orders_changed',{ids,status:'SEPARACAO'});
- try{
-   for(const id of ids){await api(`/api/orders/${id}/status`,{method:'POST',body:JSON.stringify({status:'SEPARACAO'})})}
- }catch(e){toast(e.message,true);refreshCurrentViewSilently('orders_changed')}
+window.toggleNeighborhoodOrders = function(cb){
+  const card = cb.closest('.orders-neighborhood-card');
+  if(!card) return;
+  card.querySelectorAll('.order-cb').forEach(orderCb => {
+    if(!orderCb.closest('tr').hidden){
+      orderCb.checked = cb.checked;
+    }
+  });
+};
+window.toggleAllOrders = function(checked){
+  document.querySelectorAll('#ordersTableContainer .order-cb').forEach(cb => {
+    if(!cb.closest('tr').hidden) cb.checked = checked;
+  });
+  document.querySelectorAll('#ordersTableContainer .orders-neighborhood-card input[type="checkbox"]:not(.order-cb)').forEach(cb => {
+    cb.checked = checked;
+  });
+};
+window.advanceSelectedOrders = async function(){
+  const cbs = document.querySelectorAll('.order-cb:checked');
+  if(!cbs.length) return toast('Selecione ao menos um pedido.');
+  const ids = Array.from(cbs).map(cb => cb.value);
+  if(!confirm(`Avançar ${ids.length} pedido(s) para separação?`)) return;
+  cbs.forEach(cb => {
+    const row = cb.closest('tr');
+    if(row){
+      row.style.transition = 'all 0.25s ease'; row.style.opacity = '0'; row.style.transform = 'translateX(20px)';
+      setTimeout(() => {
+        const card = row.closest('.orders-neighborhood-card');
+        row.remove();
+        if(card && card.querySelectorAll('tbody tr[data-order-search]').length === 0){
+          card.remove();
+        }
+      }, 250);
+    }
+  });
+  for(const id of ids){
+    const order = (window._ordersItems || []).find(o => o.id === id);
+    if(order) order.status = 'SEPARACAO';
+  }
+  setTimeout(() => {
+    const remaining = document.querySelectorAll('#ordersTableContainer tr[data-order-search]').length;
+    const subTitle = document.querySelector('.orders-toolbar .muted');
+    if(subTitle) subTitle.textContent = `${remaining} pedido(s) listado(s)`;
+    if(!remaining){
+      const container = $('#ordersTableContainer'); if(container) container.innerHTML = '<div class="empty-state">Nenhum pedido encontrado.</div>';
+    }
+  }, 260);
+  toast(`${ids.length} pedido(s) avançado(s) para separação!`);
+  Realtime.emit('orders_changed', { ids, status: 'SEPARACAO' });
+  try{
+    for(const id of ids){ await api(`/api/orders/${id}/status`, { method: 'POST', body: JSON.stringify({ status: 'SEPARACAO' }) }); }
+  }catch(e){ toast(e.message, true); refreshCurrentViewSilently('orders_changed'); }
 };
 window.togglePaymentStatus=async function(id,currentStatus,numero){
   if(currentStatus==='RECEBIDO'){if(!confirm(`O pedido ${numero} já está marcado como Recebido. Deseja mesmo alterar para Não recebido?`))return;}
@@ -3303,7 +3395,7 @@ async function priceTableItems(id,name){
  const x=await api('/api/price-tables/'+id+'/items');
  let page=1,total=Infinity,items=[];
  while(items.length<total){const p=await api('/api/products?limit=100&page='+page);items.push(...p.items);total=p.total;if(!p.items.length)break;page++}
- modal('Tabela: '+esc(name),`<form id="priceItemsForm"><div style="position:sticky;top:0;z-index:10;background:#ffffff;padding:8px 0 12px;margin-bottom:12px;border-bottom:2px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div style="flex:1;min-width:220px"><input type="text" class="search" placeholder="🔍 Filtrar produto por nome ou SKU..." oninput="filterPriceTableModalProducts(this.value)" style="width:100%;padding:8px 12px"><small class="muted" style="display:block;margin-top:4px">Defina o preço diferenciado e a <strong>Quantidade Mínima</strong> (em unidades) para que o preço da tabela seja aplicado ao pedido.</small></div><div style="display:flex;gap:8px;align-items:center"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button type="submit" class="btn primary" style="padding:10px 18px;font-weight:800">💾 Salvar tabela</button></div></div><div class="tablewrap" style="max-height:62vh;overflow:auto"><table class="table"><thead><tr><th>Produto</th><th>Preço Base</th><th>Preço na Tabela (R$)</th><th>Qtd. Mínima (un)</th></tr></thead><tbody>${items.map(pr=>{const it=x.items.find(i=>i.produto_id===pr.id);return `<tr data-pt-prod="${esc((pr.nome+' '+(pr.sku||'')).toLowerCase())}"><td><strong>${esc(pr.nome)}</strong>${pr.sku?`<br><small class="muted">SKU: ${esc(pr.sku)}</small>`:''}</td><td><span class="muted">${brl(pr.preco_base)}</span></td><td><input class="field-input" data-price-product="${pr.id}" value="${it?Number(it.preco).toFixed(2):''}" placeholder="${Number(pr.preco_base||0).toFixed(2)}" type="number" step="0.01" min="0" style="width:120px"></td><td><div style="display:flex;align-items:center;gap:6px"><input class="field-input" data-qty-product="${pr.id}" value="${it?Math.max(1,Number(it.quantidade_minima||1)):1}" type="number" step="1" min="1" style="width:90px"><small class="muted">un.</small></div></td></tr>`}).join('')}</tbody></table></div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button type="submit" class="btn primary">💾 Salvar tabela</button></div></form>`,'860px');
+ modal('Tabela: '+esc(name),`<form id="priceItemsForm"><div style="position:sticky;top:0;z-index:10;background:#ffffff;padding:8px 0 12px;margin-bottom:12px;border-bottom:2px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div style="flex:1;min-width:220px"><input type="text" class="search" placeholder="🔍 Filtrar produto por nome ou SKU..." oninput="filterPriceTableModalProducts(this.value)" style="width:100%;padding:8px 12px"><small class="muted" style="display:block;margin-top:4px">Defina o preço diferenciado e a <strong>Quantidade Mínima</strong> (em unidades) para que o preço da tabela seja aplicado ao pedido. <span style="color:#2563eb;font-weight:700">Linhas com borda azul indicam produtos com preço especial configurado.</span></small></div><div style="display:flex;gap:8px;align-items:center"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button type="submit" class="btn primary" style="padding:10px 18px;font-weight:800">💾 Salvar tabela</button></div></div><div class="tablewrap" style="max-height:74vh;overflow:auto"><table class="table"><thead><tr><th>Produto</th><th>Preço Base</th><th>Preço na Tabela (R$)</th><th>Qtd. Mínima (un)</th></tr></thead><tbody>${items.map(pr=>{const it=x.items.find(i=>i.produto_id===pr.id);const hasSpecial=Boolean(it&&it.preco);return `<tr data-pt-prod="${esc((pr.nome+' '+(pr.sku||'')).toLowerCase())}" style="${hasSpecial?'box-shadow:inset 4px 0 0 #2563eb;background:#f0f7ff;border-top:2px solid #2563eb;border-bottom:2px solid #2563eb':''}"><td><div style="display:flex;align-items:center;gap:8px"><strong>${esc(pr.nome)}</strong>${hasSpecial?'<span class="badge" style="background:#2563eb;color:#fff;font-weight:800;font-size:10px;padding:2px 6px">★ ESPECIAL</span>':''}</div>${pr.sku?`<small class="muted">SKU: ${esc(pr.sku)}</small>`:''}</td><td><span class="muted" style="${hasSpecial?'text-decoration:line-through':''}">${brl(pr.preco_base)}</span></td><td><input class="field-input" data-price-product="${pr.id}" value="${it?Number(it.preco).toFixed(2):''}" placeholder="${Number(pr.preco_base||0).toFixed(2)}" type="number" step="0.01" min="0" style="width:120px;${hasSpecial?'border:2px solid #2563eb;font-weight:800;color:#1d4ed8;background:#ffffff':''}" oninput="const tr=this.closest('tr');const val=Number(this.value);if(val>0){tr.style.boxShadow='inset 4px 0 0 #2563eb';tr.style.background='#f0f7ff';tr.style.borderTop='2px solid #2563eb';tr.style.borderBottom='2px solid #2563eb';this.style.border='2px solid #2563eb';this.style.fontWeight='800';this.style.color='#1d4ed8'}else{tr.style.boxShadow='';tr.style.background='';tr.style.borderTop='';tr.style.borderBottom='';this.style.border='';this.style.fontWeight='';this.style.color=''}"></td><td><div style="display:flex;align-items:center;gap:6px"><input class="field-input" data-qty-product="${pr.id}" value="${it?Math.max(1,Number(it.quantidade_minima||1)):1}" type="number" step="1" min="1" style="width:90px;${hasSpecial?'border:2px solid #2563eb;font-weight:700':''}"><small class="muted">un.</small></div></td></tr>`}).join('')}</tbody></table></div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button type="submit" class="btn primary">💾 Salvar tabela</button></div></form>`,'96vw');
  $('#priceItemsForm').onsubmit=async e=>{e.preventDefault();const itens=[...document.querySelectorAll('[data-price-product]')].filter(i=>String(i.value).trim()!==''&&Number(i.value)>0).map(i=>{const q=document.querySelector(`[data-qty-product="${i.dataset.priceProduct}"]`);return {produto_id:i.dataset.priceProduct,preco:Number(i.value),quantidade_minima:Math.max(1,parseInt(q?.value,10)||1)};});try{await api('/api/price-tables/'+id,{method:'PUT',body:JSON.stringify({itens,replace_all:true})});closeModal();toast('Tabela de preços salva com sucesso!');show('prices')}catch(z){toast(z.message,true)}}
 }
 async function deletePriceTable(id,nome='esta tabela'){
@@ -3332,7 +3424,7 @@ async function priceTableDetails(id,name){
       </div>
       <div id="ptdBody" style="display:none"></div>
     </div>
-  `,'960px');
+  `,'96vw');
   try{
     const data=await api('/api/price-tables/'+id+'/details');
     renderPriceTableDashboard(id,name,data);
@@ -3563,11 +3655,183 @@ function renderPriceTableDashboard(id,name,data){
   window.ptdCurrentData=data;
   window.ptdCurrentTableName=name;
   window.ptdCurrentTableId=id;
+  window.ptdActiveTab = window.ptdActiveTab || 'clients';
   const loader=document.getElementById('ptdLoader');
   const body=document.getElementById('ptdBody');
   if(!body)return;
   if(loader)loader.style.display='none';
   body.style.display='block';
+
+  const allProds = data.allProducts || [];
+  const tableItems = data.tableItems || [];
+  const specialCount = tableItems.length;
+  const uneditedCount = Math.max(0, allProds.length - specialCount);
+
+  let contentHtml = '';
+  if(window.ptdActiveTab === 'products'){
+    contentHtml = `
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px 18px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <input type="text" id="ptdProductSearch" class="search" placeholder="🔍 Buscar por nome ou SKU..." style="width:260px;padding:8px 12px;font-size:13px" oninput="filterPriceTableDashboardProducts(this.value)">
+          <div style="display:flex;gap:6px">
+            <button type="button" class="btn" id="ptdFilterProdAll" style="font-size:12px;padding:6px 12px;font-weight:700" onclick="setPriceTableProductFilter('all')">Todos (${allProds.length})</button>
+            <button type="button" class="btn" id="ptdFilterProdSpecial" style="font-size:12px;padding:6px 12px;font-weight:700;border-color:#2563eb;color:#1d4ed8;background:#eff6ff" onclick="setPriceTableProductFilter('special')">★ Preço Especial (${specialCount})</button>
+            <button type="button" class="btn" id="ptdFilterProdNormal" style="font-size:12px;padding:6px 12px;font-weight:700" onclick="setPriceTableProductFilter('normal')">Não Editados (${uneditedCount})</button>
+          </div>
+        </div>
+        <button class="btn primary" onclick="priceTableItems('${id}','${esc(name)}')">✏️ Configurar Preços</button>
+      </div>
+
+      <div id="ptdProductsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;max-height:68vh;overflow-y:auto;padding-right:4px">
+        ${allProds.map(pr => {
+          const specialItem = tableItems.find(ti => ti.produto_id === pr.id);
+          const isSpecial = Boolean(specialItem);
+          const borderStyle = isSpecial
+            ? 'border: 2.5px solid #2563eb; background: #f0f7ff; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);'
+            : 'border: 1px solid #e2e8f0; background: #ffffff;';
+          return `
+            <div class="card ptd-product-card" data-special="${isSpecial ? '1' : '0'}" data-search="${esc((pr.nome + ' ' + (pr.sku || '')).toLowerCase())}" style="${borderStyle} border-radius:10px; padding:12px; display:flex; flex-direction:column; justify-content:space-between; transition:all 0.15s">
+              <div>
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px">
+                  <strong style="font-size:13px; color:#061a4f; line-height:1.3">${esc(pr.nome)}</strong>
+                  ${isSpecial ? `
+                    <span class="badge" style="background:#2563eb; color:#ffffff; font-weight:800; font-size:10px; padding:3px 7px; border-radius:4px; flex-shrink:0">★ PREÇO ESPECIAL</span>
+                  ` : `
+                    <span class="badge" style="background:#f1f5f9; color:#64748b; font-weight:600; font-size:10px; padding:3px 7px; border-radius:4px; flex-shrink:0">Preço Base</span>
+                  `}
+                </div>
+                ${pr.sku ? `<small class="muted" style="display:block; margin-bottom:8px">SKU: ${esc(pr.sku)} · Un: ${esc(pr.unidade || 'UN')}</small>` : ''}
+              </div>
+              <div style="margin-top:10px; padding-top:8px; border-top:1px dashed ${isSpecial ? '#93c5fd' : '#e2e8f0'}">
+                ${isSpecial ? `
+                  <div style="display:flex; justify-content:space-between; align-items:flex-end">
+                    <div>
+                      <small class="muted" style="text-decoration:line-through; font-size:11px">Base: ${brl(pr.preco_base)}</small>
+                      <div style="font-size:16px; font-weight:850; color:#1d4ed8">${brl(specialItem.preco)}</div>
+                    </div>
+                    <div style="text-align:right">
+                      <span class="badge" style="background:rgba(37,99,235,0.12); color:#1d4ed8; font-weight:750; border:1px solid rgba(37,99,235,0.25); font-size:11px">
+                        Qtd. mín: <strong>${specialItem.quantidade_minima || 1}</strong> un.
+                      </span>
+                    </div>
+                  </div>
+                ` : `
+                  <div style="display:flex; justify-content:space-between; align-items:center">
+                    <div>
+                      <small class="muted" style="font-size:11px">Preço base sem alteração</small>
+                      <div style="font-size:15px; font-weight:750; color:#1e293b">${brl(pr.preco_base)}</div>
+                    </div>
+                    <span class="muted" style="font-size:11px">Qtd. mín: 1 un.</span>
+                  </div>
+                `}
+              </div>
+            </div>
+          `;
+        }).join('') || '<div class="empty-state" style="grid-column:1/-1">Nenhum produto cadastrado no sistema.</div>'}
+      </div>
+    `;
+  } else {
+    contentHtml = `
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:14px">
+        <div class="card" style="padding:12px 14px">
+          <small class="muted" style="font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">Vínculos Ativos</small>
+          <h2 style="margin:4px 0 2px;font-size:24px;color:#000">${data.kpis.totalClients}</h2>
+          <span class="muted" style="font-size:11px">Clientes cadastrados na tabela</span>
+        </div>
+        <div class="card" style="padding:12px 14px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <small class="muted" style="font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">Canais e Grupos Ativos</small>
+            <small class="muted" style="font-size:10px">Clique para gerenciar</small>
+          </div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap">
+            <button type="button" class="ptd-group-pill" onclick="togglePriceTableGroup('${id}','web')" title="Clique para gerenciar canal Web" style="cursor:pointer;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:750;background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid ${window.ptdActiveGroupKey==='web'?'#3b82f6':'rgba(59,130,246,0.3)'};box-shadow:${window.ptdActiveGroupKey==='web'?'0 0 0 2px rgba(59,130,246,0.4)':''};transition:all 0.15s">
+              🌐 Web: ${data.groupsSummary.web}
+            </button>
+            <button type="button" class="ptd-group-pill" onclick="togglePriceTableGroup('${id}','balcao')" title="Clique para gerenciar canal Balcão" style="cursor:pointer;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:750;background:rgba(253,94,2,0.15);color:#fb923c;border:1px solid ${window.ptdActiveGroupKey==='balcao'?'#fd5e02':'rgba(253,94,2,0.3)'};box-shadow:${window.ptdActiveGroupKey==='balcao'?'0 0 0 2px rgba(253,94,2,0.4)':''};transition:all 0.15s">
+              🏪 Balcão: ${data.groupsSummary.balcao}
+            </button>
+            <button type="button" class="ptd-group-pill" onclick="togglePriceTableGroup('${id}','vendedor')" title="Clique para gerenciar canal Vendedor" style="cursor:pointer;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:750;background:rgba(34,197,94,0.15);color:#4ade80;border:1px solid ${window.ptdActiveGroupKey==='vendedor'?'#22c55e':'rgba(34,197,94,0.3)'};box-shadow:${window.ptdActiveGroupKey==='vendedor'?'0 0 0 2px rgba(34,197,94,0.4)':''};transition:all 0.15s">
+              👥 Vendedor: ${data.groupsSummary.vendedor}
+            </button>
+            <button type="button" class="ptd-group-pill" onclick="togglePriceTableGroup('${id}','geral')" title="Clique para gerenciar canal Direto" style="cursor:pointer;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:750;background:rgba(148,163,184,0.15);color:#cbd5e1;border:1px solid ${window.ptdActiveGroupKey==='geral'?'#94a3b8':'rgba(148,163,184,0.3)'};box-shadow:${window.ptdActiveGroupKey==='geral'?'0 0 0 2px rgba(148,163,184,0.4)':''};transition:all 0.15s">
+              🏢 Direto: ${data.groupsSummary.geral}
+            </button>
+          </div>
+        </div>
+        <div class="card" style="padding:12px 14px">
+          <small class="muted" style="font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">Pedidos Concluídos</small>
+          <h2 style="margin:4px 0 2px;font-size:24px;color:#000">${data.kpis.totalPedidos}</h2>
+          <span class="muted" style="font-size:11px">Pedidos emitidos sob a tabela</span>
+        </div>
+        <div class="card" style="padding:12px 14px">
+          <small class="muted" style="font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">Faturamento Acumulado</small>
+          <h2 style="margin:4px 0 2px;font-size:24px;color:var(--xv-orange)">${brl(data.kpis.totalFaturado)}</h2>
+          <span class="muted" style="font-size:11px">Faturamento de clientes na tabela</span>
+        </div>
+      </div>
+      <div id="ptdGroupCardContainer">
+        ${renderPriceTableGroupCard(id,name,data,window.ptdActiveGroupKey)}
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">
+        <div>
+          <h3 style="margin:0;font-size:16px;color:#000">Lista Geral de Clientes da Tabela (<span id="ptdCount">${data.clients.length}</span>)</h3>
+          <p class="muted" style="margin:2px 0 0;font-size:12px">Clique em "Excluir" em qualquer cliente para removê-lo desta tabela.</p>
+        </div>
+        ${data.clients.length>0?`<div style="min-width:240px"><input type="text" class="search" placeholder="🔍 Filtrar por nome, doc ou canal..." style="padding:8px 12px;font-size:12px" oninput="filterPriceTableClients(this.value)"></div>`:''}
+      </div>
+      <div class="tablewrap" style="max-height:68vh;overflow:auto">
+        <table class="table" id="ptdTable">
+          <thead>
+            <tr>
+              <th>Cliente / Usuário</th>
+              <th>Documento / Contato</th>
+              <th>Grupo / Canal</th>
+              <th>Histórico</th>
+              <th style="text-align:right">Ação</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.clients.map(c=>`
+              <tr data-client-row="${c.id}" data-search="${esc((c.razao_social+' '+(c.nome_fantasia||'')+' '+(c.cnpj_cpf||'')+' '+c.grupo_canal+' '+(c.web_usuario_nome||'')+' '+(c.web_usuario_email||'')).toLowerCase())}">
+                <td>
+                  <div style="font-weight:700;color:#000000">${esc(c.razao_social)}</div>
+                  ${c.nome_fantasia?`<div class="muted" style="font-size:11px">${esc(c.nome_fantasia)}</div>`:''}
+                  ${c.web_usuario_nome?`<div style="font-size:11px;color:#60a5fa">👤 Usuário: ${esc(c.web_usuario_nome)} (${esc(c.web_usuario_email||'')})</div>`:''}
+                </td>
+                <td>
+                  <div><code>${esc(c.cnpj_cpf||'-')}</code></div>
+                  <div class="muted" style="font-size:11px">${esc(c.telefone||c.cidade||'-')}</div>
+                </td>
+                <td>
+                  <span class="badge" style="${c.canal_tipo==='WEB'?'background:rgba(59,130,246,.18);color:#60a5fa;border:1px solid rgba(59,130,246,.3)':c.canal_tipo==='BALCAO'?'background:rgba(253,94,2,.18);color:#fb923c;border:1px solid rgba(253,94,2,.3)':c.canal_tipo==='VENDEDOR'?'background:rgba(34,197,94,.18);color:#4ade80;border:1px solid rgba(34,197,94,.3)':'background:#20304a;color:#cbd5e1'}">
+                    ${esc(c.grupo_canal)}
+                  </span>
+                </td>
+                <td>
+                  <div>${c.total_pedidos} pedidos</div>
+                  <div class="muted" style="font-size:11px">${brl(c.total_faturado)}</div>
+                </td>
+                <td style="text-align:right">
+                  <button class="btn danger" style="padding:5px 12px;font-size:12px" title="Excluir este cliente da tabela" onclick="removeClientFromPriceTable('${id}','${c.id}','${esc(c.razao_social)}','${esc(name)}')">
+                    Excluir
+                  </button>
+                </td>
+              </tr>
+            `).join('')||`
+              <tr>
+                <td colspan="5" style="text-align:center;padding:30px;color:#8496ab">
+                  <div style="font-size:24px;margin-bottom:8px">👥</div>
+                  <div style="font-weight:700;color:#cbd5e1">Nenhum cliente ou grupo vinculado a esta tabela</div>
+                  <div style="font-size:12px;margin-top:4px">Você pode vincular clientes individualmente ou em massa na tela de Governança.</div>
+                </td>
+              </tr>
+            `}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
   body.innerHTML=`
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px 18px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
       <div>
@@ -3576,114 +3840,63 @@ function renderPriceTableDashboard(id,name,data){
           <span class="badge ${data.table.ativo?'ok':''}">${data.table.ativo?'Ativa':'Inativa'}</span>
         </div>
         <div class="muted" style="font-size:12px;margin-top:4px">
-          ${data.itemsCount} produtos com preço cadastrado · Criada em ${new Date(data.table.created_at).toLocaleDateString('pt-BR')}
+          ${specialCount} produto(s) com preço especial · ${uneditedCount} produto(s) no preço base · Criada em ${new Date(data.table.created_at).toLocaleDateString('pt-BR')}
         </div>
       </div>
       <div class="actions">
-        <button class="btn" onclick="priceTableItems('${id}','${esc(name)}')">🏷️ Ver Preços da Tabela</button>
+        <button class="btn" onclick="priceTableItems('${id}','${esc(name)}')">🏷️ Configurar Preços</button>
         ${data.clients.length>0?`<button class="btn danger" style="font-size:12px;padding:8px 12px" onclick="removeAllClientsFromPriceTable('${id}','${esc(name)}')">Desvincular Todos</button>`:''}
-        <button class="btn danger" style="font-size:12px;padding:8px 12px" onclick="deletePriceTable('${id}','${esc(name)}');closeModal();">🗑️ Excluir Tabela de Preço</button>
+        <button class="btn danger" style="font-size:12px;padding:8px 12px" onclick="deletePriceTable('${id}','${esc(name)}');closeModal();">🗑️ Excluir Tabela</button>
       </div>
     </div>
-    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:14px">
-      <div class="card" style="padding:12px 14px">
-        <small class="muted" style="font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">Vínculos Ativos</small>
-        <h2 style="margin:4px 0 2px;font-size:24px;color:#000">${data.kpis.totalClients}</h2>
-        <span class="muted" style="font-size:11px">Clientes cadastrados na tabela</span>
-      </div>
-      <div class="card" style="padding:12px 14px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <small class="muted" style="font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">Canais e Grupos Ativos</small>
-          <small class="muted" style="font-size:10px">Clique para gerenciar</small>
-        </div>
-        <div style="display:flex;gap:5px;flex-wrap:wrap">
-          <button type="button" class="ptd-group-pill" onclick="togglePriceTableGroup('${id}','web')" title="Clique para gerenciar canal Web" style="cursor:pointer;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:750;background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid ${window.ptdActiveGroupKey==='web'?'#3b82f6':'rgba(59,130,246,0.3)'};box-shadow:${window.ptdActiveGroupKey==='web'?'0 0 0 2px rgba(59,130,246,0.4)':''};transition:all 0.15s">
-            🌐 Web: ${data.groupsSummary.web}
-          </button>
-          <button type="button" class="ptd-group-pill" onclick="togglePriceTableGroup('${id}','balcao')" title="Clique para gerenciar canal Balcão" style="cursor:pointer;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:750;background:rgba(253,94,2,0.15);color:#fb923c;border:1px solid ${window.ptdActiveGroupKey==='balcao'?'#fd5e02':'rgba(253,94,2,0.3)'};box-shadow:${window.ptdActiveGroupKey==='balcao'?'0 0 0 2px rgba(253,94,2,0.4)':''};transition:all 0.15s">
-            🏪 Balcão: ${data.groupsSummary.balcao}
-          </button>
-          <button type="button" class="ptd-group-pill" onclick="togglePriceTableGroup('${id}','vendedor')" title="Clique para gerenciar canal Vendedor" style="cursor:pointer;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:750;background:rgba(34,197,94,0.15);color:#4ade80;border:1px solid ${window.ptdActiveGroupKey==='vendedor'?'#22c55e':'rgba(34,197,94,0.3)'};box-shadow:${window.ptdActiveGroupKey==='vendedor'?'0 0 0 2px rgba(34,197,94,0.4)':''};transition:all 0.15s">
-            👥 Vendedor: ${data.groupsSummary.vendedor}
-          </button>
-          <button type="button" class="ptd-group-pill" onclick="togglePriceTableGroup('${id}','geral')" title="Clique para gerenciar canal Direto" style="cursor:pointer;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:750;background:rgba(148,163,184,0.15);color:#cbd5e1;border:1px solid ${window.ptdActiveGroupKey==='geral'?'#94a3b8':'rgba(148,163,184,0.3)'};box-shadow:${window.ptdActiveGroupKey==='geral'?'0 0 0 2px rgba(148,163,184,0.4)':''};transition:all 0.15s">
-            🏢 Direto: ${data.groupsSummary.geral}
-          </button>
-        </div>
-      </div>
-      <div class="card" style="padding:12px 14px">
-        <small class="muted" style="font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">Pedidos Concluídos</small>
-        <h2 style="margin:4px 0 2px;font-size:24px;color:#000">${data.kpis.totalPedidos}</h2>
-        <span class="muted" style="font-size:11px">Pedidos emitidos sob a tabela</span>
-      </div>
-      <div class="card" style="padding:12px 14px">
-        <small class="muted" style="font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">Faturamento Acumulado</small>
-        <h2 style="margin:4px 0 2px;font-size:24px;color:var(--xv-orange)">${brl(data.kpis.totalFaturado)}</h2>
-        <span class="muted" style="font-size:11px">Faturamento de clientes na tabela</span>
-      </div>
+
+    <!-- Navegação de Abas Paralelas no Modal -->
+    <div style="display:flex;gap:10px;border-bottom:2px solid #e2e8f0;margin-bottom:16px;padding-bottom:8px">
+      <button id="ptdTabClientsBtn" type="button" class="btn" style="font-weight:750;background:${window.ptdActiveTab==='clients'?'var(--xv-brand-navy,#061a4f)':'#f1f5f9'};color:${window.ptdActiveTab==='clients'?'#ffffff':'#475569'};border-radius:8px;padding:8px 16px" onclick="switchPriceTableDetailsTab('clients')">
+        👥 Clientes & Grupos Vinculados (${data.clients.length})
+      </button>
+      <button id="ptdTabProductsBtn" type="button" class="btn" style="font-weight:750;background:${window.ptdActiveTab==='products'?'var(--xv-brand-navy,#061a4f)':'#f1f5f9'};color:${window.ptdActiveTab==='products'?'#ffffff':'#475569'};border-radius:8px;padding:8px 16px" onclick="switchPriceTableDetailsTab('products')">
+        🏷️ Produtos da Tabela (${allProds.length})
+      </button>
     </div>
-    <div id="ptdGroupCardContainer">
-      ${renderPriceTableGroupCard(id,name,data,window.ptdActiveGroupKey)}
-    </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">
-      <div>
-        <h3 style="margin:0;font-size:16px;color:#000">Lista Geral de Clientes da Tabela (<span id="ptdCount">${data.clients.length}</span>)</h3>
-        <p class="muted" style="margin:2px 0 0;font-size:12px">Clique em "Excluir" em qualquer cliente para removê-lo desta tabela.</p>
-      </div>
-      ${data.clients.length>0?`<div style="min-width:240px"><input type="text" class="search" placeholder="🔍 Filtrar por nome, doc ou canal..." style="padding:8px 12px;font-size:12px" oninput="filterPriceTableClients(this.value)"></div>`:''}
-    </div>
-    <div class="tablewrap" style="max-height:400px;overflow:auto">
-      <table class="table" id="ptdTable">
-        <thead>
-          <tr>
-            <th>Cliente / Usuário</th>
-            <th>Documento / Contato</th>
-            <th>Grupo / Canal</th>
-            <th>Histórico</th>
-            <th style="text-align:right">Ação</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${data.clients.map(c=>`
-            <tr data-client-row="${c.id}" data-search="${esc((c.razao_social+' '+(c.nome_fantasia||'')+' '+(c.cnpj_cpf||'')+' '+c.grupo_canal+' '+(c.web_usuario_nome||'')+' '+(c.web_usuario_email||'')).toLowerCase())}">
-              <td>
-                <div style="font-weight:700;color:#000000">${esc(c.razao_social)}</div>
-                ${c.nome_fantasia?`<div class="muted" style="font-size:11px">${esc(c.nome_fantasia)}</div>`:''}
-                ${c.web_usuario_nome?`<div style="font-size:11px;color:#60a5fa">👤 Usuário: ${esc(c.web_usuario_nome)} (${esc(c.web_usuario_email||'')})</div>`:''}
-              </td>
-              <td>
-                <div><code>${esc(c.cnpj_cpf||'-')}</code></div>
-                <div class="muted" style="font-size:11px">${esc(c.telefone||c.cidade||'-')}</div>
-              </td>
-              <td>
-                <span class="badge" style="${c.canal_tipo==='WEB'?'background:rgba(59,130,246,.18);color:#60a5fa;border:1px solid rgba(59,130,246,.3)':c.canal_tipo==='BALCAO'?'background:rgba(253,94,2,.18);color:#fb923c;border:1px solid rgba(253,94,2,.3)':c.canal_tipo==='VENDEDOR'?'background:rgba(34,197,94,.18);color:#4ade80;border:1px solid rgba(34,197,94,.3)':'background:#20304a;color:#cbd5e1'}">
-                  ${esc(c.grupo_canal)}
-                </span>
-              </td>
-              <td>
-                <div>${c.total_pedidos} pedidos</div>
-                <div class="muted" style="font-size:11px">${brl(c.total_faturado)}</div>
-              </td>
-              <td style="text-align:right">
-                <button class="btn danger" style="padding:5px 12px;font-size:12px" title="Excluir este cliente da tabela" onclick="removeClientFromPriceTable('${id}','${c.id}','${esc(c.razao_social)}','${esc(name)}')">
-                  Excluir
-                </button>
-              </td>
-            </tr>
-          `).join('')||`
-            <tr>
-              <td colspan="5" style="text-align:center;padding:30px;color:#8496ab">
-                <div style="font-size:24px;margin-bottom:8px">👥</div>
-                <div style="font-weight:700;color:#cbd5e1">Nenhum cliente ou grupo vinculado a esta tabela</div>
-                <div style="font-size:12px;margin-top:4px">Você pode vincular clientes individualmente ou em massa na tela de Governança.</div>
-              </td>
-            </tr>
-          `}
-        </tbody>
-      </table>
-    </div>
+
+    ${contentHtml}
   `;
 }
+window.switchPriceTableDetailsTab=function(tab){
+  window.ptdActiveTab=tab;
+  if(window.ptdCurrentData){
+    renderPriceTableDashboard(window.ptdCurrentTableId,window.ptdCurrentTableName,window.ptdCurrentData);
+  }
+};
+window._ptdProductFilter='all';
+window.setPriceTableProductFilter=function(filter){
+  window._ptdProductFilter=filter;
+  ['All','Special','Normal'].forEach(f=>{
+    const b=document.getElementById('ptdFilterProd'+f);
+    if(b){
+      if(f.toLowerCase()===filter){
+        b.style.background='#eff6ff'; b.style.color='#1d4ed8'; b.style.borderColor='#2563eb';
+      }else{
+        b.style.background=''; b.style.color=''; b.style.borderColor='';
+      }
+    }
+  });
+  window.filterPriceTableDashboardProducts(document.getElementById('ptdProductSearch')?.value||'');
+};
+window.filterPriceTableDashboardProducts=function(q){
+  const term=(q||'').trim().toLowerCase();
+  const filter=window._ptdProductFilter||'all';
+  const cards=document.querySelectorAll('#ptdProductsGrid .ptd-product-card');
+  cards.forEach(card=>{
+    const isSpecial=card.dataset.special==='1';
+    const matchSearch=!term||card.dataset.search.includes(term);
+    let matchFilter=true;
+    if(filter==='special') matchFilter=isSpecial;
+    if(filter==='normal') matchFilter=!isSpecial;
+    card.style.display=(matchSearch&&matchFilter)?'flex':'none';
+  });
+};
 window.togglePriceTableGroup=function(tableId,groupKey){
   if(window.ptdActiveGroupKey===groupKey){
     window.ptdActiveGroupKey=null;
@@ -4136,7 +4349,7 @@ async function logistics(v){
       hasSubgrupos=true;
       const totalP=filteredPedidos.length;
       const totalV=filteredPedidos.reduce((acc, p)=>acc+Number(p.total||0),0);
-      return `<div class="card logistics-neighborhood"><div class="panel-title"><strong style="color:#ef4444">${esc(sg.bairro)}</strong><span class="badge" style="margin-right:auto; margin-left:10px">${totalP} pedidos · ${brl(totalV)}</span><label style="cursor:pointer;font-size:12px;display:flex;align-items:center;gap:5px"><input type="checkbox" onchange="const cb=this.closest('.logistics-neighborhood').querySelectorAll('.routeOrder'); cb.forEach(c => c.checked = this.checked)"> Selecionar todos</label></div><div class="actions">${filteredPedidos.map(p=>`<label class="card logistics-order"><input type="checkbox" class="load-order routeOrder" value="${p.id}"> <span><strong>${esc(p.numero)}</strong> · ${esc(p.nome_fantasia||p.razao_social)}<br><strong style="color:#ef4444;font-size:12px">📍 ${esc(p.bairro||sg.bairro)}</strong> · <small class="muted">Operador: ${esc(p.operador_nome||'N/A')}${grupoKey==='TODOS'?` · Origem: ${esc(p.origem)}`:''}</small></span></label>`).join('')}</div></div>`;
+      return `<div class="card logistics-neighborhood"><div class="panel-title"><strong style="color:#ef4444">${esc(sg.bairro)}</strong><span class="badge" style="margin-right:auto; margin-left:10px">${totalP} pedidos · ${brl(totalV)}</span><label style="cursor:pointer;font-size:12px;display:flex;align-items:center;gap:5px"><input type="checkbox" onchange="const cb=this.closest('.logistics-neighborhood').querySelectorAll('.routeOrder'); cb.forEach(c => c.checked = this.checked)"> Selecionar todos</label></div><div class="actions">${filteredPedidos.map(p=>`<label class="card logistics-order"><input type="checkbox" class="load-order routeOrder" value="${p.id}"> <span><strong>${esc(p.numero)}</strong> · ${esc(p.nome_fantasia||p.razao_social)}<br><strong style="color:#ef4444;font-size:12px">📍 ${esc(p.bairro||sg.bairro)}</strong> · <small style="color:#dc2626;font-weight:750">Operador: ${esc(p.operador_nome||'N/A')}</small>${grupoKey==='TODOS'?` · <small class="muted">Origem: ${esc(p.origem)}</small>`:''}</span></label>`).join('')}</div></div>`;
     }).join('');
     
     if(!hasSubgrupos) sgHtml='<div class="empty-state">Nenhum pedido para este filtro.</div>';
@@ -5045,6 +5258,60 @@ window.updateDelivSelectionCounter = function(){
   if(btnList) btnList.disabled = checked.length === 0;
   const btnComplete = document.getElementById('btnDelivCompleteDirect');
   if(btnComplete) btnComplete.disabled = checked.length === 0;
+
+  // Sincronizar o checkbox master da tela
+  const masterCb = document.getElementById('delivSelectAllScreen');
+  if(masterCb){
+    const visibleOrderCbs = [...document.querySelectorAll('#delivNeighborhoodsList .logistics-neighborhood:not([style*="display: none"]) .logistics-order:not([style*="display: none"]) .routeOrder')];
+    const checkedVisible = visibleOrderCbs.filter(cb => cb.checked).length;
+    if(visibleOrderCbs.length > 0 && checkedVisible === visibleOrderCbs.length){
+      masterCb.checked = true;
+      masterCb.indeterminate = false;
+    } else if(checkedVisible > 0){
+      masterCb.checked = false;
+      masterCb.indeterminate = true;
+    } else {
+      masterCb.checked = false;
+      masterCb.indeterminate = false;
+    }
+  }
+
+  // Sincronizar checkboxes de cada bairro
+  document.querySelectorAll('#delivNeighborhoodsList .logistics-neighborhood').forEach(card => {
+    const bCb = card.querySelector('.panel-title input[type="checkbox"]');
+    if(bCb){
+      const bOrders = [...card.querySelectorAll('.logistics-order:not([style*="display: none"]) .routeOrder')];
+      const bChecked = bOrders.filter(c => c.checked).length;
+      if(bOrders.length > 0 && bChecked === bOrders.length){
+        bCb.checked = true;
+        bCb.indeterminate = false;
+      } else if(bChecked > 0){
+        bCb.checked = false;
+        bCb.indeterminate = true;
+      } else {
+        bCb.checked = false;
+        bCb.indeterminate = false;
+      }
+    }
+  });
+};
+
+window.toggleSelectAllScreenDelivOrders = function(checked){
+  const cards = document.querySelectorAll('#delivNeighborhoodsList .logistics-neighborhood');
+  cards.forEach(card => {
+    if(card.style.display !== 'none'){
+      const bCb = card.querySelector('.panel-title input[type="checkbox"]');
+      if(bCb) bCb.checked = checked;
+      const orders = card.querySelectorAll('.logistics-order');
+      orders.forEach(ord => {
+        if(ord.style.display !== 'none'){
+          const cb = ord.querySelector('.routeOrder');
+          if(cb) cb.checked = checked;
+        }
+      });
+    }
+  });
+  updateDelivSelectionCounter();
 };
 
 window.filterDelivOrdersTable = function(){
@@ -5061,6 +5328,7 @@ window.filterDelivOrdersTable = function(){
     });
     card.style.display = (visibleCount > 0 || !q) ? 'block' : 'none';
   });
+  updateDelivSelectionCounter();
 };
 
 window.downloadDeliveryOrdersPdf = function(){
@@ -5265,7 +5533,11 @@ window.renderDeliveryRoutesDashboardContent = async function(){
                 <strong style="color:#061a4f">0</strong> pedidos selecionados · <strong class="orange" style="color:var(--xv-orange,#fd5e02)">R$ 0,00</strong>
               </span>
             </div>
-            <div style="display:flex; gap:10px; flex-wrap:wrap">
+            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center">
+              <label style="cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px;font-weight:700;color:#061a4f;background:#f8fafc;padding:7px 12px;border:1px solid #cbd5e1;border-radius:6px">
+                <input type="checkbox" id="delivSelectAllScreen" onchange="toggleSelectAllScreenDelivOrders(this.checked)">
+                Selecionar todos da tela
+              </label>
               <button id="btnDelivMakeList" class="btn" style="background:#fff; color:#061a4f; border:1px solid #dce4ef" onclick="generateLoadingList()">
                 📋 Gerar Lista de Carregamento
               </button>
@@ -5322,8 +5594,8 @@ window.renderDeliveryRoutesDashboardContent = async function(){
                           <div class="muted" style="font-size:11px; margin-top:2px; color:#64748b">
                             📍 ${esc(p.endereco || sg.bairro)}
                           </div>
-                          <div class="muted" style="font-size:11px; margin-top:2px; color:#64748b">
-                            👤 ${esc(p.operador_nome || 'N/A')}${p.origem === 'BALCAO' ? ' · <strong style="color:#7c3aed">🏪 Balcão — Entrega</strong>' : (activeGrupo === 'TODOS' ? ` · ${esc(p.origem)}` : '')}
+                          <div style="font-size:11px; margin-top:2px; color:#dc2626; font-weight:750">
+                            👤 ${esc(p.operador_nome || 'N/A')}${p.origem === 'BALCAO' ? ' · <strong style="color:#7c3aed">🏪 Balcão — Entrega</strong>' : (activeGrupo === 'TODOS' ? ` · <span style="color:#64748b; font-weight:normal">${esc(p.origem)}</span>` : '')}
                           </div>
                         </div>
                       </label>

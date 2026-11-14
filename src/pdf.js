@@ -233,7 +233,7 @@ export function makeCatalogPdf(items,file){const sep='-'.repeat(116);const lines
 export function makeStockPdf(items,file){const sep='-'.repeat(116);const lines=['XIQUIM VARGAS','RELATÓRIO DE ESTOQUE INTELIGENTE',`Gerado em: ${formatBrasiliaDateTime(new Date())}`,`Total de produtos: ${items.length}`,'','PRODUTO                                                  | SKU             | DISPONÍVEL | RESERVADO | MÍNIMO | STATUS',sep];for(const x of items)lines.push(`${String(x.nome||'').slice(0,56).padEnd(56)} | ${String(x.sku||'').slice(0,15).padEnd(15)} | ${String(x.quantidade_disponivel).padStart(10)} | ${String(x.quantidade_reservada).padStart(9)} | ${String(x.estoque_minimo).padStart(6)} | ${x.status||'-'}`);buildPdf(paginate(lines,72,116),file,{fontSize:8,lineHeight:11,leftMargin:14,topMargin:824})}
 
 export function makeLoadingListPdf(data, file) {
-  const sep = '-'.repeat(94);
+  const sep = '-'.repeat(72);
   const lines=[
     'XIQUIM VARGAS - DISTRIBUIDORA DE BEBIDAS',
     'LISTA DE CARREGAMENTO LOGÍSTICO',
@@ -242,7 +242,7 @@ export function makeLoadingListPdf(data, file) {
     `Total de pedidos: ${data.total_pedidos || 0}`,
     `Total de volumes: ${data.total_produtos || 0}`,
     '',
-    'QTD/UN  DESCRIÇÃO DO PRODUTO',
+    'QTD/UN   DESCRIÇÃO DO PRODUTO',
     sep
   ];
   for(const p of data.produtos||[]){
@@ -254,11 +254,11 @@ export function makeLoadingListPdf(data, file) {
       }catch{}
     }
     const unitTag = formatUnitTag(unit);
-    const qStr = (String(p.quantidade_total).padStart(3) + ' ' + unitTag).padEnd(7, ' ') + ' ';
-    const descLines = wrap(String(p.produto_nome || '').trim(), 86);
+    const qStr = (String(p.quantidade_total).padStart(3) + ' ' + unitTag).padEnd(8, ' ') + ' ';
+    const descLines = wrap(String(p.produto_nome || '').trim(), 63);
     lines.push(`${qStr}${descLines[0] || ''}`);
     for(let i=1; i<descLines.length; i++){
-      lines.push(`        ${descLines[i]}`);
+      lines.push(`         ${descLines[i]}`);
     }
   }
   lines.push(
@@ -269,7 +269,7 @@ export function makeLoadingListPdf(data, file) {
     '',
     'Documento operacional para conferência de carregamento e expedição.'
   );
-  buildPdf(paginate(lines,54,94),file,{fontSize:9.5,lineHeight:14,leftMargin:28,topMargin:810});
+  buildPdf(paginate(lines,44,72),file,{fontSize:12,lineHeight:17,leftMargin:28,topMargin:805});
 }
 export function makeBulkOrderPdf(ordersData, file) {
   const allPages = [];
