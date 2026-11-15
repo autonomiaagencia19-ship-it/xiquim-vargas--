@@ -1,5 +1,5 @@
 
-window.formatBrasiliaDateTime = function(val, options = {}) {
+window.formatBrasiliaDateTime = function (val, options = {}) {
   if (!val) return '-';
   let s = String(val).trim();
   if (!s) return '-';
@@ -10,376 +10,378 @@ window.formatBrasiliaDateTime = function(val, options = {}) {
   return d.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', ...options });
 };
 
-window.formatBrasiliaDate = function(val, options = {}) {
+window.formatBrasiliaDate = function (val, options = {}) {
   return window.formatBrasiliaDateTime(val, { dateStyle: 'short', ...options });
 };
 
-window.formatBrasiliaTime = function(val, options = {}) {
+window.formatBrasiliaTime = function (val, options = {}) {
   return window.formatBrasiliaDateTime(val, { timeStyle: 'medium', ...options });
 };
 
 const NATIVE_BASE = (typeof window !== 'undefined' && window.AndroidApp && typeof window.AndroidApp.getBaseUrl === 'function') ? window.AndroidApp.getBaseUrl() : '';
 const API = (typeof window !== 'undefined' && (window.location.protocol === 'file:' || !window.location.origin || window.location.origin === 'null')) ? (NATIVE_BASE || 'https://xiquim-vargas-erp.onrender.com') : '';
 // Polyfill: crypto.randomUUID só existe em contexto seguro (HTTPS/localhost). Em http://192.168.x.x (rede local) ele não existe.
-(function(){const c=(typeof window!=='undefined'&&window.crypto)?window.crypto:(window.crypto={});if(typeof c.randomUUID!=='function'){c.randomUUID=function(){const b=new Uint8Array(16);if(typeof c.getRandomValues==='function'){c.getRandomValues(b)}else{for(let i=0;i<16;i++)b[i]=Math.floor(Math.random()*256)}b[6]=(b[6]&0x0f)|0x40;b[8]=(b[8]&0x3f)|0x80;const h=[...b].map(x=>x.toString(16).padStart(2,'0')).join('');return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`}}})();
-if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{})}
-let token=localStorage.getItem('xv_token'),me=null;
-function safeStorageSet(key,value){try{localStorage.setItem(key,value);return true}catch(err){console.warn(`[Storage] Cota excedida ao gravar "${key}". Limpando caches...`,err);try{const toRemove=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k!=='xv_token'&&k!=='xv_user'){toRemove.push(k)}}toRemove.forEach(k=>localStorage.removeItem(k));localStorage.setItem(key,value);return true}catch(err2){try{const curToken=(key==='xv_token')?value:localStorage.getItem('xv_token');const curUser=(key==='xv_user')?value:localStorage.getItem('xv_user');localStorage.clear();if(curToken)localStorage.setItem('xv_token',curToken);if(curUser)localStorage.setItem('xv_user',curUser);localStorage.setItem(key,value);return true}catch(err3){console.error('[Storage] Falha irrecuperavel no localStorage:',err3);return false}}}}
-try{const staleCaches=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('xv_cache_'))staleCaches.push(k)}staleCaches.forEach(k=>localStorage.removeItem(k))}catch(_){}
-function priceForLine(product,quantity=1){const minimum=Number(product?.quantidade_minima||1);if(product?.preco_tabela!=null&&Number(quantity)>=minimum)return Number(product.preco_tabela);if(product?.promocao_preco!=null)return Number(product.promocao_preco);return Number(product?.preco_aplicado??product?.preco_base??0)}
-const $=s=>document.querySelector(s);function jsonArg(value){const bytes=new TextEncoder().encode(JSON.stringify(value));let binary='';for(const byte of bytes)binary+=String.fromCharCode(byte);return btoa(binary)}
-function parseJsonArg(encoded){return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(encoded),c=>c.charCodeAt(0))))}
-const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-async function api(path,opt={}){const reqId=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);try{const r=await fetch(API+path,{...opt,headers:{'x-request-id':reqId,'content-type':'application/json',...(opt.headers||{}),...(token?{authorization:'Bearer '+token}:{})}});if(!r.ok){if(r.status===401&&token&&!path.includes('/api/auth/login')){localStorage.removeItem('xv_token');localStorage.removeItem('xv_user');token=null;me=null;alert('Sua sessão expirou. Faça login novamente.');return loginPage()}let e;try{e=await r.json()}catch{};throw new Error(e?.error||`HTTP ${r.status}`)}return r.headers.get('content-type')?.includes('application/json')?r.json():r.blob()}catch(e){if(path.startsWith('/api/auth/')||path.startsWith('/api/setup/')){throw new Error('Não foi possível conectar ao servidor ERP. Verifique sua conexão com a internet ou se o endereço do servidor está correto.');}if((!navigator.onLine||e instanceof TypeError||e?.name==='TypeError'||e.message?.includes('fetch')||e.message?.includes('NetworkError')||e.message?.includes('Failed to fetch'))&&opt.method&&opt.method!=='GET'){const q=await queueOffline(path,opt);return {offline:true,queued_id:q.id}}throw e}}
-function money(v){const n=Number(v);return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number.isFinite(n)?n:0)}
-function offlineDb(){return new Promise((resolve,reject)=>{const r=indexedDB.open('xv-offline-v1-'+encodeURIComponent(me?.id||'anonymous'),1);r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv');if(!d.objectStoreNames.contains('queue'))d.createObjectStore('queue',{keyPath:'id'})};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
-async function offlinePut(store,key,value){const d=await offlineDb();return new Promise((res,rej)=>{const t=d.transaction(store,'readwrite');t.objectStore(store).put(value,key);t.oncomplete=res;t.onerror=()=>rej(t.error)})}
-async function offlineGet(store,key){const d=await offlineDb();return new Promise((res,rej)=>{const t=d.transaction(store);const r=t.objectStore(store).get(key);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
-async function queueOffline(path,opt){const id=crypto.randomUUID();const item={id,path,method:opt.method||'POST',body:opt.body||'{}',headers:opt.headers||{},created_at:new Date().toISOString()};const d=await offlineDb();await new Promise((res,rej)=>{const t=d.transaction('queue','readwrite');t.objectStore('queue').put(item);t.oncomplete=res;t.onerror=()=>rej(t.error)});return item}
-async function syncOfflineQueue(){if(!navigator.onLine)return;const d=await offlineDb();const rows=await new Promise((res,rej)=>{const t=d.transaction('queue');const q=t.objectStore('queue').getAll();q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)});let synced=0;for(const item of (rows||[]).sort((a,b)=>a.created_at.localeCompare(b.created_at))){try{await api(item.path,{method:item.method,body:item.body,headers:{...(item.headers||{}),'Idempotency-Key':item.headers?.['Idempotency-Key']||('OFF-'+item.id)}});await new Promise((res,rej)=>{const t=d.transaction('queue','readwrite');t.objectStore('queue').delete(item.id);t.oncomplete=res;t.onerror=()=>rej(t.error)});synced++}catch(e){if(!navigator.onLine)break;console.warn('sync-pending',e.message)}}if(synced>0){toastRole(`✓ ${synced} operação(ões) offline sincronizada(s) com sucesso!`);if(typeof roleRealtimeRefresh==='function'){roleRealtimeRefresh('orders_changed');roleRealtimeRefresh('stock_changed')}}}
-let _roleNetTimer=null;
-function handleRoleNetworkChange(isOnline){
+(function () { const c = (typeof window !== 'undefined' && window.crypto) ? window.crypto : (window.crypto = {}); if (typeof c.randomUUID !== 'function') { c.randomUUID = function () { const b = new Uint8Array(16); if (typeof c.getRandomValues === 'function') { c.getRandomValues(b) } else { for (let i = 0; i < 16; i++)b[i] = Math.floor(Math.random() * 256) } b[6] = (b[6] & 0x0f) | 0x40; b[8] = (b[8] & 0x3f) | 0x80; const h = [...b].map(x => x.toString(16).padStart(2, '0')).join(''); return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}` } } })();
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(() => { }) }
+let token = localStorage.getItem('xv_token'), me = null;
+function safeStorageSet(key, value) { try { localStorage.setItem(key, value); return true } catch (err) { console.warn(`[Storage] Cota excedida ao gravar "${key}". Limpando caches...`, err); try { const toRemove = []; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k !== 'xv_token' && k !== 'xv_user') { toRemove.push(k) } } toRemove.forEach(k => localStorage.removeItem(k)); localStorage.setItem(key, value); return true } catch (err2) { try { const curToken = (key === 'xv_token') ? value : localStorage.getItem('xv_token'); const curUser = (key === 'xv_user') ? value : localStorage.getItem('xv_user'); localStorage.clear(); if (curToken) localStorage.setItem('xv_token', curToken); if (curUser) localStorage.setItem('xv_user', curUser); localStorage.setItem(key, value); return true } catch (err3) { console.error('[Storage] Falha irrecuperavel no localStorage:', err3); return false } } } }
+try { const staleCaches = []; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith('xv_cache_')) staleCaches.push(k) } staleCaches.forEach(k => localStorage.removeItem(k)) } catch (_) { }
+function priceForLine(product, quantity = 1) { const minimum = Number(product?.quantidade_minima || 1); if (product?.preco_tabela != null && Number(quantity) >= minimum) return Number(product.preco_tabela); if (product?.promocao_preco != null) return Number(product.promocao_preco); return Number(product?.preco_aplicado ?? product?.preco_base ?? 0) }
+const $ = s => document.querySelector(s); function jsonArg(value) { const bytes = new TextEncoder().encode(JSON.stringify(value)); let binary = ''; for (const byte of bytes) binary += String.fromCharCode(byte); return btoa(binary) }
+function parseJsonArg(encoded) { return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(encoded), c => c.charCodeAt(0)))) }
+const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+async function api(path, opt = {}) { const reqId = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10); try { const r = await fetch(API + path, { ...opt, headers: { 'x-request-id': reqId, 'content-type': 'application/json', ...(opt.headers || {}), ...(token ? { authorization: 'Bearer ' + token } : {}) } }); if (!r.ok) { if (r.status === 401 && token && !path.includes('/api/auth/login')) { localStorage.removeItem('xv_token'); localStorage.removeItem('xv_user'); token = null; me = null; alert('Sua sessão expirou. Faça login novamente.'); return loginPage() } let e; try { e = await r.json() } catch { }; throw new Error(e?.error || `HTTP ${r.status}`) } return r.headers.get('content-type')?.includes('application/json') ? r.json() : r.blob() } catch (e) { if (path.startsWith('/api/auth/') || path.startsWith('/api/setup/')) { throw new Error('Não foi possível conectar ao servidor ERP. Verifique sua conexão com a internet ou se o endereço do servidor está correto.'); } if ((!navigator.onLine || e instanceof TypeError || e?.name === 'TypeError' || e.message?.includes('fetch') || e.message?.includes('NetworkError') || e.message?.includes('Failed to fetch')) && opt.method && opt.method !== 'GET') { const q = await queueOffline(path, opt); return { offline: true, queued_id: q.id } } throw e } }
+function money(v) { const n = Number(v); return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number.isFinite(n) ? n : 0) }
+function offlineDb() { return new Promise((resolve, reject) => { const r = indexedDB.open('xv-offline-v1-' + encodeURIComponent(me?.id || 'anonymous'), 1); r.onupgradeneeded = () => { const d = r.result; if (!d.objectStoreNames.contains('kv')) d.createObjectStore('kv'); if (!d.objectStoreNames.contains('queue')) d.createObjectStore('queue', { keyPath: 'id' }) }; r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error) }) }
+async function offlinePut(store, key, value) { const d = await offlineDb(); return new Promise((res, rej) => { const t = d.transaction(store, 'readwrite'); t.objectStore(store).put(value, key); t.oncomplete = res; t.onerror = () => rej(t.error) }) }
+async function offlineGet(store, key) { const d = await offlineDb(); return new Promise((res, rej) => { const t = d.transaction(store); const r = t.objectStore(store).get(key); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error) }) }
+async function queueOffline(path, opt) { const id = crypto.randomUUID(); const item = { id, path, method: opt.method || 'POST', body: opt.body || '{}', headers: opt.headers || {}, created_at: new Date().toISOString() }; const d = await offlineDb(); await new Promise((res, rej) => { const t = d.transaction('queue', 'readwrite'); t.objectStore('queue').put(item); t.oncomplete = res; t.onerror = () => rej(t.error) }); return item }
+async function syncOfflineQueue() { if (!navigator.onLine) return; const d = await offlineDb(); const rows = await new Promise((res, rej) => { const t = d.transaction('queue'); const q = t.objectStore('queue').getAll(); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error) }); let synced = 0; for (const item of (rows || []).sort((a, b) => a.created_at.localeCompare(b.created_at))) { try { await api(item.path, { method: item.method, body: item.body, headers: { ...(item.headers || {}), 'Idempotency-Key': item.headers?.['Idempotency-Key'] || ('OFF-' + item.id) } }); await new Promise((res, rej) => { const t = d.transaction('queue', 'readwrite'); t.objectStore('queue').delete(item.id); t.oncomplete = res; t.onerror = () => rej(t.error) }); synced++ } catch (e) { if (!navigator.onLine) break; console.warn('sync-pending', e.message) } } if (synced > 0) { toastRole(`✓ ${synced} operação(ões) offline sincronizada(s) com sucesso!`); if (typeof roleRealtimeRefresh === 'function') { roleRealtimeRefresh('orders_changed'); roleRealtimeRefresh('stock_changed') } } }
+let _roleNetTimer = null;
+function handleRoleNetworkChange(isOnline) {
   clearTimeout(_roleNetTimer);
-  _roleNetTimer=setTimeout(async()=>{
-    const reallyOnline = typeof navigator.onLine==='boolean' ? navigator.onLine : isOnline;
-    const el=document.getElementById('offlineIndicator')||document.getElementById('roleOfflineIndicator');
-    if(reallyOnline){
-      if(el)el.style.display='none';
+  _roleNetTimer = setTimeout(async () => {
+    const reallyOnline = typeof navigator.onLine === 'boolean' ? navigator.onLine : isOnline;
+    const el = document.getElementById('offlineIndicator') || document.getElementById('roleOfflineIndicator');
+    if (reallyOnline) {
+      if (el) el.style.display = 'none';
       toastRole("Conexão restabelecida! Sincronizando...");
       await syncOfflineQueue();
-      if(typeof roleRealtimeRefresh==='function'){
+      if (typeof roleRealtimeRefresh === 'function') {
         roleRealtimeRefresh('orders_changed');
         roleRealtimeRefresh('stock_changed');
       }
-    }else{
-      if(el)el.style.display='inline-flex';
+    } else {
+      if (el) el.style.display = 'inline-flex';
       toastRole("Dispositivo em Modo Offline. Operando localmente.", true);
     }
   }, 300);
 }
-window.addEventListener('online',()=>handleRoleNetworkChange(true));
-window.addEventListener('offline',()=>handleRoleNetworkChange(false));
-setTimeout(syncOfflineQueue,1200);
+window.addEventListener('online', () => handleRoleNetworkChange(true));
+window.addEventListener('offline', () => handleRoleNetworkChange(false));
+setTimeout(syncOfflineQueue, 1200);
 
-let _roleToastTimer=null;
-function toastRole(m,isError=false){
-  let t=$('#toast')||$('#roleToast')||$('#storeToast');
-  if(!t){t=document.createElement('div');t.id='roleToast';t.className='toast';document.body.appendChild(t)}
+let _roleToastTimer = null;
+function toastRole(m, isError = false) {
+  let t = $('#toast') || $('#roleToast') || $('#storeToast');
+  if (!t) { t = document.createElement('div'); t.id = 'roleToast'; t.className = 'toast'; document.body.appendChild(t) }
   clearTimeout(_roleToastTimer);
-  t.textContent=m;
-  t.style.display='block';
-  t.style.opacity='1';
-  t.style.backgroundColor=isError?'#991b1b':'var(--xv-primary,#0f172a)';
-  t.style.color='#fff';
-  _roleToastTimer=setTimeout(()=>{t.style.opacity='0';setTimeout(()=>{t.style.display='none'},300)},2500);
+  t.textContent = m;
+  t.style.display = 'block';
+  t.style.opacity = '1';
+  t.style.backgroundColor = isError ? '#991b1b' : 'var(--xv-primary,#0f172a)';
+  t.style.color = '#fff';
+  _roleToastTimer = setTimeout(() => { t.style.opacity = '0'; setTimeout(() => { t.style.display = 'none' }, 300) }, 2500);
 }
-window.toastStore=toastRole;
-const toast=toastRole;
-const brl=money;
-function modal(title,body,width='700px'){
+window.toastStore = toastRole;
+const toast = toastRole;
+const brl = money;
+function modal(title, body, width = '700px') {
   document.querySelector('#modal')?.remove();
-  const x=document.createElement('div');
-  x.id='modal';
-  x.style='position:fixed;inset:0;background:rgba(0,0,0,0.7);display:grid;place-items:center;z-index:1000;padding:12px;overflow-y:auto;';
-  x.innerHTML=`<div class="panel" style="width:min(${width},96vw);max-height:92vh;overflow-y:auto;background:var(--bg,#fff);box-shadow:0 20px 45px rgba(0,0,0,0.35);border-radius:12px;padding:20px;border:1px solid #dfe5ed;"><div class="top" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #e2e8f0;"><h2 style="margin:0;font-size:1.25rem;color:var(--xv-brand-navy,#061a4f);">${title}</h2><button class="btn" onclick="closeModal()" style="padding:4px 10px;font-size:16px;">✕</button></div>${body}</div>`;
+  const x = document.createElement('div');
+  x.id = 'modal';
+  x.style = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:grid;place-items:center;z-index:1000;padding:12px;overflow-y:auto;';
+  x.innerHTML = `<div class="panel" style="width:min(${width},96vw);max-height:92vh;overflow-y:auto;background:var(--bg,#fff);box-shadow:0 20px 45px rgba(0,0,0,0.35);border-radius:12px;padding:20px;border:1px solid #dfe5ed;"><div class="top" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #e2e8f0;"><h2 style="margin:0;font-size:1.25rem;color:var(--xv-brand-navy,#061a4f);">${title}</h2><button class="btn" onclick="closeModal()" style="padding:4px 10px;font-size:16px;">✕</button></div>${body}</div>`;
   document.body.appendChild(x);
 }
-function closeModal(){
+function closeModal() {
   document.querySelector('#modal')?.remove();
 }
-window.modal=modal;
-window.closeModal=closeModal;
+window.modal = modal;
+window.closeModal = closeModal;
 
-async function openRealtimeStream(){const response=await fetch('/api/events/ticket',{method:'POST',headers:{authorization:'Bearer '+token}});if(!response.ok){if(response.status===401||response.status===403)return null;throw new Error('Realtime temporariamente indisponivel')}const {ticket}=await response.json();return new EventSource('/api/events?ticket='+encodeURIComponent(ticket))}
-const Realtime={
-  bc:null,es:null,listeners:[],connecting:false,reconnectDelay:1000,
-  openStream:openRealtimeStream,
-  connectStream(){if(this.es||this.connecting)return;this.connecting=true;this.openStream().then(stream=>{if(!stream)return;this.es=stream;this.reconnectDelay=1000;stream.onmessage=e=>{try{const d=JSON.parse(e.data);this.dispatch(d.type,d.payload,'sse')}catch(err){}};stream.onerror=()=>{stream.close();if(this.es===stream)this.es=null;const delay=this.reconnectDelay;this.reconnectDelay=Math.min(30000,delay*2);setTimeout(()=>this.connectStream(),delay)}}).catch(()=>{const delay=this.reconnectDelay;this.reconnectDelay=Math.min(30000,delay*2);setTimeout(()=>this.connectStream(),delay)}).finally(()=>{this.connecting=false})},
-  init(onMsg){
-    if(onMsg)this.listeners.push(onMsg);
-    if(!this.bc&&typeof BroadcastChannel!=='undefined'){
-      try{
-        this.bc=new BroadcastChannel('xv_erp_realtime');
-        this.bc.onmessage=e=>{if(e?.data)this.dispatch(e.data.type,e.data.payload,'bc')};
-      }catch(e){}
+async function openRealtimeStream() { const response = await fetch('/api/events/ticket', { method: 'POST', headers: { authorization: 'Bearer ' + token } }); if (!response.ok) { if (response.status === 401 || response.status === 403) return null; throw new Error('Realtime temporariamente indisponivel') } const { ticket } = await response.json(); return new EventSource('/api/events?ticket=' + encodeURIComponent(ticket)) }
+const Realtime = {
+  bc: null, es: null, listeners: [], connecting: false, reconnectDelay: 1000,
+  openStream: openRealtimeStream,
+  connectStream() { if (this.es || this.connecting) return; this.connecting = true; this.openStream().then(stream => { if (!stream) return; this.es = stream; this.reconnectDelay = 1000; stream.onmessage = e => { try { const d = JSON.parse(e.data); this.dispatch(d.type, d.payload, 'sse') } catch (err) { } }; stream.onerror = () => { stream.close(); if (this.es === stream) this.es = null; const delay = this.reconnectDelay; this.reconnectDelay = Math.min(30000, delay * 2); setTimeout(() => this.connectStream(), delay) } }).catch(() => { const delay = this.reconnectDelay; this.reconnectDelay = Math.min(30000, delay * 2); setTimeout(() => this.connectStream(), delay) }).finally(() => { this.connecting = false }) },
+  init(onMsg) {
+    if (onMsg) this.listeners.push(onMsg);
+    if (!this.bc && typeof BroadcastChannel !== 'undefined') {
+      try {
+        this.bc = new BroadcastChannel('xv_erp_realtime');
+        this.bc.onmessage = e => { if (e?.data) this.dispatch(e.data.type, e.data.payload, 'bc') };
+      } catch (e) { }
     }
-    if(!this.es&&typeof EventSource!=='undefined'){
-      try{
-        this.connectStream();window.addEventListener('online',()=>this.connectStream());
-        
-      }catch(e){}
+    if (!this.es && typeof EventSource !== 'undefined') {
+      try {
+        this.connectStream(); window.addEventListener('online', () => this.connectStream());
+
+      } catch (e) { }
     }
-    window.addEventListener('visibilitychange',()=>{if(!document.hidden)this.dispatch('tab_focused',{},'local')});
+    window.addEventListener('visibilitychange', () => { if (!document.hidden) this.dispatch('tab_focused', {}, 'local') });
   },
-  emit(type,payload={}){
-    this.dispatch(type,payload,'local');
-    try{this.bc?.postMessage({type,payload})}catch(e){}
+  emit(type, payload = {}) {
+    this.dispatch(type, payload, 'local');
+    try { this.bc?.postMessage({ type, payload }) } catch (e) { }
   },
-  dispatch(type,payload,source){
-    for(const fn of this.listeners){try{fn(type,payload,source)}catch(e){console.error('Realtime err',e)}}
+  dispatch(type, payload, source) {
+    for (const fn of this.listeners) { try { fn(type, payload, source) } catch (e) { console.error('Realtime err', e) } }
   }
 };
 
-let _roleDebounce=null;
-async function roleRealtimeRefresh(type,payload){
+let _roleDebounce = null;
+async function roleRealtimeRefresh(type, payload) {
   clearTimeout(_roleDebounce);
-  _roleDebounce=setTimeout(async()=>{
-    if(document.querySelector('#modal')||document.querySelector('#sellerFloatingCartModal'))return;
-    const ae=document.activeElement;
-    if(ae&&(ae.tagName==='INPUT'||ae.tagName==='TEXTAREA'||ae.tagName==='SELECT'))return;
-    const role=document.body.dataset.role;
-    try{
-      if(role==='Frente de Loja / PDV'){
-        if(type==='clients_changed'||type==='tab_focused'){
-          try{
-            const c=await api('/api/clients');
-            window.pdvClients=c.items||[];
-            await offlinePut('kv','pdvClients',window.pdvClients);
-          }catch(e){}
+  _roleDebounce = setTimeout(async () => {
+    if (document.querySelector('#modal') || document.querySelector('#sellerFloatingCartModal')) return;
+    const ae = document.activeElement;
+    if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT')) return;
+    const role = document.body.dataset.role;
+    try {
+      if (role === 'Frente de Loja / PDV') {
+        if (type === 'clients_changed' || type === 'tab_focused') {
+          try {
+            const c = await api('/api/clients');
+            window.pdvClients = c.items || [];
+            await offlinePut('kv', 'pdvClients', window.pdvClients);
+          } catch (e) { }
         }
-        if(type==='stock_changed'||type==='products_changed'||type==='prices_changed'||type==='orders_changed'||type==='tab_focused'){
-          const clientId=$('#pdvClient')?.value||'CLIENTE-BALCAO';
-          const [p,s]=await Promise.all([
-            api('/api/products'+(clientId?'?cliente_id='+encodeURIComponent(clientId):'')),
+        if (type === 'stock_changed' || type === 'products_changed' || type === 'prices_changed' || type === 'orders_changed' || type === 'tab_focused') {
+          const clientId = $('#pdvClient')?.value || 'CLIENTE-BALCAO';
+          const [p, s] = await Promise.all([
+            api('/api/products' + (clientId ? '?cliente_id=' + encodeURIComponent(clientId) : '')),
             api('/api/stock')
           ]);
-          const sm=new Map(s.items.map(x=>[x.id,x]));
-          window.pdvProducts=p.items.map(x=>({...x,...(sm.get(x.id)||{})}));
-          await offlinePut('kv','pdvProducts',p.items);
-          await offlinePut('kv','pdvStock',s.items);
-          const searchInput=$('#pdvSearch');
-          if(searchInput&&searchInput.value.trim()){
+          const sm = new Map(s.items.map(x => [x.id, x]));
+          window.pdvProducts = p.items.map(x => ({ ...x, ...(sm.get(x.id) || {}) }));
+          await offlinePut('kv', 'pdvProducts', p.items);
+          await offlinePut('kv', 'pdvStock', s.items);
+          const searchInput = $('#pdvSearch');
+          if (searchInput && searchInput.value.trim()) {
             pdvFilter(searchInput);
           }
-          if(window.pdvCart&&Object.keys(window.pdvCart).length>0){
+          if (window.pdvCart && Object.keys(window.pdvCart).length > 0) {
             pdvCartRender();
           }
         }
-      }else if(role==='Vendedor Externo'){
+      } else if (role === 'Vendedor Externo') {
         // 1. Prioridade absoluta: se estiver montando pedido ou navegando catalogo, NUNCA redirecionar a tela
-        if(window.sellerCatalogMode || document.getElementById('sellerCatalogRoot')){
-          if(type==='stock_changed'||type==='products_changed'||type==='prices_changed'||type==='orders_changed'||type==='tab_focused'){
-            try{
-              const [p,s]=await Promise.all([
-                api('/api/products'+(window.sellerCurrentClientId?'?cliente_id='+encodeURIComponent(window.sellerCurrentClientId):'')),
+        if (window.sellerCatalogMode || document.getElementById('sellerCatalogRoot')) {
+          if (type === 'stock_changed' || type === 'products_changed' || type === 'prices_changed' || type === 'orders_changed' || type === 'tab_focused') {
+            try {
+              const [p, s] = await Promise.all([
+                api('/api/products' + (window.sellerCurrentClientId ? '?cliente_id=' + encodeURIComponent(window.sellerCurrentClientId) : '')),
                 api('/api/seller/stock')
               ]);
-              const sm=new Map(s.items.map(x=>[x.id,x]));
-              const items=p.items.map(x=>({...x,...(sm.get(x.id)||{})}));
-              if(window.sellerCatalogMode==='DEMO'){
-                window.sellerCatalogItems=items;
-                if(typeof sellerCatalogRender==='function')sellerCatalogRender(items);
-              }else{
-                window.sellerProducts=items;
+              const sm = new Map(s.items.map(x => [x.id, x]));
+              const items = p.items.map(x => ({ ...x, ...(sm.get(x.id) || {}) }));
+              if (window.sellerCatalogMode === 'DEMO') {
+                window.sellerCatalogItems = items;
+                if (typeof sellerCatalogRender === 'function') sellerCatalogRender(items);
+              } else {
+                window.sellerProducts = items;
                 const prodEl = $('#sellerProducts');
-                if(prodEl && typeof sellerRender==='function'){
+                if (prodEl && typeof sellerRender === 'function') {
                   let filtered = items;
-                  if(window.sellerCurrentCatId) filtered = filtered.filter(x => x.categoria_id === window.sellerCurrentCatId);
-                  if(window.sellerCurrentSubId) filtered = filtered.filter(x => x.subcategoria_id === window.sellerCurrentSubId);
+                  if (window.sellerCurrentCatId) filtered = filtered.filter(x => x.categoria_id === window.sellerCurrentCatId);
+                  if (window.sellerCurrentSubId) filtered = filtered.filter(x => x.subcategoria_id === window.sellerCurrentSubId);
                   sellerRender(filtered);
                 }
-                if(typeof renderSellerNewOrderCart==='function')renderSellerNewOrderCart();
+                if (typeof renderSellerNewOrderCart === 'function') renderSellerNewOrderCart();
               }
-            }catch(e){
+            } catch (e) {
               console.warn('Erro ao atualizar produtos em segundo plano no pedido do vendedor:', e);
             }
           }
-        }else if(document.getElementById('sellerStockList') || (document.querySelector('.mobile-header h1')?.textContent === 'Estoque disponível')){
+        } else if (document.getElementById('sellerStockList') || (document.querySelector('.mobile-header h1')?.textContent === 'Estoque disponível')) {
           // 2. Apenas atualiza o estoque se a tela de estoque estiver REALMENTE aberta
-          if(type==='stock_changed'||type==='products_changed'||type==='orders_changed'||type==='tab_focused'){
-            try{
-              const x=await api('/api/seller/stock');
-              const listEl=$('#sellerStockList');
-              if(listEl){
-                listEl.innerHTML=x.items.map(sellerStockRow).join('');
-                const search=$('#sellerStockSearch');
-                if(search&&search.value.trim())sellerStockFilter(search);
+          if (type === 'stock_changed' || type === 'products_changed' || type === 'orders_changed' || type === 'tab_focused') {
+            try {
+              const x = await api('/api/seller/stock');
+              const listEl = $('#sellerStockList');
+              if (listEl) {
+                listEl.innerHTML = x.items.map(sellerStockRow).join('');
+                const search = $('#sellerStockSearch');
+                if (search && search.value.trim()) sellerStockFilter(search);
               }
-            }catch(e){}
+            } catch (e) { }
           }
-        }else if(document.querySelector('.mobile-header h1')?.textContent === 'Meus pedidos'){
-          if(type==='orders_changed'||type==='returns_changed'||type==='tab_focused'){
+        } else if (document.querySelector('.mobile-header h1')?.textContent === 'Meus pedidos') {
+          if (type === 'orders_changed' || type === 'returns_changed' || type === 'tab_focused') {
             sellerOrders();
           }
-        }else if(document.querySelector('.mobile-header h1')?.textContent === 'Painel do mês'){
-          if(type==='orders_changed'||type==='returns_changed'||type==='tab_focused'){
+        } else if (document.querySelector('.mobile-header h1')?.textContent === 'Painel do mês') {
+          if (type === 'orders_changed' || type === 'returns_changed' || type === 'tab_focused') {
             sellerDashboard();
           }
-        }else if(document.querySelector('.mobile-header h1')?.textContent === 'Minhas Rotas'){
-          if(type==='routes_changed'||type==='tab_focused'){
+        } else if (document.querySelector('.mobile-header h1')?.textContent === 'Minhas Rotas') {
+          if (type === 'routes_changed' || type === 'tab_focused') {
             sellerMyRoutes();
           }
-        }else{
-          if(type==='clients_changed'||type==='orders_changed'||type==='returns_changed'||type==='tab_focused'){
-            if(typeof sellerRefreshCrm==='function')sellerRefreshCrm();
+        } else {
+          if (type === 'clients_changed' || type === 'orders_changed' || type === 'returns_changed' || type === 'tab_focused') {
+            if (typeof sellerRefreshCrm === 'function') sellerRefreshCrm();
           }
         }
-      }else if(role==='Loja Online'){
-        if(type==='orders_changed'||type==='tab_focused'){
-          const navActive=document.querySelector('.store-nav.active');
-          if(navActive&&navActive.textContent.toLowerCase().includes('ped')){
+      } else if (role === 'Loja Online') {
+        if (type === 'orders_changed' || type === 'tab_focused') {
+          const navActive = document.querySelector('.store-nav.active');
+          if (navActive && navActive.textContent.toLowerCase().includes('ped')) {
             lojaPedidos();
           }
         }
-        if(type==='products_changed'||type==='stock_changed'||type==='prices_changed'||type==='tab_focused'){
-          const p=await api('/api/products'+(window.lojaClientId?'?cliente_id='+encodeURIComponent(window.lojaClientId):''));
-          window.lojaProducts=p.items;
-          if($('#storeSubSearch')){
+        if (type === 'products_changed' || type === 'stock_changed' || type === 'prices_changed' || type === 'tab_focused') {
+          const p = await api('/api/products' + (window.lojaClientId ? '?cliente_id=' + encodeURIComponent(window.lojaClientId) : ''));
+          window.lojaProducts = p.items;
+          if ($('#storeSubSearch')) {
             lojaFilterSub();
-          }else if($('#storeProducts')){
+          } else if ($('#storeProducts')) {
             lojaFilter();
           }
-          if(typeof renderCart==='function'&&$('#cartItems')){
+          if (typeof renderCart === 'function' && $('#cartItems')) {
             renderCart();
           }
         }
-        if(type==='settings_changed'){
-          try{
-            const sc=await api('/api/store-config');
-            window.storeCfg=sc.config||{};
-            const navActive=document.querySelector('.store-nav.active');
-            if(navActive&&navActive.textContent.toLowerCase().includes('cat')){
-              const hero=$('.store-hero');
-              if(hero)hero.outerHTML=storeHeroHtml();
+        if (type === 'settings_changed') {
+          try {
+            const sc = await api('/api/store-config');
+            window.storeCfg = sc.config || {};
+            const navActive = document.querySelector('.store-nav.active');
+            if (navActive && navActive.textContent.toLowerCase().includes('cat')) {
+              const hero = $('.store-hero');
+              if (hero) hero.outerHTML = storeHeroHtml();
             }
-          }catch(e){}
+          } catch (e) { }
         }
-      }else if(role==='Motorista'){
-        if(type==='routes_changed'||type==='orders_changed'||type==='returns_changed'||type==='tab_focused'){
-          const hasModal=!!document.querySelector('#modal');
-          if(!hasModal){
-            const host=document.querySelector('.mobile-content');
-            if(host){
-              if(host.innerHTML.includes('Fila do dia')){
+      } else if (role === 'Motorista') {
+        if (type === 'routes_changed' || type === 'orders_changed' || type === 'returns_changed' || type === 'tab_focused') {
+          const hasModal = !!document.querySelector('#modal');
+          if (!hasModal) {
+            const host = document.querySelector('.mobile-content');
+            if (host) {
+              if (host.innerHTML.includes('Fila do dia')) {
                 driver();
-              }else if(host.innerHTML.includes('Rotas concluídas')){
+              } else if (host.innerHTML.includes('Rotas concluídas')) {
                 driverCompletedRoutes();
               }
             }
           }
         }
       }
-    }catch(err){console.warn('roleRealtimeRefresh err',err)}
-  },120);
+    } catch (err) { console.warn('roleRealtimeRefresh err', err) }
+  }, 120);
 }
-function getAuthPdfUrl(url){try{const full=new URL(url,window.location.origin);if(token&&!full.searchParams.has('token'))full.searchParams.set('token',token);if(!full.searchParams.has('format'))full.searchParams.set('format','pdf');return full.href}catch(_){return url+(url.includes('?')?'&':'?')+'token='+encodeURIComponent(token||'')+'&format=pdf'}}
-function closePdfViewerModal(){const m=document.getElementById('xvPdfModal');if(m)m.remove()}
-function printPdfFrame(frameId){if(window.AndroidApp?.printWebPage){try{window.AndroidApp.printWebPage();return}catch(_){}}const frame=document.getElementById(frameId);if(frame&&frame.contentWindow){try{frame.contentWindow.focus();frame.contentWindow.print();return}catch(_){}}window.print()}
-function openPdfViewerModal(pdfUrl,filename,blob){closePdfViewerModal();const blobUrl=blob?URL.createObjectURL(blob):pdfUrl;const modal=document.createElement('div');modal.id='xvPdfModal';modal.style.cssText='position:fixed;inset:0;background:rgba(2,6,23,0.85);z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;backdrop-filter:blur(4px);';modal.innerHTML=`<div style="background:#0f172a;border:1px solid #334155;border-radius:12px;width:100%;max-width:900px;height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);"><div style="padding:12px 16px;background:#1e293b;border-bottom:1px solid #334155;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;"><div style="display:flex;align-items:center;gap:8px;color:#fff;font-weight:700;font-size:15px;"><span>📄</span><span style="max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${filename||'Documento PDF'}</span></div><div style="display:flex;gap:8px;align-items:center;"><button type="button" class="btn" style="padding:6px 12px;font-size:13px;background:#fd5e02;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;" onclick="printPdfFrame('xvPdfFrame')">🖨️ Imprimir</button><a href="${blobUrl}" download="${filename||'documento.pdf'}" target="_blank" class="btn" style="padding:6px 12px;font-size:13px;background:#3b82f6;color:#fff;border:none;border-radius:6px;text-decoration:none;font-weight:700;display:inline-flex;align-items:center;">⬇ Baixar</a><button type="button" class="btn" style="padding:6px 12px;font-size:13px;background:#475569;color:#fff;border:none;border-radius:6px;cursor:pointer;" onclick="closePdfViewerModal()">✕ Fechar</button></div></div><div style="flex:1;position:relative;background:#f8fafc;width:100%;height:100%;"><iframe id="xvPdfFrame" src="${blobUrl}" style="width:100%;height:100%;border:none;" title="Visualizador de PDF"></iframe></div></div>`;document.body.appendChild(modal)}
-async function downloadAuthFile(url,filename){try{const authedUrl=getAuthPdfUrl(url);if(window.AndroidApp?.openPdf){try{window.AndroidApp.openPdf(authedUrl,filename||'documento.pdf')}catch(_){}}const reqId=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);console.log(`[${reqId}] GET ${url}`);const r=await fetch(url,{headers:{'x-request-id':reqId,...(token?{authorization:'Bearer '+token}:{})}});if(!r.ok)throw new Error('Não foi possível abrir o documento');const b=await r.blob();openPdfViewerModal(authedUrl,filename,b)}catch(e){if(window.AndroidApp?.openPdf){try{window.AndroidApp.openPdf(getAuthPdfUrl(url),filename||'documento.pdf');return}catch(_){}}alert(e.message)}}
-function logout(){localStorage.removeItem('xv_token');localStorage.removeItem('xv_user');token=null;me=null;loginPage()}
-function loginPage(){
-  const isStore=document.body.dataset.role==='Loja Online';
-  const roleName=esc(document.body.dataset.role||'Operação');
-  const srvUrl=(typeof API !== 'undefined' && API) ? API : (window.location.origin || 'https://xiquim-vargas-erp.onrender.com');
-  const hasAppConfig=typeof window !== 'undefined' && window.AndroidApp && typeof window.AndroidApp.openConfig === 'function';
-  document.body.innerHTML=`<div class="login"><div class="loginbox">
+function getAuthPdfUrl(url) { try { const full = new URL(url, window.location.origin); if (token && !full.searchParams.has('token')) full.searchParams.set('token', token); if (!full.searchParams.has('format')) full.searchParams.set('format', 'pdf'); return full.href } catch (_) { return url + (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(token || '') + '&format=pdf' } }
+function closePdfViewerModal() { const m = document.getElementById('xvPdfModal'); if (m) m.remove() }
+function printPdfFrame(frameId) { if (window.AndroidApp?.printWebPage) { try { window.AndroidApp.printWebPage(); return } catch (_) { } } const frame = document.getElementById(frameId); if (frame && frame.contentWindow) { try { frame.contentWindow.focus(); frame.contentWindow.print(); return } catch (_) { } } window.print() }
+function openPdfViewerModal(pdfUrl, filename, blob) { closePdfViewerModal(); const blobUrl = blob ? URL.createObjectURL(blob) : pdfUrl; const modal = document.createElement('div'); modal.id = 'xvPdfModal'; modal.style.cssText = 'position:fixed;inset:0;background:rgba(2,6,23,0.85);z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;backdrop-filter:blur(4px);'; modal.innerHTML = `<div style="background:#0f172a;border:1px solid #334155;border-radius:12px;width:100%;max-width:900px;height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);"><div style="padding:12px 16px;background:#1e293b;border-bottom:1px solid #334155;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;"><div style="display:flex;align-items:center;gap:8px;color:#fff;font-weight:700;font-size:15px;"><span>📄</span><span style="max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${filename || 'Documento PDF'}</span></div><div style="display:flex;gap:8px;align-items:center;"><button type="button" class="btn" style="padding:6px 12px;font-size:13px;background:#fd5e02;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;" onclick="printPdfFrame('xvPdfFrame')">🖨️ Imprimir</button><a href="${blobUrl}" download="${filename || 'documento.pdf'}" target="_blank" class="btn" style="padding:6px 12px;font-size:13px;background:#3b82f6;color:#fff;border:none;border-radius:6px;text-decoration:none;font-weight:700;display:inline-flex;align-items:center;">⬇ Baixar</a><button type="button" class="btn" style="padding:6px 12px;font-size:13px;background:#475569;color:#fff;border:none;border-radius:6px;cursor:pointer;" onclick="closePdfViewerModal()">✕ Fechar</button></div></div><div style="flex:1;position:relative;background:#f8fafc;width:100%;height:100%;"><iframe id="xvPdfFrame" src="${blobUrl}" style="width:100%;height:100%;border:none;" title="Visualizador de PDF"></iframe></div></div>`; document.body.appendChild(modal) }
+async function downloadAuthFile(url, filename) { try { const authedUrl = getAuthPdfUrl(url); if (window.AndroidApp?.openPdf) { try { window.AndroidApp.openPdf(authedUrl, filename || 'documento.pdf') } catch (_) { } } const reqId = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10); console.log(`[${reqId}] GET ${url}`); const r = await fetch(url, { headers: { 'x-request-id': reqId, ...(token ? { authorization: 'Bearer ' + token } : {}) } }); if (!r.ok) throw new Error('Não foi possível abrir o documento'); const b = await r.blob(); openPdfViewerModal(authedUrl, filename, b) } catch (e) { if (window.AndroidApp?.openPdf) { try { window.AndroidApp.openPdf(getAuthPdfUrl(url), filename || 'documento.pdf'); return } catch (_) { } } alert(e.message) } }
+function logout() { localStorage.removeItem('xv_token'); localStorage.removeItem('xv_user'); token = null; me = null; loginPage() }
+function loginPage() {
+  const isStore = document.body.dataset.role === 'Loja Online';
+  const roleName = esc(document.body.dataset.role || 'Operação');
+  const srvUrl = (typeof API !== 'undefined' && API) ? API : (window.location.origin || 'https://xiquim-vargas-erp.onrender.com');
+  const hasAppConfig = typeof window !== 'undefined' && window.AndroidApp && typeof window.AndroidApp.openConfig === 'function';
+  document.body.innerHTML = `<div class="login"><div class="loginbox">
     <img class="xv-logo" src="/assets/institucional/01_Logo_Xiquim_Vargas_HD.png" alt="Xiquim Vargas">
     <h1>${roleName}</h1>
-    ${isStore?`<p style="color:#ffffff">Escolha como deseja acessar a Loja Online.</p><div class="actions" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button class="btn primary" onclick="storeAuthMode('login')">Fazer Login</button><button class="btn" style="color:#ffffff;background:#162438;border:1px solid #2e4362" onclick="storeAuthMode('register')">Cadastre-se</button></div><div id="storeAuthBox"></div>`:`<p style="color:#ffffff">Entre com suas credenciais para acessar sua operação.</p><form id="roleLoginForm"><div class="field"><label style="color:#ffffff">E-mail, Usuário ou Telefone</label><input name="email" type="text" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Seu e-mail, usuário ou telefone" required></div><br><div class="field"><label style="color:#ffffff">Senha</label><div style="display:flex;gap:6px"><input name="password" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Sua senha" required style="flex:1"><button type="button" class="btn" tabindex="-1" style="color:#ffffff;background:#162438;border:1px solid #2e4362" onclick="const x=this.previousElementSibling; x.type=x.type==='password'?'text':'password'">👁</button></div></div><br><button class="btn primary" type="submit" style="width:100%;padding:13px;font-weight:700">Entrar na operação</button></form>`}
+    ${isStore ? `<p style="color:#ffffff">Escolha como deseja acessar a Loja Online.</p><div class="actions" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button class="btn primary" onclick="storeAuthMode('login')">Fazer Login</button><button class="btn" style="color:#ffffff;background:#162438;border:1px solid #2e4362" onclick="storeAuthMode('register')">Cadastre-se</button></div><div id="storeAuthBox"></div>` : `<p style="color:#ffffff">Entre com suas credenciais para acessar sua operação.</p><form id="roleLoginForm"><div class="field"><label style="color:#ffffff">E-mail, Usuário ou Telefone</label><input name="email" type="text" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Seu e-mail, usuário ou telefone" required></div><br><div class="field"><label style="color:#ffffff">Senha</label><div style="display:flex;gap:6px"><input name="password" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Sua senha" required style="flex:1"><button type="button" class="btn" tabindex="-1" style="color:#ffffff;background:#162438;border:1px solid #2e4362" onclick="const x=this.previousElementSibling; x.type=x.type==='password'?'text':'password'">👁</button></div></div><br><button class="btn primary" type="submit" style="width:100%;padding:13px;font-weight:700">Entrar na operação</button></form>`}
     <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.1);text-align:center;">
       <small style="color:#94a3b8;font-size:12px;display:block">Servidor conectado:</small>
       <code style="color:#38bdf8;font-size:11px;word-break:break-all">${srvUrl}</code>
       ${hasAppConfig ? `<div style="margin-top:8px"><button type="button" class="btn" style="padding:6px 14px;font-size:12px;background:rgba(255,255,255,0.08);color:#e2e8f0;border:1px solid rgba(255,255,255,0.15);" onclick="window.AndroidApp.openConfig()">⚙ Trocar Endereço do Servidor</button></div>` : ''}
     </div>
   </div></div><div id="toastRoleBox" class="toast"></div>`;
-  if(!isStore)document.getElementById('roleLoginForm').addEventListener('submit',doLogin)
+  if (!isStore) document.getElementById('roleLoginForm').addEventListener('submit', doLogin)
 }
-function storeAuthMode(mode){const box=$('#storeAuthBox');if(mode==='login'){box.innerHTML=`<form id="roleLoginForm" class="form" style="margin-top:18px"><div class="field"><label style="color:#ffffff">E-mail, Usuário ou Telefone</label><input name="email" type="text" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Ex: seu e-mail" required></div><div class="field"><label style="color:#ffffff">Senha</label><div style="display:flex;gap:6px"><input name="password" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" required style="flex:1"><button type="button" class="btn" tabindex="-1" style="color:#ffffff;background:#162438;border:1px solid #2e4362" onclick="const x=this.previousElementSibling; x.type=x.type==='password'?'text':'password'">👁</button></div></div><button class="btn primary" style="width:100%">Fazer Login</button></form>`;$('#roleLoginForm').addEventListener('submit',doLogin);return}storeRegister()}
-const DEFAULT_GV_BAIRROS_ROLE=['Acampamento da Vale','Açucena','Altinópolis','Alto Esplanada','Asteca','Atalaia','Bela Vista','Belvedere','Betel','Boa Vista','Canaã','Capim','Carapina','Caravelas','Cardo','Castanheira','Centro','Chácara Braúnas','Cidade Jardim','Cidade Nova','Conquista','Distrito Industrial','Elvamar','Esperança','Esplanada','Esplanadinha','Fazenda Arnô','Figueira do Rio Doce','Floresta','Fraternidade','Grã-Duquesa','Guaçuí','Ilha dos Araújos','Industrial','Ipê','Jardim Alice','Jardim Atalaia','Jardim do Trevo','Jardim Ipê','Jardim Pérola','Jardim Primavera','Jardim Vera Cruz','JK','JK 1','JK 2','JK 3','Kennedy','Lagoa Santa','Lourdes','Mãe de Deus','Maria Eugênia','Mirante','Monte Carmelo','Morada do Acampamento','Morada do Vale','Morada do Vale II','Morada do Vale III','Morro do Carapina','Nossa Senhora das Graças','Nossa Senhora de Fátima','Nova JK','Nova Vila Bretas','Novo Horizonte','Palmeiras','Parque das Aroeiras','Parque Olímpico','Penha','Pérola','Planalto','Recanto dos Sonhos','Residencial Figueira','Residencial Rio Doce','Retiro dos Lagos','Sagrada Família','Santa Efigênia','Santa Helena','Santa Paula','Santa Rita','Santa Terezinha','Santo Antônio','Santos Dumont','São Cristóvão','São Geraldo','São José','São Paulo','São Pedro','São Raimundo','São Tarcísio','Sertão do Rio Doce','SIR','Sítio das Flores','Tiradentes','Trevo','Turmalina','Universitário','Vale do Sol','Vale Pastoril','Vera Cruz','Vila Bretas','Vila dos Montes','Vila Império','Vila Isa','Vila Mariana','Vila Ozanan','Vila Parque Ibituruna','Vila Rica','Vila União','Village da Serra','Vista Alegre','Vitória'];
-async function loadCityBairrosForRole(){try{const res=await api('/api/city-bairros');if(Array.isArray(res?.items)&&res.items.length){window._roleCityBairros=res.items;try{await offlinePut('kv','cityBairros',res.items)}catch(_){}return res.items}}catch(_){try{const cached=await offlineGet('kv','cityBairros');if(Array.isArray(cached)&&cached.length)return cached}catch(__){}}return window._roleCityBairros||DEFAULT_GV_BAIRROS_ROLE}
-async function storeRegister(){const box=$('#storeAuthBox')||$('#registerBox');if(!box)return;const bairros=await loadCityBairrosForRole();box.innerHTML=`<form id="storeRegisterForm" class="form" style="margin-top:18px"><div class="field"><label style="color:#ffffff">Nome</label><input name="nome" required></div><div class="field"><label style="color:#ffffff">E-mail</label><input name="email" type="email" autocomplete="email" required></div><div class="field"><label style="color:#ffffff">Telefone</label><input name="telefone" type="tel" autocomplete="tel" maxlength="40" required></div><div class="field"><label style="color:#ffffff">Endereço</label><input name="endereco" autocomplete="street-address" maxlength="240" required></div><div class="field"><label style="color:#ffffff">Bairro (Governador Valadares - MG)</label><select name="bairro" required><option value="" disabled selected>Selecione o seu bairro...</option>${bairros.map(b=>`<option value="${esc(b)}">${esc(b)}</option>`).join('')}</select></div><div class="field"><label style="color:#ffffff">Cidade / UF</label><select name="cidade" required><option value="Governador Valadares" selected>Governador Valadares - MG</option></select><input type="hidden" name="estado" value="MG"></div><div class="field"><label style="color:#ffffff">Criar senha</label><div style="display:flex;gap:6px"><input id="regPassword" name="password" type="password" minlength="8" required style="flex:1"><button type="button" class="btn" style="color:#ffffff;background:#162438;border:1px solid #2e4362" onclick="const x=$('#regPassword');x.type=x.type==='password'?'text':'password'">👁</button></div></div><button class="btn primary" style="width:100%">Criar cadastro</button></form>`;$('#storeRegisterForm').onsubmit=async e=>{e.preventDefault();try{const x=await api('/api/store/register',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});if(!x||!x.token)throw new Error(x?.error||'Não foi possível concluir o cadastro.');token=x.token;me=x.user;safeStorageSet('xv_token',token);safeStorageSet('xv_user',JSON.stringify(x.user||{}));await renderRole()}catch(err){alert(err.message)}}}
-async function doLogin(e){
+function storeAuthMode(mode) { const box = $('#storeAuthBox'); if (mode === 'login') { box.innerHTML = `<form id="roleLoginForm" class="form" style="margin-top:18px"><div class="field"><label style="color:#ffffff">E-mail, Usuário ou Telefone</label><input name="email" type="text" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Ex: seu e-mail" required></div><div class="field"><label style="color:#ffffff">Senha</label><div style="display:flex;gap:6px"><input name="password" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" required style="flex:1"><button type="button" class="btn" tabindex="-1" style="color:#ffffff;background:#162438;border:1px solid #2e4362" onclick="const x=this.previousElementSibling; x.type=x.type==='password'?'text':'password'">👁</button></div></div><button class="btn primary" style="width:100%">Fazer Login</button></form>`; $('#roleLoginForm').addEventListener('submit', doLogin); return } storeRegister() }
+const DEFAULT_GV_BAIRROS_ROLE = ['Acampamento da Vale', 'Açucena', 'Altinópolis', 'Alto Esplanada', 'Asteca', 'Atalaia', 'Bela Vista', 'Belvedere', 'Betel', 'Boa Vista', 'Canaã', 'Capim', 'Carapina', 'Caravelas', 'Cardo', 'Castanheira', 'Centro', 'Chácara Braúnas', 'Cidade Jardim', 'Cidade Nova', 'Conquista', 'Distrito Industrial', 'Elvamar', 'Esperança', 'Esplanada', 'Esplanadinha', 'Fazenda Arnô', 'Figueira do Rio Doce', 'Floresta', 'Fraternidade', 'Grã-Duquesa', 'Guaçuí', 'Ilha dos Araújos', 'Industrial', 'Ipê', 'Jardim Alice', 'Jardim Atalaia', 'Jardim do Trevo', 'Jardim Ipê', 'Jardim Pérola', 'Jardim Primavera', 'Jardim Vera Cruz', 'JK', 'JK 1', 'JK 2', 'JK 3', 'Kennedy', 'Lagoa Santa', 'Lourdes', 'Mãe de Deus', 'Maria Eugênia', 'Mirante', 'Monte Carmelo', 'Morada do Acampamento', 'Morada do Vale', 'Morada do Vale II', 'Morada do Vale III', 'Morro do Carapina', 'Nossa Senhora das Graças', 'Nossa Senhora de Fátima', 'Nova JK', 'Nova Vila Bretas', 'Novo Horizonte', 'Palmeiras', 'Parque das Aroeiras', 'Parque Olímpico', 'Penha', 'Pérola', 'Planalto', 'Recanto dos Sonhos', 'Residencial Figueira', 'Residencial Rio Doce', 'Retiro dos Lagos', 'Sagrada Família', 'Santa Efigênia', 'Santa Helena', 'Santa Paula', 'Santa Rita', 'Santa Terezinha', 'Santo Antônio', 'Santos Dumont', 'São Cristóvão', 'São Geraldo', 'São José', 'São Paulo', 'São Pedro', 'São Raimundo', 'São Tarcísio', 'Sertão do Rio Doce', 'SIR', 'Sítio das Flores', 'Tiradentes', 'Trevo', 'Turmalina', 'Universitário', 'Vale do Sol', 'Vale Pastoril', 'Vera Cruz', 'Vila Bretas', 'Vila dos Montes', 'Vila Império', 'Vila Isa', 'Vila Mariana', 'Vila Ozanan', 'Vila Parque Ibituruna', 'Vila Rica', 'Vila União', 'Village da Serra', 'Vista Alegre', 'Vitória'];
+async function loadCityBairrosForRole() { try { const res = await api('/api/city-bairros'); if (Array.isArray(res?.items) && res.items.length) { window._roleCityBairros = res.items; try { await offlinePut('kv', 'cityBairros', res.items) } catch (_) { } return res.items } } catch (_) { try { const cached = await offlineGet('kv', 'cityBairros'); if (Array.isArray(cached) && cached.length) return cached } catch (__) { } } return window._roleCityBairros || DEFAULT_GV_BAIRROS_ROLE }
+async function storeRegister() { const box = $('#storeAuthBox') || $('#registerBox'); if (!box) return; const bairros = await loadCityBairrosForRole(); box.innerHTML = `<form id="storeRegisterForm" class="form" style="margin-top:18px"><div class="field"><label style="color:#ffffff">Nome</label><input name="nome" required></div><div class="field"><label style="color:#ffffff">E-mail</label><input name="email" type="email" autocomplete="email" required></div><div class="field"><label style="color:#ffffff">Telefone</label><input name="telefone" type="tel" autocomplete="tel" maxlength="40" required></div><div class="field"><label style="color:#ffffff">Endereço</label><input name="endereco" autocomplete="street-address" maxlength="240" required></div><div class="field"><label style="color:#ffffff">Bairro (Governador Valadares - MG)</label><select name="bairro" required><option value="" disabled selected>Selecione o seu bairro...</option>${bairros.map(b => `<option value="${esc(b)}">${esc(b)}</option>`).join('')}</select></div><div class="field"><label style="color:#ffffff">Cidade / UF</label><select name="cidade" required><option value="Governador Valadares" selected>Governador Valadares - MG</option></select><input type="hidden" name="estado" value="MG"></div><div class="field"><label style="color:#ffffff">Criar senha</label><div style="display:flex;gap:6px"><input id="regPassword" name="password" type="password" minlength="8" required style="flex:1"><button type="button" class="btn" style="color:#ffffff;background:#162438;border:1px solid #2e4362" onclick="const x=$('#regPassword');x.type=x.type==='password'?'text':'password'">👁</button></div></div><button class="btn primary" style="width:100%">Criar cadastro</button></form>`; $('#storeRegisterForm').onsubmit = async e => { e.preventDefault(); try { const x = await api('/api/store/register', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(e.currentTarget))) }); if (!x || !x.token) throw new Error(x?.error || 'Não foi possível concluir o cadastro.'); token = x.token; me = x.user; safeStorageSet('xv_token', token); safeStorageSet('xv_user', JSON.stringify(x.user || {})); await renderRole() } catch (err) { alert(err.message) } } }
+async function doLogin(e) {
   e.preventDefault();
-  const form=e.currentTarget;
-  if(!(form instanceof HTMLFormElement))return alert('Não foi possível identificar o formulário de login. Atualize a página e tente novamente.');
-  const submit=form.querySelector('button[type=submit]');
-  if(submit){submit.disabled=true;submit.textContent='Entrando…'}
-  try{
-    const rawData=Object.fromEntries(new FormData(form));
-    const data={email:String(rawData.email||'').trim(),password:String(rawData.password||'').trim()};
-    if(!data.email)throw new Error('Informe o e-mail ou usuário para entrar.');
-    if(!data.password)throw new Error('Informe a senha.');
-    const x=await api('/api/auth/login',{method:'POST',body:JSON.stringify(data)});
-    if(!x||!x.token){
-      throw new Error(x?.error||'Não foi possível validar as credenciais.');
+  const form = e.currentTarget;
+  if (!(form instanceof HTMLFormElement)) return alert('Não foi possível identificar o formulário de login. Atualize a página e tente novamente.');
+  const submit = form.querySelector('button[type=submit]');
+  if (submit) { submit.disabled = true; submit.textContent = 'Entrando…' }
+  try {
+    const rawData = Object.fromEntries(new FormData(form));
+    const data = { email: String(rawData.email || '').trim(), password: String(rawData.password || '').trim() };
+    if (!data.email) throw new Error('Informe o e-mail ou usuário para entrar.');
+    if (!data.password) throw new Error('Informe a senha.');
+    const x = await api('/api/auth/login', { method: 'POST', body: JSON.stringify(data) });
+    if (!x || !x.token) {
+      throw new Error(x?.error || 'Não foi possível validar as credenciais.');
     }
-    const pageRole=document.body.dataset.role;
-    const userRole=String(x.user?.role||'').toLowerCase().trim();
-    if(pageRole && userRole && !isRoleAllowed(pageRole, userRole)){
-      throw new Error(`Esta interface (${pageRole}) não corresponde ao seu perfil de acesso (${x.user?.role||'indefinido'}). Faça login com o perfil correspondente.`);
+    const pageRole = document.body.dataset.role;
+    const userRole = String(x.user?.role || '').toLowerCase().trim();
+    if (pageRole && userRole && !isRoleAllowed(pageRole, userRole)) {
+      throw new Error(`Esta interface (${pageRole}) não corresponde ao seu perfil de acesso (${x.user?.role || 'indefinido'}). Faça login com o perfil correspondente.`);
     }
-    token=x.token;
-    me=x.user;
-    safeStorageSet('xv_token',token);
-    safeStorageSet('xv_user',JSON.stringify(x.user||{}));
+    token = x.token;
+    me = x.user;
+    safeStorageSet('xv_token', token);
+    safeStorageSet('xv_user', JSON.stringify(x.user || {}));
     await renderRole();
-  }catch(err){
+  } catch (err) {
     alert(err.message);
-    if(submit){submit.disabled=false;submit.textContent='Entrar na operação'}
+    if (submit) { submit.disabled = false; submit.textContent = 'Entrar na operação' }
   }
 }
-function userFromToken(t){try{const p=String(t||'').split('.')[1];if(!p)return null;let b64=p.replace(/-/g,'+').replace(/_/g,'/');while(b64.length%4!==0)b64+='=';const jsonStr=decodeURIComponent(atob(b64).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join(''));const d=JSON.parse(jsonStr);return d?{id:d.sub,role:d.role,email:d.email,nome:d.nome}:null}catch{try{let b64=String(t||'').split('.')[1].replace(/-/g,'+').replace(/_/g,'/');while(b64.length%4!==0)b64+='=';const d=JSON.parse(atob(b64));return d?{id:d.sub,role:d.role,email:d.email,nome:d.nome}:null}catch{return null}}}
-function isRoleAllowed(pageRole, rawRole){
-  const r=String(rawRole||'').toLowerCase().replace(/[-_]/g,' ').trim();
-  if(!r)return false;
-  if(r.includes('admin')||r==='root'||r.includes('gerente'))return true;
-  if(pageRole==='Vendedor Externo'){
-    return r.includes('seller')||r.includes('vendedor')||r.includes('venda')||r.includes('comercial')||r.includes('extern')||r.includes('repres');
+function userFromToken(t) { try { const p = String(t || '').split('.')[1]; if (!p) return null; let b64 = p.replace(/-/g, '+').replace(/_/g, '/'); while (b64.length % 4 !== 0) b64 += '='; const jsonStr = decodeURIComponent(atob(b64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')); const d = JSON.parse(jsonStr); return d ? { id: d.sub, role: d.role, email: d.email, nome: d.nome } : null } catch { try { let b64 = String(t || '').split('.')[1].replace(/-/g, '+').replace(/_/g, '/'); while (b64.length % 4 !== 0) b64 += '='; const d = JSON.parse(atob(b64)); return d ? { id: d.sub, role: d.role, email: d.email, nome: d.nome } : null } catch { return null } } }
+function isRoleAllowed(pageRole, rawRole) {
+  const r = String(rawRole || '').toLowerCase().replace(/[-_]/g, ' ').trim();
+  if (!r) return false;
+  if (r.includes('admin') || r === 'root' || r.includes('gerente')) return true;
+  if (pageRole === 'Vendedor Externo') {
+    return r.includes('seller') || r.includes('vendedor') || r.includes('venda') || r.includes('comercial') || r.includes('extern') || r.includes('repres');
   }
-  if(pageRole==='Frente de Loja / PDV'){
-    return r.includes('cashier')||r.includes('caixa')||r.includes('pdv')||r.includes('balcao')||r.includes('balcão')||r.includes('operador');
+  if (pageRole === 'Frente de Loja / PDV') {
+    return r.includes('cashier') || r.includes('caixa') || r.includes('pdv') || r.includes('balcao') || r.includes('balcão') || r.includes('operador');
   }
-  if(pageRole==='Loja Online'){
-    return r.includes('web')||r.includes('client')||r.includes('cliente')||r.includes('consumidor')||r.includes('loja');
+  if (pageRole === 'Loja Online') {
+    return r.includes('web') || r.includes('client') || r.includes('cliente') || r.includes('consumidor') || r.includes('loja');
   }
-  if(pageRole==='Motorista'){
-    return r.includes('driver')||r.includes('motorista')||r.includes('entrega')||r.includes('transporte')||r.includes('logist');
+  if (pageRole === 'Motorista') {
+    return r.includes('driver') || r.includes('motorista') || r.includes('entrega') || r.includes('transporte') || r.includes('logist');
   }
   return true;
 }
-async function initRole(){
-  if(!token)return loginPage();
-  const cachedMe=localStorage.getItem('xv_user');
-  if(cachedMe){try{me=JSON.parse(cachedMe)}catch{}}
-  if(!me||!me.role){const tm=userFromToken(token);if(tm){me={...(me||{}),...tm};safeStorageSet('xv_user',JSON.stringify(me))}}
-  try{
-    const m=await api('/api/me');
-    if(!m?.user){
-      throw Object.assign(new Error('Sessão inválida'),{status:401});
+async function initRole() {
+  if (!token) return loginPage();
+  const cachedMe = localStorage.getItem('xv_user');
+  if (cachedMe) { try { me = JSON.parse(cachedMe) } catch { } }
+  if (!me || !me.role) { const tm = userFromToken(token); if (tm) { me = { ...(me || {}), ...tm }; safeStorageSet('xv_user', JSON.stringify(me)) } }
+  try {
+    const m = await api('/api/me');
+    if (!m?.user) {
+      throw Object.assign(new Error('Sessão inválida'), { status: 401 });
     }
-    me=m.user;
-    safeStorageSet('xv_user',JSON.stringify(me));
-    Realtime.init((type,payload)=>roleRealtimeRefresh(type,payload));
+    me = m.user;
+    safeStorageSet('xv_user', JSON.stringify(me));
+    Realtime.init((type, payload) => roleRealtimeRefresh(type, payload));
     await renderRole();
-  }catch(err){
-    if((!navigator.onLine||err.name==='TypeError'||err.message?.includes('fetch')||err.message?.includes('NetworkError')||err.message?.includes('Failed to fetch'))&&me){
+  } catch (err) {
+    if ((!navigator.onLine || err.name === 'TypeError' || err.message?.includes('fetch') || err.message?.includes('NetworkError') || err.message?.includes('Failed to fetch')) && me) {
       console.warn('Operando offline com sessão em cache');
       await renderRole();
       return;
     }
-    if(err.message?.includes('401')||err.message?.includes('Token')||err.message?.includes('jwt')){
+    if (err.message?.includes('401') || err.message?.includes('Token') || err.message?.includes('jwt')) {
       localStorage.removeItem('xv_token');
       localStorage.removeItem('xv_user');
-      token=null;me=null;
+      token = null; me = null;
       return loginPage();
     }
-    if(me){
+    if (me) {
       await renderRole();
-    }else{
+    } else {
       loginPage();
     }
   }
 }
-function mobileHeader(title,subtitle,logo='/assets/institucional/01_Logo_Xiquim_Vargas_HD.png',dark=false){const isOff=typeof navigator.onLine==='boolean'&&!navigator.onLine;return `<header class="mobile-header"><div class="mobile-header-row"><img class="xv-logo" src="${logo}" alt="Xiquim Vargas"><div style="margin-left:auto;display:flex;align-items:center;gap:8px"><span id="roleOfflineIndicator" style="display:${isOff?'inline-flex':'none'};background:#e11d48;color:#fff;font-weight:700;font-size:11px;padding:3px 8px;border-radius:12px">OFFLINE</span><button class="btn" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:#fff" onclick="logout()">⇥</button></div></div><div style="margin-top:8px"><strong style="font-size:21px">${title}</strong><div class="mobile-user" style="color:#FD5E02!important;font-weight:700">${subtitle}</div></div></header>`}
-function bottom(active){return `<nav class="bottom-nav"><button class="${active==='home'?'active':''}" onclick="roleHome()"><span class="ico">⌂</span>Início</button><button class="${active==='clients'?'active':''}" onclick="seller()"><span class="ico">♙</span>Clientes</button><button class="${active==='orders'?'active':''}" onclick="sellerOrders()"><span class="ico">▣</span>Pedidos</button></nav>`}
-async function renderRole(){const role=document.body.dataset.role;let userRole=String(me?.role||'').toLowerCase().trim();if(!userRole&&token){const tm=userFromToken(token);if(tm?.role){me={...(me||{}),...tm};userRole=String(tm.role).toLowerCase().trim()}}if(role&&userRole&&!isRoleAllowed(role,userRole)){localStorage.removeItem('xv_token');localStorage.removeItem('xv_user');token=null;me=null;alert(`Esta interface (${role}) não corresponde ao seu perfil de acesso (${me?.role||'indefinido'}).\n\nPor favor, faça login com uma conta de perfil compatível ou Administrador.`);return loginPage()}
-if(role==='Vendedor Externo')return seller();if(role==='Frente de Loja / PDV')return pdv();if(role==='Loja Online')return loja();return driver()}
-window.openCrmWhatsApp = function(phone, clientName, days, topProductsJson) {
-  const cleanPhone = String(phone||'').replace(/\D/g, '');
+function mobileHeader(title, subtitle, logo = '/assets/institucional/01_Logo_Xiquim_Vargas_HD.png', dark = false) { const isOff = typeof navigator.onLine === 'boolean' && !navigator.onLine; return `<header class="mobile-header"><div class="mobile-header-row"><img class="xv-logo" src="${logo}" alt="Xiquim Vargas"><div style="margin-left:auto;display:flex;align-items:center;gap:8px"><span id="roleOfflineIndicator" style="display:${isOff ? 'inline-flex' : 'none'};background:#e11d48;color:#fff;font-weight:700;font-size:11px;padding:3px 8px;border-radius:12px">OFFLINE</span><button class="btn" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:#fff" onclick="logout()">⇥</button></div></div><div style="margin-top:8px"><strong style="font-size:21px">${title}</strong><div class="mobile-user" style="color:#FD5E02!important;font-weight:700">${subtitle}</div></div></header>` }
+function bottom(active) { return `<nav class="bottom-nav"><button class="${active === 'home' ? 'active' : ''}" onclick="roleHome()"><span class="ico">⌂</span>Início</button><button class="${active === 'clients' ? 'active' : ''}" onclick="seller()"><span class="ico">♙</span>Clientes</button><button class="${active === 'orders' ? 'active' : ''}" onclick="sellerOrders()"><span class="ico">▣</span>Pedidos</button></nav>` }
+async function renderRole() {
+  const role = document.body.dataset.role; let userRole = String(me?.role || '').toLowerCase().trim(); if (!userRole && token) { const tm = userFromToken(token); if (tm?.role) { me = { ...(me || {}), ...tm }; userRole = String(tm.role).toLowerCase().trim() } } if (role && userRole && !isRoleAllowed(role, userRole)) { localStorage.removeItem('xv_token'); localStorage.removeItem('xv_user'); token = null; me = null; alert(`Esta interface (${role}) não corresponde ao seu perfil de acesso (${me?.role || 'indefinido'}).\n\nPor favor, faça login com uma conta de perfil compatível ou Administrador.`); return loginPage() }
+  if (role === 'Vendedor Externo') return seller(); if (role === 'Frente de Loja / PDV') return pdv(); if (role === 'Loja Online') return loja(); return driver()
+}
+window.openCrmWhatsApp = function (phone, clientName, days, topProductsJson) {
+  const cleanPhone = String(phone || '').replace(/\D/g, '');
   if (!cleanPhone) return toastRole('Cliente sem telefone cadastrado.', true);
   let topProducts = [];
-  try { topProducts = typeof topProductsJson === 'string' ? JSON.parse(topProductsJson) : (topProductsJson||[]); } catch(e){}
+  try { topProducts = typeof topProductsJson === 'string' ? JSON.parse(topProductsJson) : (topProductsJson || []); } catch (e) { }
   const prodsText = topProducts && topProducts.length ? topProducts.slice(0, 2).join(' e ') : 'seus produtos habituais';
   const daysText = (days !== null && days !== undefined && days !== '') ? `Faz ${days} dias desde o seu último pedido.` : 'Esperamos que esteja tudo bem!';
   const sellerName = me?.nome || 'Vendedor Externo';
@@ -387,7 +389,7 @@ window.openCrmWhatsApp = function(phone, clientName, days, topProductsJson) {
   window.open(`https://wa.me/55${cleanPhone}?text=${msg}`, '_blank');
 };
 
-window.crmInteractionsModal = async function(clientId, clientName) {
+window.crmInteractionsModal = async function (clientId, clientName) {
   try {
     const res = await api('/api/clients/' + clientId + '/interactions');
     const items = res.items || [];
@@ -448,13 +450,13 @@ window.crmInteractionsModal = async function(clientId, clientName) {
   }
 };
 
-window.sellerRepeatClient = async function(clientId) {
+window.sellerRepeatClient = async function (clientId) {
   try {
     toastRole('Recuperando último pedido...');
     const x = await api('/api/clients/' + clientId + '/repeat-last', { method: 'POST', body: '{}' });
-    const client = (window.sellerClients || []).find(c => c.id === clientId) || 
-                   (window.sellerCrmData?.items || []).find(c => c.id === clientId) || 
-                   { id: clientId, razao_social: 'Cliente' };
+    const client = (window.sellerClients || []).find(c => c.id === clientId) ||
+      (window.sellerCrmData?.items || []).find(c => c.id === clientId) ||
+      { id: clientId, razao_social: 'Cliente' };
     await sellerNewOrder(client);
     if (x.itens && x.itens.length) {
       for (const item of x.itens) {
@@ -479,7 +481,7 @@ window.sellerRepeatClient = async function(clientId) {
   }
 };
 
-async function seller(tab = null){
+async function seller(tab = null) {
   window.sellerCatalogMode = null;
   window.sellerCurrentTab = tab || 'list';
   window.sellerCrmRfmFilter = window.sellerCrmRfmFilter || 'ALL';
@@ -492,7 +494,7 @@ async function seller(tab = null){
     ]);
     await offlinePut('kv', 'sellerClients', c.items || []);
     await offlinePut('kv', 'sellerCrm', crm);
-  } catch(e) {
+  } catch (e) {
     const cachedClients = await offlineGet('kv', 'sellerClients');
     const cachedCrm = await offlineGet('kv', 'sellerCrm');
     if (!cachedClients) throw e;
@@ -521,10 +523,10 @@ async function seller(tab = null){
 
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:16px;margin-bottom:14px;">
           <div style="display:flex;gap:8px;align-items:center;">
-            <button type="button" class="crm-tab-btn ${window.sellerCurrentTab==='list'?'active':''}" onclick="window.sellerCurrentTab='list';document.querySelectorAll('.crm-tab-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active');renderSellerClientsUI()">
+            <button type="button" class="crm-tab-btn ${window.sellerCurrentTab === 'list' ? 'active' : ''}" onclick="window.sellerCurrentTab='list';document.querySelectorAll('.crm-tab-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active');renderSellerClientsUI()">
               📋 Cadastro & Carteira Geral
             </button>
-            <button type="button" class="crm-tab-btn ${window.sellerCurrentTab==='crm'?'active':''}" onclick="window.sellerCurrentTab='crm';document.querySelectorAll('.crm-tab-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active');renderSellerClientsUI()">
+            <button type="button" class="crm-tab-btn ${window.sellerCurrentTab === 'crm' ? 'active' : ''}" onclick="window.sellerCurrentTab='crm';document.querySelectorAll('.crm-tab-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active');renderSellerClientsUI()">
               📊 Saúde da Carteira (CRM)
             </button>
           </div>
@@ -536,9 +538,9 @@ async function seller(tab = null){
           <div style="display:flex;gap:8px;">
             <select id="sellerClientBairro" class="search" style="flex:1;background:#fff;color:#172033;padding:8px;height:40px;border-radius:8px;border:1px solid #dbe3ec" onchange="renderSellerClientsUI()">
               <option value="">Todos os bairros</option>
-              ${bairros.map(b=>`<option value="${esc(b)}">${esc(b)}</option>`).join('')}
+              ${bairros.map(b => `<option value="${esc(b)}">${esc(b)}</option>`).join('')}
             </select>
-            <select id="sellerClientPeriodo" class="search" style="flex:1;background:#fff;color:#172033;padding:8px;height:40px;border-radius:8px;border:1px solid #dbe3ec;display:${window.sellerCurrentTab==='list'?'block':'none'}" onchange="renderSellerClientsUI()">
+            <select id="sellerClientPeriodo" class="search" style="flex:1;background:#fff;color:#172033;padding:8px;height:40px;border-radius:8px;border:1px solid #dbe3ec;display:${window.sellerCurrentTab === 'list' ? 'block' : 'none'}" onchange="renderSellerClientsUI()">
               <option value="">Qualquer período</option>
               <option value="7">Últimos 7 dias</option>
               <option value="15">De 8 a 15 dias</option>
@@ -635,12 +637,12 @@ function renderSellerClientsUI() {
 
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
         <span style="font-size:12px;color:#64748b;font-weight:800;">Filtro RFM:</span>
-        <button type="button" class="crm-filter-pill ${rfmFilter==='ALL'?'active':''}" onclick="window.sellerCrmRfmFilter='ALL';renderSellerClientsUI()">Todos (${s.total_clientes||0})</button>
-        <button type="button" class="crm-filter-pill ${rfmFilter==='EM_RISCO'?'active':''}" style="border-color:#f59e0b;color:${rfmFilter==='EM_RISCO'?'#fff':'#b45309'}" onclick="window.sellerCrmRfmFilter='EM_RISCO';renderSellerClientsUI()">⚠️ Em Risco (${s.em_risco||0})</button>
-        <button type="button" class="crm-filter-pill ${rfmFilter==='VIP'?'active':''}" style="border-color:#8b5cf6;color:${rfmFilter==='VIP'?'#fff':'#6d28d9'}" onclick="window.sellerCrmRfmFilter='VIP';renderSellerClientsUI()">⭐ VIPs (${s.vips||0})</button>
-        <button type="button" class="crm-filter-pill ${rfmFilter==='ATIVO'?'active':''}" style="border-color:#10b981;color:${rfmFilter==='ATIVO'?'#fff':'#047857'}" onclick="window.sellerCrmRfmFilter='ATIVO';renderSellerClientsUI()">🟢 Ativos (${s.ativos||0})</button>
-        <button type="button" class="crm-filter-pill ${rfmFilter==='INATIVO'?'active':''}" style="border-color:#ef4444;color:${rfmFilter==='INATIVO'?'#fff':'#b91c1c'}" onclick="window.sellerCrmRfmFilter='INATIVO';renderSellerClientsUI()">🔴 Inativos (${s.inativos||0})</button>
-        <button type="button" class="crm-filter-pill ${rfmFilter==='NOVO'?'active':''}" onclick="window.sellerCrmRfmFilter='NOVO';renderSellerClientsUI()">Novos (${s.novos||0})</button>
+        <button type="button" class="crm-filter-pill ${rfmFilter === 'ALL' ? 'active' : ''}" onclick="window.sellerCrmRfmFilter='ALL';renderSellerClientsUI()">Todos (${s.total_clientes || 0})</button>
+        <button type="button" class="crm-filter-pill ${rfmFilter === 'EM_RISCO' ? 'active' : ''}" style="border-color:#f59e0b;color:${rfmFilter === 'EM_RISCO' ? '#fff' : '#b45309'}" onclick="window.sellerCrmRfmFilter='EM_RISCO';renderSellerClientsUI()">⚠️ Em Risco (${s.em_risco || 0})</button>
+        <button type="button" class="crm-filter-pill ${rfmFilter === 'VIP' ? 'active' : ''}" style="border-color:#8b5cf6;color:${rfmFilter === 'VIP' ? '#fff' : '#6d28d9'}" onclick="window.sellerCrmRfmFilter='VIP';renderSellerClientsUI()">⭐ VIPs (${s.vips || 0})</button>
+        <button type="button" class="crm-filter-pill ${rfmFilter === 'ATIVO' ? 'active' : ''}" style="border-color:#10b981;color:${rfmFilter === 'ATIVO' ? '#fff' : '#047857'}" onclick="window.sellerCrmRfmFilter='ATIVO';renderSellerClientsUI()">🟢 Ativos (${s.ativos || 0})</button>
+        <button type="button" class="crm-filter-pill ${rfmFilter === 'INATIVO' ? 'active' : ''}" style="border-color:#ef4444;color:${rfmFilter === 'INATIVO' ? '#fff' : '#b91c1c'}" onclick="window.sellerCrmRfmFilter='INATIVO';renderSellerClientsUI()">🔴 Inativos (${s.inativos || 0})</button>
+        <button type="button" class="crm-filter-pill ${rfmFilter === 'NOVO' ? 'active' : ''}" onclick="window.sellerCrmRfmFilter='NOVO';renderSellerClientsUI()">Novos (${s.novos || 0})</button>
       </div>
 
       <div class="tablewrap">
@@ -658,26 +660,26 @@ function renderSellerClientsUI() {
           </thead>
           <tbody>
             ${filtered.map(x => {
-              const days = x.dias_sem_comprar;
-              let recBadge = '<span class="badge" style="background:#e2e8f0;color:#64748b;">Nunca comprou</span>';
-              if (days !== null && days !== undefined) {
-                if (days <= 7) recBadge = `<span class="badge" style="background:rgba(34,197,94,0.15);color:#16a34a;">Há ${days} dia(s)</span>`;
-                else if (days <= 15) recBadge = `<span class="badge" style="background:rgba(59,130,246,0.15);color:#2563eb;">Há ${days} dias</span>`;
-                else if (days <= 45) recBadge = `<span class="badge" style="background:rgba(245,158,11,0.18);color:#d97706;animation:pulse-lead 2s infinite;">Há ${days} dias</span>`;
-                else recBadge = `<span class="badge" style="background:rgba(239,68,68,0.15);color:#dc2626;">Há ${days} dias</span>`;
-              }
+      const days = x.dias_sem_comprar;
+      let recBadge = '<span class="badge" style="background:#e2e8f0;color:#64748b;">Nunca comprou</span>';
+      if (days !== null && days !== undefined) {
+        if (days <= 7) recBadge = `<span class="badge" style="background:rgba(34,197,94,0.15);color:#16a34a;">Há ${days} dia(s)</span>`;
+        else if (days <= 15) recBadge = `<span class="badge" style="background:rgba(59,130,246,0.15);color:#2563eb;">Há ${days} dias</span>`;
+        else if (days <= 45) recBadge = `<span class="badge" style="background:rgba(245,158,11,0.18);color:#d97706;animation:pulse-lead 2s infinite;">Há ${days} dias</span>`;
+        else recBadge = `<span class="badge" style="background:rgba(239,68,68,0.15);color:#dc2626;">Há ${days} dias</span>`;
+      }
 
-              let rfmClass = 'crm-badge-ativo';
-              let rfmLabel = '🟢 Ativo';
-              if (x.status_rfm === 'VIP') { rfmClass = 'crm-badge-vip'; rfmLabel = '⭐ VIP'; }
-              else if (x.status_rfm === 'EM_RISCO') { rfmClass = 'crm-badge-risco'; rfmLabel = '⚠️ Em Risco'; }
-              else if (x.status_rfm === 'INATIVO') { rfmClass = 'crm-badge-inativo'; rfmLabel = '🔴 Inativo'; }
-              else if (x.status_rfm === 'NOVO') { rfmClass = 'crm-badge-novo'; rfmLabel = '🆕 Novo'; }
+      let rfmClass = 'crm-badge-ativo';
+      let rfmLabel = '🟢 Ativo';
+      if (x.status_rfm === 'VIP') { rfmClass = 'crm-badge-vip'; rfmLabel = '⭐ VIP'; }
+      else if (x.status_rfm === 'EM_RISCO') { rfmClass = 'crm-badge-risco'; rfmLabel = '⚠️ Em Risco'; }
+      else if (x.status_rfm === 'INATIVO') { rfmClass = 'crm-badge-inativo'; rfmLabel = '🔴 Inativo'; }
+      else if (x.status_rfm === 'NOVO') { rfmClass = 'crm-badge-novo'; rfmLabel = '🆕 Novo'; }
 
-              const topChips = (x.top_produtos || []).slice(0, 2).map(p => `<span class="crm-product-tag">${esc(p)}</span>`).join('') || '<span class="muted" style="font-size:11px;">Sem mix ainda</span>';
-              const lastIntText = x.ultima_interacao ? `<small style="display:block;color:#1e293b;max-width:210px;white-space:normal;line-height:1.3;"><b>${esc(x.ultima_interacao.tipo)}:</b> ${esc(x.ultima_interacao.descricao.slice(0, 45))}${x.ultima_interacao.descricao.length>45?'...':''}</small>` : '<small class="muted">Nenhum registro</small>';
+      const topChips = (x.top_produtos || []).slice(0, 2).map(p => `<span class="crm-product-tag">${esc(p)}</span>`).join('') || '<span class="muted" style="font-size:11px;">Sem mix ainda</span>';
+      const lastIntText = x.ultima_interacao ? `<small style="display:block;color:#1e293b;max-width:210px;white-space:normal;line-height:1.3;"><b>${esc(x.ultima_interacao.tipo)}:</b> ${esc(x.ultima_interacao.descricao.slice(0, 45))}${x.ultima_interacao.descricao.length > 45 ? '...' : ''}</small>` : '<small class="muted">Nenhum registro</small>';
 
-              return `
+      return `
                 <tr>
                   <td>
                     <button class="btn" style="text-align:left;padding:4px 8px;font-size:13px;" onclick="sellerClientProfile('${x.id}')">
@@ -697,17 +699,17 @@ function renderSellerClientsUI() {
                   <td>${lastIntText}</td>
                   <td style="text-align:right;">
                     <div style="display:inline-flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
-                      <button class="btn-crm-wpp" title="Conversar no WhatsApp com mensagem inteligente de reposição" onclick="openCrmWhatsApp('${x.telefone||''}', parseJsonArg('${jsonArg(x.razao_social||x.nome_fantasia)}'), ${days!==null&&days!==undefined?days:'null'}, parseJsonArg('${jsonArg(JSON.stringify(x.top_produtos||[]))}'))">📲 WhatsApp</button>
+                      <button class="btn-crm-wpp" title="Conversar no WhatsApp com mensagem inteligente de reposição" onclick="openCrmWhatsApp('${x.telefone || ''}', parseJsonArg('${jsonArg(x.razao_social || x.nome_fantasia)}'), ${days !== null && days !== undefined ? days : 'null'}, parseJsonArg('${jsonArg(JSON.stringify(x.top_produtos || []))}'))">📲 WhatsApp</button>
                       <button class="btn" title="Repetir último pedido" style="padding:6px 9px;font-size:12px;" onclick="sellerRepeatClient('${x.id}')">↻ Repetir</button>
-                      <button class="btn" title="Linha do Tempo CRM e Registro de Contatos" style="padding:6px 9px;font-size:12px;" onclick="crmInteractionsModal('${x.id}', parseJsonArg('${jsonArg(x.razao_social||x.nome_fantasia)}'))">📝 CRM</button>
+                      <button class="btn" title="Linha do Tempo CRM e Registro de Contatos" style="padding:6px 9px;font-size:12px;" onclick="crmInteractionsModal('${x.id}', parseJsonArg('${jsonArg(x.razao_social || x.nome_fantasia)}'))">📝 CRM</button>
                       <button class="btn" title="Editar dados cadastrais do cliente" style="padding:6px 9px;font-size:12px;background:#e0f2fe;color:#0369a1;border-color:#bae6fd;font-weight:700;" onclick="sellerEditClient('${x.id}')">✏️ Editar</button>
                       <button class="btn primary" title="Novo Pedido" style="padding:6px 10px;font-size:12px;" onclick="sellerNewOrder('${x.id}')">＋ Pedido</button>
-                      <button class="btn danger" title="Excluir este cliente da carteira" style="padding:6px 9px;font-size:12px;" onclick="sellerDeleteClient('${x.id}', parseJsonArg('${jsonArg(x.razao_social||x.nome_fantasia)}'))">🗑️</button>
+                      <button class="btn danger" title="Excluir este cliente da carteira" style="padding:6px 9px;font-size:12px;" onclick="sellerDeleteClient('${x.id}', parseJsonArg('${jsonArg(x.razao_social || x.nome_fantasia)}'))">🗑️</button>
                     </div>
                   </td>
                 </tr>
               `;
-            }).join('') || '<tr><td colspan="7" class="empty-state">Nenhum cliente encontrado com os filtros selecionados.</td></tr>'}
+    }).join('') || '<tr><td colspan="7" class="empty-state">Nenhum cliente encontrado com os filtros selecionados.</td></tr>'}
           </tbody>
         </table>
       </div>
@@ -718,13 +720,13 @@ function renderSellerClientsUI() {
     const now = Date.now();
     const msInDay = 86400000;
     const filtered = (window.sellerClients || []).filter(c => {
-      if (sq && !(c.razao_social||'').toLowerCase().includes(sq) && !(c.nome_fantasia||'').toLowerCase().includes(sq) && !(c.cnpj_cpf||'').toLowerCase().includes(sq) && !(c.telefone||'').toLowerCase().includes(sq) && !(c.bairro||'').toLowerCase().includes(sq)) return false;
+      if (sq && !(c.razao_social || '').toLowerCase().includes(sq) && !(c.nome_fantasia || '').toLowerCase().includes(sq) && !(c.cnpj_cpf || '').toLowerCase().includes(sq) && !(c.telefone || '').toLowerCase().includes(sq) && !(c.bairro || '').toLowerCase().includes(sq)) return false;
       if (bairro && c.bairro !== bairro) return false;
       if (periodo) {
         if (!c.ultima_compra) {
           if (periodo !== '99') return false;
         } else {
-          const t = c.ultima_compra.includes('T') ? c.ultima_compra : (c.ultima_compra.replace(' ','T')+'Z');
+          const t = c.ultima_compra.includes('T') ? c.ultima_compra : (c.ultima_compra.replace(' ', 'T') + 'Z');
           const days = (now - new Date(t).getTime()) / msInDay;
           if (periodo === '7' && days > 7) return false;
           if (periodo === '15' && (days <= 7 || days > 15)) return false;
@@ -747,15 +749,15 @@ function renderSellerClientsUI() {
               <h3>${esc(x.razao_social || x.nome_fantasia)}</h3>
               <div class="muted">${esc(x.bairro || x.cidade || x.endereco || 'Endereço não informado')}</div>
               ${x.cnpj_cpf ? `<div class="muted" style="font-size:11px;">Doc: ${esc(x.cnpj_cpf)}${x.telefone ? ' · Tel: ' + esc(x.telefone) : ''}</div>` : ''}
-              ${x.ultima_compra ? `<div class="muted" style="font-size:11px;margin-top:4px;color:#a26a0c;font-weight:700">Última compra: ${new Date(x.ultima_compra.includes('T')?x.ultima_compra:(x.ultima_compra.replace(' ','T')+'Z')).toLocaleDateString('pt-BR')}</div>` : `<div class="muted" style="font-size:11px;margin-top:4px;font-weight:700">Nunca comprou</div>`}
+              ${x.ultima_compra ? `<div class="muted" style="font-size:11px;margin-top:4px;color:#a26a0c;font-weight:700">Última compra: ${new Date(x.ultima_compra.includes('T') ? x.ultima_compra : (x.ultima_compra.replace(' ', 'T') + 'Z')).toLocaleDateString('pt-BR')}</div>` : `<div class="muted" style="font-size:11px;margin-top:4px;font-weight:700">Nunca comprou</div>`}
             </div>
             <div class="client-actions" style="flex-wrap:wrap;gap:6px;">
-              <button class="btn" style="font-size:12px;padding:6px 10px;" onclick="crmInteractionsModal('${x.id}', parseJsonArg('${jsonArg(x.razao_social||x.nome_fantasia)}'))">📝 CRM</button>
+              <button class="btn" style="font-size:12px;padding:6px 10px;" onclick="crmInteractionsModal('${x.id}', parseJsonArg('${jsonArg(x.razao_social || x.nome_fantasia)}'))">📝 CRM</button>
               <button class="btn" style="font-size:12px;padding:6px 10px;" onclick="sellerRepeatClient('${x.id}')">↻ Repetir</button>
               <button class="btn" style="font-size:12px;padding:6px 10px;" onclick="sellerClientProfile('${x.id}')">Perfil</button>
               <button class="btn" style="font-size:12px;padding:6px 10px;background:#e0f2fe;color:#0369a1;border-color:#bae6fd;font-weight:700;" onclick="sellerEditClient('${x.id}')">✏️ Editar</button>
               <button class="btn primary" style="font-size:12px;padding:6px 10px;" onclick="sellerNewOrder('${x.id}')">Novo pedido ›</button>
-              <button class="btn danger" style="font-size:12px;padding:6px 10px;" onclick="sellerDeleteClient('${x.id}', parseJsonArg('${jsonArg(x.razao_social||x.nome_fantasia)}'))" title="Excluir este cliente da carteira">🗑️ Excluir</button>
+              <button class="btn danger" style="font-size:12px;padding:6px 10px;" onclick="sellerDeleteClient('${x.id}', parseJsonArg('${jsonArg(x.razao_social || x.nome_fantasia)}'))" title="Excluir este cliente da carteira">🗑️ Excluir</button>
             </div>
           </article>
         `).join('') || '<div class="empty-state">Nenhum cliente encontrado.</div>'}
@@ -775,7 +777,7 @@ async function sellerRefreshCrm() {
     ]);
     window.sellerClients = (c.items || []).filter(x => x.id !== 'CLIENTE-BALCAO' && (me?.role !== 'seller' || !me?.id || x.vendedor_id === me.id));
     if (crm && Array.isArray(crm.items)) crm.items = crm.items.filter(x => x.id !== 'CLIENTE-BALCAO' && (me?.role !== 'seller' || !me?.id || x.vendedor_id === me.id));
-  window.sellerCrmData = crm;
+    window.sellerCrmData = crm;
     await offlinePut('kv', 'sellerClients', window.sellerClients);
     await offlinePut('kv', 'sellerCrm', window.sellerCrmData);
     renderSellerClientsUI();
@@ -786,33 +788,33 @@ async function sellerRefreshCrm() {
 }
 window.sellerRefreshCrm = sellerRefreshCrm;
 
-async function sellerCatalog(){let p,s,cats;try{[p,s,cats]=await Promise.all([api('/api/products'),api('/api/seller/stock'),api('/api/categories')]);await offlinePut('kv','sellerCatalogProducts',p.items);await offlinePut('kv','sellerCatalogStock',s.items);await offlinePut('kv','sellerCategories',cats)}catch(e){const cp=await offlineGet('kv','sellerCatalogProducts');const cs=await offlineGet('kv','sellerCatalogStock');const ccats=await offlineGet('kv','sellerCategories');if(!cp||!cs||!ccats)throw e;p={items:cp};s={items:cs};cats=ccats}const sm=new Map(s.items.map(x=>[x.id,x]));const products=p.items.map(x=>({...x,...(sm.get(x.id)||{})}));window.sellerCatalogItems=products;window.sellerCategories=cats.categorias;window.sellerSubcategories=cats.subcategorias;window.sellerCatalogMode='DEMO';window._sellerBackNavLevel='CATEGORIES';window.sellerCurrentCatId='';window.sellerCurrentSubId='';document.body.innerHTML=`<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Catálogo',`${esc(me.nome)} · Demonstrativo`)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="seller()">← Voltar</button></div><div id="sellerCatalogRoot"></div></div></div>`;sellerShowCategories();initSellerScrollFloatingBack()}
-function sellerShowCategories(){window._sellerBackNavLevel='CATEGORIES';window.sellerCurrentCatId='';window.sellerCurrentSubId='';const cats=window.sellerCategories||[];const html=cats.length?`<div class="grid" style="margin-top:14px;margin-bottom:24px;">${cats.map(c=>`<div class="mobile-card" style="cursor:pointer" onclick="sellerShowSubcategories('${c.id}')"><h3>${esc(c.nome)}</h3><p class="muted">${esc(c.descricao||'')}</p></div>`).join('')}</div>`:'';$('#sellerCatalogRoot').innerHTML=`<div class="section-title"><h2>Catálogo por Categoria</h2></div>${html}<div class="section-title"><h2>Todos os Produtos</h2></div><input class="search" style="margin-bottom:14px;background:#fff;color:#172033;border-color:#dbe3ec" placeholder="Pesquisar produto..." oninput="sellerFilterAll(this)"><div id="sellerProducts" class="product-grid"></div>`;const items=window.sellerCatalogMode==='DEMO'?window.sellerCatalogItems:window.sellerProducts;if(window.sellerCatalogMode==='DEMO')sellerCatalogRender(items);else sellerRender(items);updateSellerScrollFloatingBackLabel()}
-function sellerFilterAll(input){const q=(input.value||'').toLowerCase();const items=window.sellerCatalogMode==='DEMO'?window.sellerCatalogItems:window.sellerProducts;const filtered=items.filter(p=>(p.nome+' '+(p.sku||'')+' '+(p.marca||'')).toLowerCase().includes(q));if(window.sellerCatalogMode==='DEMO')sellerCatalogRender(filtered);else sellerRender(filtered)}
-function sellerShowSubcategories(catId){const cat=window.sellerCategories.find(c=>c.id===catId);const subs=(window.sellerSubcategories||[]).filter(s=>s.categoria_id===catId);window._sellerBackNavLevel='SUBCATEGORIES';window.sellerCurrentCatId=catId;window.sellerCurrentSubId='';const allItems=window.sellerCatalogMode==='DEMO'?window.sellerCatalogItems:window.sellerProducts;const catItems=(allItems||[]).filter(p=>p.categoria_id===catId);$('#sellerCatalogRoot').innerHTML=`<div class="mobile-nav" style="margin-bottom:14px"><button class="btn" onclick="sellerShowCategories()">← Voltar às categorias</button></div><div class="section-title"><h2>Subcategorias de ${esc(cat?.nome||'')}</h2><span class="muted">${catItems.length} produtos</span></div><div class="grid" style="margin-top:14px;margin-bottom:20px;"><div class="mobile-card" style="cursor:pointer;border-left:4px solid #f97316" onclick="sellerShowProductsSub('','Todos os Produtos (${catItems.length})','${catId}')"><h3>Todos os Produtos</h3><p class="muted">Ver todos os produtos de ${esc(cat?.nome||'')}</p></div>${subs.length?subs.map(s=>{const cnt=(allItems||[]).filter(p=>p.subcategoria_id===s.id).length;return `<div class="mobile-card" style="cursor:pointer" onclick="sellerShowProductsSub('${s.id}','${esc(s.nome).replace(/'/g,"\\'").replace(/"/g,"&quot;")}','${catId}')"><h3>${esc(s.nome)}</h3><p class="muted">${cnt} produtos</p></div>`}).join(''):'<p class="muted">Nenhuma subcategoria.</p>'}</div><div class="section-title"><h2>Produtos em ${esc(cat?.nome||'')}</h2></div><div id="sellerProducts" class="product-grid" style="margin-top:14px"></div>`;if(window.sellerCatalogMode==='DEMO')sellerCatalogRender(catItems);else sellerRender(catItems);window.scrollTo({top:0,behavior:'smooth'});updateSellerScrollFloatingBackLabel()}
-function sellerShowProductsSub(subId,subName,catId){window._sellerBackNavLevel='PRODUCTS_SUB';window.sellerCurrentSubId=subId;window.sellerCurrentCatId=catId;$('#sellerCatalogRoot').innerHTML=`<div class="mobile-nav" style="margin-bottom:14px;display:flex;gap:8px"><button class="btn" onclick="sellerShowSubcategories('${catId||''}')">← Subcategorias</button><button class="btn" onclick="sellerShowCategories()">🏠 Categorias</button></div><div class="section-title"><h2>${esc(subName)}</h2></div><div class="form" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;"><input id="sellerSubSearch" class="search" style="grid-column:1/-1" placeholder="Pesquisar produto..." oninput="sellerFilterSub()"><div class="field"><label>Menor preço (R$)</label><input type="number" step="0.01" min="0" id="sellerSubMin" class="search" placeholder="0,00" oninput="sellerFilterSub()"></div><div class="field"><label>Maior preço (R$)</label><input type="number" step="0.01" min="0" id="sellerSubMax" class="search" placeholder="Sem limite" oninput="sellerFilterSub()"></div><div style="grid-column:1/-1;display:flex;gap:8px;margin-top:4px;"><button type="button" class="btn" onclick="const s=$('#sellerSubSearch');if(s)s.value='';const mn=$('#sellerSubMin');if(mn)mn.value='';const mx=$('#sellerSubMax');if(mx)mx.value='';sellerFilterSub()">Limpar filtros</button></div></div><div id="sellerProducts" class="product-grid" style="margin-top:14px"></div>`;sellerFilterSub();window.scrollTo({top:0,behavior:'smooth'});updateSellerScrollFloatingBackLabel()}
-function sellerFilterSub(){const q=($('#sellerSubSearch')?.value||'').trim().toLowerCase();const minRaw=$('#sellerSubMin')?.value;const maxRaw=$('#sellerSubMax')?.value;const min=minRaw!==''&&minRaw!=null?Number(minRaw):0;const max=maxRaw!==''&&maxRaw!=null?Number(maxRaw):Infinity;const subId=window.sellerCurrentSubId;const catId=window.sellerCurrentCatId;const items=window.sellerCatalogMode==='DEMO'?window.sellerCatalogItems:window.sellerProducts;const filtered=(items||[]).filter(x=>{if(catId&&x.categoria_id!==catId)return false;if(subId&&x.subcategoria_id!==subId)return false;const price=Number(x.promocao_preco!=null?x.promocao_preco:(x.preco_aplicado??x.preco_base));if(price<min||price>max)return false;if(q&&!(x.nome+' '+(x.sku||'')+' '+(x.codigo_barras||'')).toLowerCase().includes(q))return false;return true});if(window.sellerCatalogMode==='DEMO')sellerCatalogRender(filtered);else sellerRender(filtered)}
-function sellerCatalogRender(items){const el=$('#sellerProducts')||$('#sellerCatalogList');if(el)el.innerHTML=items.map(p=>{const tName=esc(p.tabela_preco_nome||p.tabela_nome||'Oferta');return `<article class="product-card">${productThumbHtml(p,p.marca||'PRODUTO')}<h4>${esc(p.nome)}</h4><div class="muted">${esc(p.tamanho||p.sabor||p.sku||'')}</div>${p.preco_tabela!=null?`<div class="promo-label">🏷️ ${tName}: ${money(p.preco_tabela)}${Number(p.quantidade_minima)>1?` a partir de ${p.quantidade_minima} un.`:''}</div>`:''}<div class="product-price">${money(p.preco_aplicado ?? p.preco_base)}</div>${Number(p.esgotado)?'<div class="promo-label" style="background:#b42318">ESGOTADO</div><button class="btn" disabled>Indisponível</button>':''}</article>`}).join('')}
-async function sellerDashboard(filterYm){try{const url='/api/seller/dashboard/monthly'+(filterYm?'?mes='+encodeURIComponent(filterYm):'');const x=await api(url);const ymParts=(x.ano_mes||new Date().toISOString().slice(0,7)).split('-').map(Number);const curYear=ymParts[0]||new Date().getFullYear();const curMonth=ymParts[1]||(new Date().getMonth()+1);const meses=[{v:1,l:'01 - Jan'},{v:2,l:'02 - Fev'},{v:3,l:'03 - Mar'},{v:4,l:'04 - Abr'},{v:5,l:'05 - Mai'},{v:6,l:'06 - Jun'},{v:7,l:'07 - Jul'},{v:8,l:'08 - Ago'},{v:9,l:'09 - Set'},{v:10,l:'10 - Out'},{v:11,l:'11 - Nov'},{v:12,l:'12 - Dez'}];const anos=[2024,2025,2026,2027,2028,2029,2030];document.body.innerHTML=`<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Painel do mês',`${esc(me.nome)} · Vendas do mês`)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="seller()">← Minha carteira</button><button class="btn" onclick="sellerOrders()">▣ Pedidos</button><button class="btn primary" onclick="sellerDashboard('${filterYm||''}')">↻ Atualizar</button></div><div class="mobile-card" style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><span style="font-size:13px;font-weight:700">📅 Filtrar Mês/Ano:</span><div style="display:flex;gap:6px"><select id="sellerSelfMonth" class="search" style="padding:6px 10px;font-size:13px;border-radius:8px" onchange="sellerDashboard($('#sellerSelfYear').value+'-'+String(this.value).padStart(2,'0'))">${meses.map(m=>`<option value="${m.v}" ${m.v===curMonth?'selected':''}>${m.l}</option>`).join('')}</select><select id="sellerSelfYear" class="search" style="padding:6px 10px;font-size:13px;border-radius:8px" onchange="sellerDashboard(this.value+'-'+String($('#sellerSelfMonth').value).padStart(2,'0'))">${anos.map(y=>`<option value="${y}" ${y===curYear?'selected':''}>${y}</option>`).join('')}</select></div></div><div class="grid" style="margin-top:12px"><div class="mobile-card"><small class="muted">Pedidos no mês (${esc(x.mes)})</small><h2>${Number(x.pedidos||0)}</h2></div><div class="mobile-card"><small class="muted">Valor total dos pedidos (${esc(x.mes)})</small><h2 class="orange">${money(x.valor_total)}</h2><p class="muted" style="font-size:16px">Valor dos pedidos emitidos, não apenas pagamentos recebidos.</p></div></div><div class="mobile-card" style="margin-top:12px"><strong>${esc(x.mes||'Mês atual')}</strong><p class="muted">Considera os pedidos emitidos por você e os pedidos da sua carteira de clientes neste mês.</p></div></div>${bottom('home')}</div>`}catch(e){alert(e.message)}}
-async function sellerMyRoutes(){try{const x=await api('/api/seller/my-routes');const dias=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];const html=x.items.length?x.items.map(r=>`<article class="mobile-card"><div class="route-status">${dias[r.dia_semana]||'Dia '+r.dia_semana}</div><h3 style="margin:4px 0">${esc(r.nome)}</h3><div class="muted" style="margin-top:6px"><strong>Bairros:</strong> ${r.bairros.length?r.bairros.map(b=>esc(b)).join(', '):'Nenhum bairro cadastrado'}</div></article>`).join(''):'<div class="empty-state">Nenhuma rota designada para você.</div>';document.body.innerHTML=`<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Minhas Rotas',`${esc(me.nome)} · Rotas Designadas`)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="seller()">← Voltar</button><button class="btn primary" onclick="sellerMyRoutes()">↻ Atualizar</button></div><div class="section-title"><h2>Planejamento da semana</h2><span class="muted">${x.items.length} rotas</span></div>${html}</div>${bottom('clients')}</div>`}catch(e){alert(e.message)}}
-async function sellerEditOrder(id){
- try{
-  const x=await api('/api/orders/'+id+'/detail'); const cidParam=x.order?.cliente_id?'&cliente_id='+encodeURIComponent(x.order.cliente_id):''; let products={items:[],total:0}; for(let page=1,done=false;!done;page++){const pg=await api('/api/products?limit=100&page='+page+cidParam);products.items.push(...pg.items);products.total=pg.total;done=products.items.length>=pg.total||!pg.items.length}
-  const o=x.order;if(o.status!=='PENDENTE')return alert('Somente pedidos pendentes podem ser editados pelo vendedor.');
-  const existing=new Set(x.items.map(i=>i.produto_id));window.sellerOrderCatalog=products.items.filter(p=>!existing.has(p.id));
-  window.sellerOrderItems=new Map(x.items.map(i=>[i.produto_id,{produto_id:i.produto_id,quantidade:Number(i.quantidade),nome:i.produto_nome}]));
-  document.body.innerHTML=`<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Editar pedido '+esc(o.numero),`${esc(me.nome)} · ${esc(o.nome_fantasia||o.cliente_nome)}`)}<form id="sellerOrderEditForm" class="mobile-card form" style="margin-top:15px"><div class="field"><label>Modalidade</label><select name="modalidade_entrega"><option value="ENTREGA" ${o.modalidade_entrega==='ENTREGA'?'selected':''}>Entrega</option><option value="RETIRADA" ${o.modalidade_entrega!=='ENTREGA'?'selected':''}>Retirada</option></select></div><div class="field"><label>Desconto</label><input name="desconto_valor" type="number" min="0" step="0.01" value="${Number(o.desconto_valor||0)}"></div><div class="field"><label>Tipo de desconto</label><select name="desconto_tipo"><option value="VALOR" ${o.desconto_tipo!=='PERCENTUAL'?'selected':''}>R$ valor</option><option value="PERCENTUAL" ${o.desconto_tipo==='PERCENTUAL'?'selected':''}>%</option></select></div><div class="field" style="grid-column:1/-1"><label>Observações</label><textarea name="observacoes" rows="3">${esc(o.observacoes||'')}</textarea></div><div class="field" style="grid-column:1/-1"><label>Itens do pedido</label><div id="sellerOrderItems"></div></div><div class="field" style="grid-column:1/-1"><label>Adicionar item do catálogo</label><input id="sellerOrderSearch" class="search" placeholder="Pesquisar produto..." oninput="filterSellerOrderCatalog(this)"><div id="sellerOrderCatalog" class="order-catalog-picker"></div></div><div class="actions" style="grid-column:1/-1"><button type="button" class="btn" onclick="sellerOrders()">Cancelar</button><button class="btn primary">Salvar alterações</button></div></form></div></div>`;
-  renderSellerOrderItems();filterSellerOrderCatalog($('#sellerOrderSearch'));
-  $('#sellerOrderEditForm').onsubmit=async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.currentTarget));const itens=[...window.sellerOrderItems.values()].filter(i=>Number(i.quantidade)>0).map(i=>({produto_id:i.produto_id,quantidade:Number(i.quantidade)}));if(!itens.length)return alert('O pedido precisa manter pelo menos um item.');try{await api('/api/orders/'+id,{method:'PUT',body:JSON.stringify({...f,itens})});alert('Pedido atualizado e PDF regenerado.');sellerOrders()}catch(z){alert(z.message)}}
- }catch(e){alert(e.message)}
+async function sellerCatalog() { let p, s, cats; try { [p, s, cats] = await Promise.all([api('/api/products'), api('/api/seller/stock'), api('/api/categories')]); await offlinePut('kv', 'sellerCatalogProducts', p.items); await offlinePut('kv', 'sellerCatalogStock', s.items); await offlinePut('kv', 'sellerCategories', cats) } catch (e) { const cp = await offlineGet('kv', 'sellerCatalogProducts'); const cs = await offlineGet('kv', 'sellerCatalogStock'); const ccats = await offlineGet('kv', 'sellerCategories'); if (!cp || !cs || !ccats) throw e; p = { items: cp }; s = { items: cs }; cats = ccats } const sm = new Map(s.items.map(x => [x.id, x])); const products = p.items.map(x => ({ ...x, ...(sm.get(x.id) || {}) })); window.sellerCatalogItems = products; window.sellerCategories = cats.categorias; window.sellerSubcategories = cats.subcategorias; window.sellerCatalogMode = 'DEMO'; window._sellerBackNavLevel = 'CATEGORIES'; window.sellerCurrentCatId = ''; window.sellerCurrentSubId = ''; document.body.innerHTML = `<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Catálogo', `${esc(me.nome)} · Demonstrativo`)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="seller()">← Voltar</button></div><div id="sellerCatalogRoot"></div></div></div>`; sellerShowCategories(); initSellerScrollFloatingBack() }
+function sellerShowCategories() { window._sellerBackNavLevel = 'CATEGORIES'; window.sellerCurrentCatId = ''; window.sellerCurrentSubId = ''; const cats = window.sellerCategories || []; const html = cats.length ? `<div class="grid" style="margin-top:14px;margin-bottom:24px;">${cats.map(c => `<div class="mobile-card" style="cursor:pointer" onclick="sellerShowSubcategories('${c.id}')"><h3>${esc(c.nome)}</h3><p class="muted">${esc(c.descricao || '')}</p></div>`).join('')}</div>` : ''; $('#sellerCatalogRoot').innerHTML = `<div class="section-title"><h2>Catálogo por Categoria</h2></div>${html}<div class="section-title"><h2>Todos os Produtos</h2></div><input class="search" style="margin-bottom:14px;background:#fff;color:#172033;border-color:#dbe3ec" placeholder="Pesquisar produto..." oninput="sellerFilterAll(this)"><div id="sellerProducts" class="product-grid"></div>`; const items = window.sellerCatalogMode === 'DEMO' ? window.sellerCatalogItems : window.sellerProducts; if (window.sellerCatalogMode === 'DEMO') sellerCatalogRender(items); else sellerRender(items); updateSellerScrollFloatingBackLabel() }
+function sellerFilterAll(input) { const q = (input.value || '').toLowerCase(); const items = window.sellerCatalogMode === 'DEMO' ? window.sellerCatalogItems : window.sellerProducts; const filtered = items.filter(p => (p.nome + ' ' + (p.sku || '') + ' ' + (p.marca || '')).toLowerCase().includes(q)); if (window.sellerCatalogMode === 'DEMO') sellerCatalogRender(filtered); else sellerRender(filtered) }
+function sellerShowSubcategories(catId) { const cat = window.sellerCategories.find(c => c.id === catId); const subs = (window.sellerSubcategories || []).filter(s => s.categoria_id === catId); window._sellerBackNavLevel = 'SUBCATEGORIES'; window.sellerCurrentCatId = catId; window.sellerCurrentSubId = ''; const allItems = window.sellerCatalogMode === 'DEMO' ? window.sellerCatalogItems : window.sellerProducts; const catItems = (allItems || []).filter(p => p.categoria_id === catId); $('#sellerCatalogRoot').innerHTML = `<div class="mobile-nav" style="margin-bottom:14px"><button class="btn" onclick="sellerShowCategories()">← Voltar às categorias</button></div><div class="section-title"><h2>Subcategorias de ${esc(cat?.nome || '')}</h2><span class="muted">${catItems.length} produtos</span></div><div class="grid" style="margin-top:14px;margin-bottom:20px;"><div class="mobile-card" style="cursor:pointer;border-left:4px solid #f97316" onclick="sellerShowProductsSub('','Todos os Produtos (${catItems.length})','${catId}')"><h3>Todos os Produtos</h3><p class="muted">Ver todos os produtos de ${esc(cat?.nome || '')}</p></div>${subs.length ? subs.map(s => { const cnt = (allItems || []).filter(p => p.subcategoria_id === s.id).length; return `<div class="mobile-card" style="cursor:pointer" onclick="sellerShowProductsSub('${s.id}','${esc(s.nome).replace(/'/g, "\\'").replace(/"/g, "&quot;")}','${catId}')"><h3>${esc(s.nome)}</h3><p class="muted">${cnt} produtos</p></div>` }).join('') : '<p class="muted">Nenhuma subcategoria.</p>'}</div><div class="section-title"><h2>Produtos em ${esc(cat?.nome || '')}</h2></div><div id="sellerProducts" class="product-grid" style="margin-top:14px"></div>`; if (window.sellerCatalogMode === 'DEMO') sellerCatalogRender(catItems); else sellerRender(catItems); window.scrollTo({ top: 0, behavior: 'smooth' }); updateSellerScrollFloatingBackLabel() }
+function sellerShowProductsSub(subId, subName, catId) { window._sellerBackNavLevel = 'PRODUCTS_SUB'; window.sellerCurrentSubId = subId; window.sellerCurrentCatId = catId; $('#sellerCatalogRoot').innerHTML = `<div class="mobile-nav" style="margin-bottom:14px;display:flex;gap:8px"><button class="btn" onclick="sellerShowSubcategories('${catId || ''}')">← Subcategorias</button><button class="btn" onclick="sellerShowCategories()">🏠 Categorias</button></div><div class="section-title"><h2>${esc(subName)}</h2></div><div class="form" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;"><input id="sellerSubSearch" class="search" style="grid-column:1/-1" placeholder="Pesquisar produto..." oninput="sellerFilterSub()"><div class="field"><label>Menor preço (R$)</label><input type="number" step="0.01" min="0" id="sellerSubMin" class="search" placeholder="0,00" oninput="sellerFilterSub()"></div><div class="field"><label>Maior preço (R$)</label><input type="number" step="0.01" min="0" id="sellerSubMax" class="search" placeholder="Sem limite" oninput="sellerFilterSub()"></div><div style="grid-column:1/-1;display:flex;gap:8px;margin-top:4px;"><button type="button" class="btn" onclick="const s=$('#sellerSubSearch');if(s)s.value='';const mn=$('#sellerSubMin');if(mn)mn.value='';const mx=$('#sellerSubMax');if(mx)mx.value='';sellerFilterSub()">Limpar filtros</button></div></div><div id="sellerProducts" class="product-grid" style="margin-top:14px"></div>`; sellerFilterSub(); window.scrollTo({ top: 0, behavior: 'smooth' }); updateSellerScrollFloatingBackLabel() }
+function sellerFilterSub() { const q = ($('#sellerSubSearch')?.value || '').trim().toLowerCase(); const minRaw = $('#sellerSubMin')?.value; const maxRaw = $('#sellerSubMax')?.value; const min = minRaw !== '' && minRaw != null ? Number(minRaw) : 0; const max = maxRaw !== '' && maxRaw != null ? Number(maxRaw) : Infinity; const subId = window.sellerCurrentSubId; const catId = window.sellerCurrentCatId; const items = window.sellerCatalogMode === 'DEMO' ? window.sellerCatalogItems : window.sellerProducts; const filtered = (items || []).filter(x => { if (catId && x.categoria_id !== catId) return false; if (subId && x.subcategoria_id !== subId) return false; const price = Number(x.promocao_preco != null ? x.promocao_preco : (x.preco_aplicado ?? x.preco_base)); if (price < min || price > max) return false; if (q && !(x.nome + ' ' + (x.sku || '') + ' ' + (x.codigo_barras || '')).toLowerCase().includes(q)) return false; return true }); if (window.sellerCatalogMode === 'DEMO') sellerCatalogRender(filtered); else sellerRender(filtered) }
+function sellerCatalogRender(items) { const el = $('#sellerProducts') || $('#sellerCatalogList'); if (el) el.innerHTML = items.map(p => { const tName = esc(p.tabela_preco_nome || p.tabela_nome || 'Oferta'); return `<article class="product-card">${productThumbHtml(p, p.marca || 'PRODUTO')}<h4>${esc(p.nome)}</h4><div class="muted">${esc(p.tamanho || p.sabor || p.sku || '')}</div>${p.preco_tabela != null ? `<div class="promo-label">🏷️ ${tName}: ${money(p.preco_tabela)}${Number(p.quantidade_minima) > 1 ? ` a partir de ${p.quantidade_minima} un.` : ''}</div>` : ''}<div class="product-price">${money(p.preco_aplicado ?? p.preco_base)}</div>${Number(p.esgotado) ? '<div class="promo-label" style="background:#b42318">ESGOTADO</div><button class="btn" disabled>Indisponível</button>' : ''}</article>` }).join('') }
+async function sellerDashboard(filterYm) { try { const url = '/api/seller/dashboard/monthly' + (filterYm ? '?mes=' + encodeURIComponent(filterYm) : ''); const x = await api(url); const ymParts = (x.ano_mes || new Date().toISOString().slice(0, 7)).split('-').map(Number); const curYear = ymParts[0] || new Date().getFullYear(); const curMonth = ymParts[1] || (new Date().getMonth() + 1); const meses = [{ v: 1, l: '01 - Jan' }, { v: 2, l: '02 - Fev' }, { v: 3, l: '03 - Mar' }, { v: 4, l: '04 - Abr' }, { v: 5, l: '05 - Mai' }, { v: 6, l: '06 - Jun' }, { v: 7, l: '07 - Jul' }, { v: 8, l: '08 - Ago' }, { v: 9, l: '09 - Set' }, { v: 10, l: '10 - Out' }, { v: 11, l: '11 - Nov' }, { v: 12, l: '12 - Dez' }]; const anos = [2024, 2025, 2026, 2027, 2028, 2029, 2030]; document.body.innerHTML = `<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Painel do mês', `${esc(me.nome)} · Vendas do mês`)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="seller()">← Minha carteira</button><button class="btn" onclick="sellerOrders()">▣ Pedidos</button><button class="btn primary" onclick="sellerDashboard('${filterYm || ''}')">↻ Atualizar</button></div><div class="mobile-card" style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><span style="font-size:13px;font-weight:700">📅 Filtrar Mês/Ano:</span><div style="display:flex;gap:6px"><select id="sellerSelfMonth" class="search" style="padding:6px 10px;font-size:13px;border-radius:8px" onchange="sellerDashboard($('#sellerSelfYear').value+'-'+String(this.value).padStart(2,'0'))">${meses.map(m => `<option value="${m.v}" ${m.v === curMonth ? 'selected' : ''}>${m.l}</option>`).join('')}</select><select id="sellerSelfYear" class="search" style="padding:6px 10px;font-size:13px;border-radius:8px" onchange="sellerDashboard(this.value+'-'+String($('#sellerSelfMonth').value).padStart(2,'0'))">${anos.map(y => `<option value="${y}" ${y === curYear ? 'selected' : ''}>${y}</option>`).join('')}</select></div></div><div class="grid" style="margin-top:12px"><div class="mobile-card"><small class="muted">Pedidos no mês (${esc(x.mes)})</small><h2>${Number(x.pedidos || 0)}</h2></div><div class="mobile-card"><small class="muted">Valor total dos pedidos (${esc(x.mes)})</small><h2 class="orange">${money(x.valor_total)}</h2><p class="muted" style="font-size:16px">Valor dos pedidos emitidos, não apenas pagamentos recebidos.</p></div></div><div class="mobile-card" style="margin-top:12px"><strong>${esc(x.mes || 'Mês atual')}</strong><p class="muted">Considera os pedidos emitidos por você e os pedidos da sua carteira de clientes neste mês.</p></div></div>${bottom('home')}</div>` } catch (e) { alert(e.message) } }
+async function sellerMyRoutes() { try { const x = await api('/api/seller/my-routes'); const dias = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']; const html = x.items.length ? x.items.map(r => `<article class="mobile-card"><div class="route-status">${dias[r.dia_semana] || 'Dia ' + r.dia_semana}</div><h3 style="margin:4px 0">${esc(r.nome)}</h3><div class="muted" style="margin-top:6px"><strong>Bairros:</strong> ${r.bairros.length ? r.bairros.map(b => esc(b)).join(', ') : 'Nenhum bairro cadastrado'}</div></article>`).join('') : '<div class="empty-state">Nenhuma rota designada para você.</div>'; document.body.innerHTML = `<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Minhas Rotas', `${esc(me.nome)} · Rotas Designadas`)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="seller()">← Voltar</button><button class="btn primary" onclick="sellerMyRoutes()">↻ Atualizar</button></div><div class="section-title"><h2>Planejamento da semana</h2><span class="muted">${x.items.length} rotas</span></div>${html}</div>${bottom('clients')}</div>` } catch (e) { alert(e.message) } }
+async function sellerEditOrder(id) {
+  try {
+    const x = await api('/api/orders/' + id + '/detail'); const cidParam = x.order?.cliente_id ? '&cliente_id=' + encodeURIComponent(x.order.cliente_id) : ''; let products = { items: [], total: 0 }; for (let page = 1, done = false; !done; page++) { const pg = await api('/api/products?limit=100&page=' + page + cidParam); products.items.push(...pg.items); products.total = pg.total; done = products.items.length >= pg.total || !pg.items.length }
+    const o = x.order; if (o.status !== 'PENDENTE') return alert('Somente pedidos pendentes podem ser editados pelo vendedor.');
+    const existing = new Set(x.items.map(i => i.produto_id)); window.sellerOrderCatalog = products.items.filter(p => !existing.has(p.id));
+    window.sellerOrderItems = new Map(x.items.map(i => [i.produto_id, { produto_id: i.produto_id, quantidade: Number(i.quantidade), nome: i.produto_nome }]));
+    document.body.innerHTML = `<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Editar pedido ' + esc(o.numero), `${esc(me.nome)} · ${esc(o.nome_fantasia || o.cliente_nome)}`)}<form id="sellerOrderEditForm" class="mobile-card form" style="margin-top:15px"><div class="field"><label>Modalidade</label><select name="modalidade_entrega"><option value="ENTREGA" ${o.modalidade_entrega === 'ENTREGA' ? 'selected' : ''}>Entrega</option><option value="RETIRADA" ${o.modalidade_entrega !== 'ENTREGA' ? 'selected' : ''}>Retirada</option></select></div><div class="field"><label>Desconto</label><input name="desconto_valor" type="number" min="0" step="0.01" value="${Number(o.desconto_valor || 0)}"></div><div class="field"><label>Tipo de desconto</label><select name="desconto_tipo"><option value="VALOR" ${o.desconto_tipo !== 'PERCENTUAL' ? 'selected' : ''}>R$ valor</option><option value="PERCENTUAL" ${o.desconto_tipo === 'PERCENTUAL' ? 'selected' : ''}>%</option></select></div><div class="field" style="grid-column:1/-1"><label>Observações</label><textarea name="observacoes" rows="3">${esc(o.observacoes || '')}</textarea></div><div class="field" style="grid-column:1/-1"><label>Itens do pedido</label><div id="sellerOrderItems"></div></div><div class="field" style="grid-column:1/-1"><label>Adicionar item do catálogo</label><input id="sellerOrderSearch" class="search" placeholder="Pesquisar produto..." oninput="filterSellerOrderCatalog(this)"><div id="sellerOrderCatalog" class="order-catalog-picker"></div></div><div class="actions" style="grid-column:1/-1"><button type="button" class="btn" onclick="sellerOrders()">Cancelar</button><button class="btn primary">Salvar alterações</button></div></form></div></div>`;
+    renderSellerOrderItems(); filterSellerOrderCatalog($('#sellerOrderSearch'));
+    $('#sellerOrderEditForm').onsubmit = async e => { e.preventDefault(); const f = Object.fromEntries(new FormData(e.currentTarget)); const itens = [...window.sellerOrderItems.values()].filter(i => Number(i.quantidade) > 0).map(i => ({ produto_id: i.produto_id, quantidade: Number(i.quantidade) })); if (!itens.length) return alert('O pedido precisa manter pelo menos um item.'); try { await api('/api/orders/' + id, { method: 'PUT', body: JSON.stringify({ ...f, itens }) }); alert('Pedido atualizado e PDF regenerado.'); sellerOrders() } catch (z) { alert(z.message) } }
+  } catch (e) { alert(e.message) }
 }
-function renderSellerOrderItems(){const h=$('#sellerOrderItems');if(!h)return;h.innerHTML=[...window.sellerOrderItems.values()].map(i=>{const catProd=(window.sellerOrderCatalog||[]).find(x=>x.id===i.produto_id)||i;const hasTier=catProd?.preco_tabela!=null&&Number(catProd?.quantidade_minima)>1;const tName=esc(catProd?.tabela_preco_nome||catProd?.tabela_nome||'Oferta');return `<div class="seller-edit-item" style="flex-wrap:wrap;gap:6px"><div style="flex:1;min-width:160px"><strong>${esc(i.nome)}</strong>${hasTier?`<small style="display:block;color:var(--xv-orange,#fd5e02);font-weight:750;cursor:pointer" onclick="window.sellerOrderItems.get('${i.produto_id}').quantidade=${Number(catProd.quantidade_minima)};renderSellerOrderItems()">🏷️ ${tName}: ${money(catProd.preco_tabela)} (mín. ${catProd.quantidade_minima} un.) · <u>Usar ${catProd.quantidade_minima} un.</u></small>`:''}</div><input type="number" min="1" max="100000" value="${Number(i.quantidade)}" oninput="window.sellerOrderItems.get('${i.produto_id}').quantidade=Number(this.value)"><button type="button" class="btn danger" onclick="window.sellerOrderItems.delete('${i.produto_id}');renderSellerOrderItems()">Remover</button></div>`}).join('')||'<span class="muted">Adicione um item.</span>'}
-function filterSellerOrderCatalog(input){const q=(input.value||'').toLowerCase().trim();const items=(window.sellerOrderCatalog||[]).filter(p=>(p.nome+' '+(p.sku||'')+' '+(p.codigo_barras||'')).toLowerCase().includes(q));$('#sellerOrderCatalog').innerHTML=items.map(p=>{const tName=esc(p.tabela_preco_nome||p.tabela_nome||'Oferta');const hasMin=p.preco_tabela!=null&&Number(p.quantidade_minima)>1;return `<div class="order-catalog-item" style="flex-wrap:wrap;gap:6px"><span><strong>${esc(p.nome)}</strong><small>${esc(p.sku||'Sem SKU')} · ${money(p.preco_aplicado??p.preco_base)}</small>${p.preco_tabela!=null?`<small style="display:block;color:var(--xv-orange,#fd5e02);font-weight:750">🏷️ ${tName}: ${money(p.preco_tabela)}${hasMin?` (a partir de ${p.quantidade_minima} un.)`:''}</small>`:''}</span><div style="display:flex;gap:6px;flex-wrap:wrap">${hasMin?`<button type="button" class="btn primary" style="padding:5px 10px;font-size:12px" onclick="addSellerOrderItem('${p.id}',${Number(p.quantidade_minima)})">⚡ Mín. ${p.quantidade_minima} un.</button>`:''}<button type="button" class="btn" onclick="addSellerOrderItem('${p.id}',1)">Adicionar</button></div></div>`}).join('')||'<span class="muted">Nenhum produto encontrado.</span>'}
-function addSellerOrderItem(id,qtyToAdd=1){const p=(window.sellerOrderCatalog||[]).find(x=>x.id===id);if(!p)return;const q=Math.max(1,Number(qtyToAdd)||1);if(window.sellerOrderItems.has(id))window.sellerOrderItems.get(id).quantidade+=q;else window.sellerOrderItems.set(id,{...p,produto_id:id,quantidade:q,nome:p.nome});renderSellerOrderItems();filterSellerOrderCatalog($('#sellerOrderSearch'))}
+function renderSellerOrderItems() { const h = $('#sellerOrderItems'); if (!h) return; h.innerHTML = [...window.sellerOrderItems.values()].map(i => { const catProd = (window.sellerOrderCatalog || []).find(x => x.id === i.produto_id) || i; const hasTier = catProd?.preco_tabela != null && Number(catProd?.quantidade_minima) > 1; const tName = esc(catProd?.tabela_preco_nome || catProd?.tabela_nome || 'Oferta'); return `<div class="seller-edit-item" style="flex-wrap:wrap;gap:6px"><div style="flex:1;min-width:160px"><strong>${esc(i.nome)}</strong>${hasTier ? `<small style="display:block;color:var(--xv-orange,#fd5e02);font-weight:750;cursor:pointer" onclick="window.sellerOrderItems.get('${i.produto_id}').quantidade=${Number(catProd.quantidade_minima)};renderSellerOrderItems()">🏷️ ${tName}: ${money(catProd.preco_tabela)} (mín. ${catProd.quantidade_minima} un.) · <u>Usar ${catProd.quantidade_minima} un.</u></small>` : ''}</div><input type="number" min="1" max="100000" value="${Number(i.quantidade)}" oninput="window.sellerOrderItems.get('${i.produto_id}').quantidade=Number(this.value)"><button type="button" class="btn danger" onclick="window.sellerOrderItems.delete('${i.produto_id}');renderSellerOrderItems()">Remover</button></div>` }).join('') || '<span class="muted">Adicione um item.</span>' }
+function filterSellerOrderCatalog(input) { const q = (input.value || '').toLowerCase().trim(); const items = (window.sellerOrderCatalog || []).filter(p => (p.nome + ' ' + (p.sku || '') + ' ' + (p.codigo_barras || '')).toLowerCase().includes(q)); $('#sellerOrderCatalog').innerHTML = items.map(p => { const tName = esc(p.tabela_preco_nome || p.tabela_nome || 'Oferta'); const hasMin = p.preco_tabela != null && Number(p.quantidade_minima) > 1; return `<div class="order-catalog-item" style="flex-wrap:wrap;gap:6px"><span><strong>${esc(p.nome)}</strong><small>${esc(p.sku || 'Sem SKU')} · ${money(p.preco_aplicado ?? p.preco_base)}</small>${p.preco_tabela != null ? `<small style="display:block;color:var(--xv-orange,#fd5e02);font-weight:750">🏷️ ${tName}: ${money(p.preco_tabela)}${hasMin ? ` (a partir de ${p.quantidade_minima} un.)` : ''}</small>` : ''}</span><div style="display:flex;gap:6px;flex-wrap:wrap">${hasMin ? `<button type="button" class="btn primary" style="padding:5px 10px;font-size:12px" onclick="addSellerOrderItem('${p.id}',${Number(p.quantidade_minima)})">⚡ Mín. ${p.quantidade_minima} un.</button>` : ''}<button type="button" class="btn" onclick="addSellerOrderItem('${p.id}',1)">Adicionar</button></div></div>` }).join('') || '<span class="muted">Nenhum produto encontrado.</span>' }
+function addSellerOrderItem(id, qtyToAdd = 1) { const p = (window.sellerOrderCatalog || []).find(x => x.id === id); if (!p) return; const q = Math.max(1, Number(qtyToAdd) || 1); if (window.sellerOrderItems.has(id)) window.sellerOrderItems.get(id).quantidade += q; else window.sellerOrderItems.set(id, { ...p, produto_id: id, quantidade: q, nome: p.nome }); renderSellerOrderItems(); filterSellerOrderCatalog($('#sellerOrderSearch')) }
 // Miniatura padronizada usada pelo Vendedor Externo e pela Loja Online (object-fit: contain, nunca corta a imagem).
-function productThumbHtml(p,label){return `<div class="product-thumb">${p.foto_url?`<img src="${esc(p.foto_url)}" alt="${esc(p.nome)}" loading="lazy" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='grid'"><span class="product-image-fallback" style="display:none"></span>`:`<span class="product-image-fallback" style="display:grid"></span>`}</div>`}
+function productThumbHtml(p, label) { return `<div class="product-thumb">${p.foto_url ? `<img src="${esc(p.foto_url)}" alt="${esc(p.nome)}" loading="lazy" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='grid'"><span class="product-image-fallback" style="display:none"></span>` : `<span class="product-image-fallback" style="display:grid"></span>`}</div>` }
 
-async function sellerNewClient(){const bairros=await loadCityBairrosForRole();document.body.innerHTML=`<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Adicionar cliente',`${esc(me.nome)} · Vendedor externo`)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="seller()">← Voltar para clientes</button></div><form id="sellerClientForm" class="mobile-card form" style="margin-top:15px"><div class="field"><label>Nome fantasia</label><input name="nome_fantasia" required></div><div class="field"><label>Razão social (opcional)</label><input name="razao_social"></div><div class="field"><label>CNPJ/CPF</label><input name="cnpj_cpf"></div><div class="field"><label>Email</label><input name="email" type="email"></div><div class="field"><label>Telefone</label><input name="telefone"></div><div class="field"><label>Endereço</label><input name="endereco" required></div><div class="field"><label>Bairro (Governador Valadares - MG)</label><select name="bairro" required><option value="" disabled selected>Selecione o bairro...</option>${bairros.map(b=>`<option value="${esc(b)}">${esc(b)}</option>`).join('')}</select></div><div class="field"><label>Cidade</label><select name="cidade" required><option value="Governador Valadares" selected>Governador Valadares - MG</option></select></div><div class="field"><label>Estado (UF)</label><select name="estado" required><option value="MG" selected>MG</option></select></div><div class="actions"><button class="btn" type="button" onclick="seller()">Cancelar</button><button class="btn primary">Salvar cliente</button></div></form></div></div>`;$('#sellerClientForm').onsubmit=async e=>{e.preventDefault();try{const x=await api('/api/clients',{method:'POST',headers:{'Idempotency-Key':'CLIENT-'+crypto.randomUUID()},body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});if(x.offline){alert('Cliente salvo no aparelho e será enviado quando a rede voltar.');return seller()}alert('Cliente cadastrado.');seller()}catch(err){alert(err.message)}}}
+async function sellerNewClient() { const bairros = await loadCityBairrosForRole(); document.body.innerHTML = `<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Adicionar cliente', `${esc(me.nome)} · Vendedor externo`)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="seller()">← Voltar para clientes</button></div><form id="sellerClientForm" class="mobile-card form" style="margin-top:15px"><div class="field"><label>Nome fantasia</label><input name="nome_fantasia" required></div><div class="field"><label>Razão social (opcional)</label><input name="razao_social"></div><div class="field"><label>CNPJ/CPF</label><input name="cnpj_cpf"></div><div class="field"><label>Email</label><input name="email" type="email"></div><div class="field"><label>Telefone</label><input name="telefone"></div><div class="field"><label>Endereço</label><input name="endereco" required></div><div class="field"><label>Bairro (Governador Valadares - MG)</label><select name="bairro" required><option value="" disabled selected>Selecione o bairro...</option>${bairros.map(b => `<option value="${esc(b)}">${esc(b)}</option>`).join('')}</select></div><div class="field"><label>Cidade</label><select name="cidade" required><option value="Governador Valadares" selected>Governador Valadares - MG</option></select></div><div class="field"><label>Estado (UF)</label><select name="estado" required><option value="MG" selected>MG</option></select></div><div class="actions"><button class="btn" type="button" onclick="seller()">Cancelar</button><button class="btn primary">Salvar cliente</button></div></form></div></div>`; $('#sellerClientForm').onsubmit = async e => { e.preventDefault(); try { const x = await api('/api/clients', { method: 'POST', headers: { 'Idempotency-Key': 'CLIENT-' + crypto.randomUUID() }, body: JSON.stringify(Object.fromEntries(new FormData(e.currentTarget))) }); if (x.offline) { alert('Cliente salvo no aparelho e será enviado quando a rede voltar.'); return seller() } alert('Cliente cadastrado.'); seller() } catch (err) { alert(err.message) } } }
 async function sellerDeleteClient(id, nome) {
   if (!id || id === 'CLIENTE-BALCAO') {
     return alert('O cliente balcão padrão não pode ser excluído.');
@@ -829,11 +831,11 @@ async function sellerDeleteClient(id, nome) {
     }
     if (window.sellerClients) {
       window.sellerClients = window.sellerClients.filter(c => c.id !== id);
-      try { await offlinePut('kv', 'sellerClients', window.sellerClients); } catch(_) {}
+      try { await offlinePut('kv', 'sellerClients', window.sellerClients); } catch (_) { }
     }
     if (window.sellerCrmData?.items) {
       window.sellerCrmData.items = window.sellerCrmData.items.filter(c => c.id !== id);
-      try { await offlinePut('kv', 'sellerCrm', window.sellerCrmData); } catch(_) {}
+      try { await offlinePut('kv', 'sellerCrm', window.sellerCrmData); } catch (_) { }
     }
     seller();
   } catch (err) {
@@ -842,7 +844,7 @@ async function sellerDeleteClient(id, nome) {
 }
 window.sellerDeleteClient = sellerDeleteClient;
 
-async function sellerEditClient(id){
+async function sellerEditClient(id) {
   try {
     let client = (window.sellerClients || []).find(c => c.id === id);
     if (!client) {
@@ -890,7 +892,7 @@ async function sellerEditClient(id){
             <label>Bairro (Gov. Valadares)</label>
             <select name="bairro" class="search" style="background:#fff;color:#172033;padding:8px;height:40px;border-radius:8px;border:1px solid #dbe3ec" required>
               <option value="" disabled ${!client.bairro ? 'selected' : ''}>Selecione o bairro...</option>
-              ${cityBairros.map(b => `<option value="${esc(b)}" ${String(client.bairro||'').trim().toLowerCase()===b.toLowerCase()?'selected':''}>${esc(b)}</option>`).join('')}
+              ${cityBairros.map(b => `<option value="${esc(b)}" ${String(client.bairro || '').trim().toLowerCase() === b.toLowerCase() ? 'selected' : ''}>${esc(b)}</option>`).join('')}
             </select>
           </div>
           <div class="field">
@@ -951,7 +953,7 @@ async function sellerEditClient(id){
           if (idx !== -1) {
             window.sellerClients[idx] = { ...window.sellerClients[idx], ...updated };
           }
-          try { await offlinePut('kv', 'sellerClients', window.sellerClients); } catch(_) {}
+          try { await offlinePut('kv', 'sellerClients', window.sellerClients); } catch (_) { }
         }
 
         if (window.sellerCrmData?.items) {
@@ -966,7 +968,7 @@ async function sellerEditClient(id){
               cidade: updated.cidade
             };
           }
-          try { await offlinePut('kv', 'sellerCrm', window.sellerCrmData); } catch(_) {}
+          try { await offlinePut('kv', 'sellerCrm', window.sellerCrmData); } catch (_) { }
         }
 
         if (document.querySelector('.mobile-content h1')?.textContent?.includes('Perfil do cliente') || document.body.innerHTML.includes('Mais comprados')) {
@@ -988,7 +990,7 @@ async function sellerRefreshHome() {
   try {
     toastRole('Atualizando dados...');
     if (navigator.onLine && typeof syncOfflineQueue === 'function') {
-      await syncOfflineQueue().catch(() => {});
+      await syncOfflineQueue().catch(() => { });
     }
     await seller(window.sellerCurrentTab || 'list');
     toastRole('✓ Dados atualizados com sucesso!');
@@ -1029,30 +1031,30 @@ async function sellerCancelOrder(id, numero, returnClientId = null) {
 }
 window.sellerCancelOrder = sellerCancelOrder;
 
-async function sellerClientProfile(id){try{const x=await api('/api/clients/'+id+'/profile');document.body.innerHTML=`<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Perfil do cliente',`${esc(me.nome)} · ${esc(x.client.razao_social)}`)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="seller()">← Carteira</button><button class="btn" style="background:#e0f2fe;color:#0369a1;border-color:#bae6fd;font-weight:700;" onclick="sellerEditClient('${x.client?.id||id}')">✏️ Editar dados</button><button class="btn primary" onclick="sellerNewOrder('${x.client?.id||id}')">＋ Novo pedido</button><button class="btn" onclick="sellerRepeatClient('${id}')">↻ Repetir último pedido</button><button class="btn" onclick="crmInteractionsModal('${id}', parseJsonArg('${jsonArg(x.client.razao_social||x.client.nome_fantasia)}'))">📝 CRM</button>${x.client.telefone?`<button class="btn-crm-wpp" onclick="openCrmWhatsApp('${x.client.telefone}', parseJsonArg('${jsonArg(x.client.razao_social||x.client.nome_fantasia)}'), null, parseJsonArg('${jsonArg(JSON.stringify((x.topProdutos||[]).map(p=>p.nome)))}'))">📲 WhatsApp</button>`:''}<button class="btn danger" onclick="sellerDeleteClient('${x.client?.id||id}', parseJsonArg('${jsonArg(x.client.razao_social||x.client.nome_fantasia)}'))">🗑️ Excluir cliente</button></div><div class="grid"><div class="mobile-card"><small>Pedidos</small><h2>${x.summary?.pedidos||0}</h2></div><div class="mobile-card"><small>Faturado</small><h2>${money(x.summary?.faturado)}</h2></div><div class="mobile-card"><small>Em aberto</small><h2>${money(x.summary?.em_aberto)}</h2></div></div><div class="mobile-card"><h3>${esc(x.client.razao_social)}</h3><p class="muted">${esc(x.client.endereco||'')} · ${esc(x.client.bairro||'')} · ${esc(x.client.cidade||'')} ${x.client.telefone?'· Tel: '+esc(x.client.telefone):''}</p></div><div class="mobile-card"><h3>Mais comprados</h3>${x.topProdutos.map(p=>`<p><strong>${esc(p.nome)}</strong> — ${p.quantidade} un. (${money(p.faturamento)})</p>`).join('')||'<p class="muted">Sem histórico concluído.</p>'}</div><div class="mobile-card"><h3>Histórico de pedidos</h3>${x.orders.map(o=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f1f5f9;flex-wrap:wrap;gap:6px;"><div><strong>${esc(o.numero)}</strong> · <span class="badge status-${String(o.status).toLowerCase()}">${esc(o.status)}</span> · <strong>${money(o.total)}</strong></div><div style="display:flex;gap:5px;"><button class="btn" style="padding:4px 8px;font-size:12px;" onclick="downloadAuthFile('/api/orders/${o.id}/pdf','pedido-${o.numero}.pdf')">PDF</button>${['PENDENTE','SEPARACAO'].includes(o.status)?`<button class="btn danger" style="padding:4px 8px;font-size:12px;" onclick="sellerCancelOrder('${o.id}','${esc(o.numero)}','${id}')">🗑️ Excluir</button>`:''}</div></div>`).join('')||'<p class="muted">Nenhum pedido realizado.</p>'}</div></div>${bottom('clients')}</div>`}catch(e){alert(e.message)}}
+async function sellerClientProfile(id) { try { const x = await api('/api/clients/' + id + '/profile'); document.body.innerHTML = `<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Perfil do cliente', `${esc(me.nome)} · ${esc(x.client.razao_social)}`)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="seller()">← Carteira</button><button class="btn" style="background:#e0f2fe;color:#0369a1;border-color:#bae6fd;font-weight:700;" onclick="sellerEditClient('${x.client?.id || id}')">✏️ Editar dados</button><button class="btn primary" onclick="sellerNewOrder('${x.client?.id || id}')">＋ Novo pedido</button><button class="btn" onclick="sellerRepeatClient('${id}')">↻ Repetir último pedido</button><button class="btn" onclick="crmInteractionsModal('${id}', parseJsonArg('${jsonArg(x.client.razao_social || x.client.nome_fantasia)}'))">📝 CRM</button>${x.client.telefone ? `<button class="btn-crm-wpp" onclick="openCrmWhatsApp('${x.client.telefone}', parseJsonArg('${jsonArg(x.client.razao_social || x.client.nome_fantasia)}'), null, parseJsonArg('${jsonArg(JSON.stringify((x.topProdutos || []).map(p => p.nome)))}'))">📲 WhatsApp</button>` : ''}<button class="btn danger" onclick="sellerDeleteClient('${x.client?.id || id}', parseJsonArg('${jsonArg(x.client.razao_social || x.client.nome_fantasia)}'))">🗑️ Excluir cliente</button></div><div class="grid"><div class="mobile-card"><small>Pedidos</small><h2>${x.summary?.pedidos || 0}</h2></div><div class="mobile-card"><small>Faturado</small><h2>${money(x.summary?.faturado)}</h2></div><div class="mobile-card"><small>Em aberto</small><h2>${money(x.summary?.em_aberto)}</h2></div></div><div class="mobile-card"><h3>${esc(x.client.razao_social)}</h3><p class="muted">${esc(x.client.endereco || '')} · ${esc(x.client.bairro || '')} · ${esc(x.client.cidade || '')} ${x.client.telefone ? '· Tel: ' + esc(x.client.telefone) : ''}</p></div><div class="mobile-card"><h3>Mais comprados</h3>${x.topProdutos.map(p => `<p><strong>${esc(p.nome)}</strong> — ${p.quantidade} un. (${money(p.faturamento)})</p>`).join('') || '<p class="muted">Sem histórico concluído.</p>'}</div><div class="mobile-card"><h3>Histórico de pedidos</h3>${x.orders.map(o => `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f1f5f9;flex-wrap:wrap;gap:6px;"><div><strong>${esc(o.numero)}</strong> · <span class="badge status-${String(o.status).toLowerCase()}">${esc(o.status)}</span> · <strong>${money(o.total)}</strong></div><div style="display:flex;gap:5px;"><button class="btn" style="padding:4px 8px;font-size:12px;" onclick="downloadAuthFile('/api/orders/${o.id}/pdf','pedido-${o.numero}.pdf')">PDF</button>${['PENDENTE', 'SEPARACAO'].includes(o.status) ? `<button class="btn danger" style="padding:4px 8px;font-size:12px;" onclick="sellerCancelOrder('${o.id}','${esc(o.numero)}','${id}')">🗑️ Excluir</button>` : ''}</div></div>`).join('') || '<p class="muted">Nenhum pedido realizado.</p>'}</div></div>${bottom('clients')}</div>` } catch (e) { alert(e.message) } }
 
-function getSellerDiscountCalculations(subtotal){
-  const type=window._sellerCurrentDiscountType||'VALOR';
-  const val=Math.max(0,Number(window._sellerCurrentDiscountVal||0));
-  let discountAmount=0;
-  if(type==='PERCENTUAL'){
-    discountAmount=Math.min(subtotal,Math.round(subtotal*Math.min(100,val))/100);
-  }else{
-    discountAmount=Math.min(subtotal,val);
+function getSellerDiscountCalculations(subtotal) {
+  const type = window._sellerCurrentDiscountType || 'VALOR';
+  const val = Math.max(0, Number(window._sellerCurrentDiscountVal || 0));
+  let discountAmount = 0;
+  if (type === 'PERCENTUAL') {
+    discountAmount = Math.min(subtotal, Math.round(subtotal * Math.min(100, val)) / 100);
+  } else {
+    discountAmount = Math.min(subtotal, val);
   }
-  const total=Math.max(0,Math.round((subtotal-discountAmount)*100)/100);
-  return {type,val,discountAmount,total};
+  const total = Math.max(0, Math.round((subtotal - discountAmount) * 100) / 100);
+  return { type, val, discountAmount, total };
 }
 
 
-function getSellerCartStorageKey(clientId){
+function getSellerCartStorageKey(clientId) {
   const sellerId = (window.me && window.me.id) ? window.me.id : 'default';
   return 'xv_seller_cart_' + sellerId + '_' + clientId;
 }
 
-async function saveSellerDraftCart(clientId){
+async function saveSellerDraftCart(clientId) {
   const targetId = clientId || window.sellerCurrentClientId;
-  if(!targetId) return;
+  if (!targetId) return;
   const items = [...(window.sellerOrderItems?.values() || [])]
     .filter(x => Number(x.quantidade) > 0)
     .map(x => ({
@@ -1064,9 +1066,9 @@ async function saveSellerDraftCart(clientId){
   const obs = (window._sellerCurrentObs !== undefined ? window._sellerCurrentObs : ($('#sellerObs')?.value || $('#sellerFloatingObs')?.value || '')).trim();
 
   const key = getSellerCartStorageKey(targetId);
-  if(!items.length && !discVal && !obs){
-    try { localStorage.removeItem(key); } catch(_) {}
-    try { await offlinePut('kv', key, null); } catch(_) {}
+  if (!items.length && !discVal && !obs) {
+    try { localStorage.removeItem(key); } catch (_) { }
+    try { await offlinePut('kv', key, null); } catch (_) { }
     return;
   }
 
@@ -1079,262 +1081,262 @@ async function saveSellerDraftCart(clientId){
     updatedAt: new Date().toISOString()
   };
 
-  try { localStorage.setItem(key, JSON.stringify(draft)); } catch(_) {}
-  try { await offlinePut('kv', key, draft); } catch(_) {}
+  try { localStorage.setItem(key, JSON.stringify(draft)); } catch (_) { }
+  try { await offlinePut('kv', key, draft); } catch (_) { }
 }
 
-async function loadSellerDraftCart(clientId){
-  if(!clientId) return null;
+async function loadSellerDraftCart(clientId) {
+  if (!clientId) return null;
   const key = getSellerCartStorageKey(clientId);
   let draft = null;
   try {
     const raw = localStorage.getItem(key);
-    if(raw) draft = JSON.parse(raw);
-  } catch(_) {}
-  if(!draft){
+    if (raw) draft = JSON.parse(raw);
+  } catch (_) { }
+  if (!draft) {
     try {
       draft = await offlineGet('kv', key);
-    } catch(_) {}
+    } catch (_) { }
   }
   return draft;
 }
 
-async function clearSellerDraftCart(clientId){
+async function clearSellerDraftCart(clientId) {
   const targetId = clientId || window.sellerCurrentClientId;
-  if(!targetId) return;
+  if (!targetId) return;
   const key = getSellerCartStorageKey(targetId);
-  try { localStorage.removeItem(key); } catch(_) {}
-  try { await offlinePut('kv', key, null); } catch(_) {}
+  try { localStorage.removeItem(key); } catch (_) { }
+  try { await offlinePut('kv', key, null); } catch (_) { }
 }
 
-async function sellerClearCartAndDraft(){
-  if((window.sellerOrderItems && window.sellerOrderItems.size > 0) || window._sellerCurrentObs || window._sellerCurrentDiscountVal){
-    if(!confirm('Deseja realmente limpar todos os itens e observações deste carrinho?')) return;
+async function sellerClearCartAndDraft() {
+  if ((window.sellerOrderItems && window.sellerOrderItems.size > 0) || window._sellerCurrentObs || window._sellerCurrentDiscountVal) {
+    if (!confirm('Deseja realmente limpar todos os itens e observações deste carrinho?')) return;
   }
   window.sellerOrderItems = new Map();
   window._sellerCurrentDiscountVal = 0;
   window._sellerCurrentDiscountType = 'VALOR';
   window._sellerCurrentObs = '';
-  const d1 = $('#sellerDiscount'); if(d1) d1.value = 0;
-  const t1 = $('#sellerDiscountType'); if(t1) t1.value = 'VALOR';
-  const o1 = $('#sellerObs'); if(o1) o1.value = '';
-  const d2 = $('#sellerFloatingDiscount'); if(d2) d2.value = 0;
-  const t2 = $('#sellerFloatingDiscountType'); if(t2) t2.value = 'VALOR';
-  const o2 = $('#sellerFloatingObs'); if(o2) o2.value = '';
+  const d1 = $('#sellerDiscount'); if (d1) d1.value = 0;
+  const t1 = $('#sellerDiscountType'); if (t1) t1.value = 'VALOR';
+  const o1 = $('#sellerObs'); if (o1) o1.value = '';
+  const d2 = $('#sellerFloatingDiscount'); if (d2) d2.value = 0;
+  const t2 = $('#sellerFloatingDiscountType'); if (t2) t2.value = 'VALOR';
+  const o2 = $('#sellerFloatingObs'); if (o2) o2.value = '';
   await clearSellerDraftCart(window.sellerCurrentClientId);
   renderSellerNewOrderCart();
   updateFloatingCartTotals();
-  if($('#sellerFloatingCartModal')) openSellerFloatingCart();
+  if ($('#sellerFloatingCartModal')) openSellerFloatingCart();
   toastRole('Carrinho limpo.');
 }
 
-async function sellerNewOrder(clientOrId){
-  try { getSellerOrderLocation().catch(()=>{}); } catch(_) {}
+async function sellerNewOrder(clientOrId) {
+  try { getSellerOrderLocation().catch(() => { }); } catch (_) { }
 
-  try{
-    let client=clientOrId;
-    if(!client)return alert('Selecione um cliente na carteira.');
-    if(typeof client==='string'){
-      client=(window.sellerClients||[]).find(c=>c.id===clientOrId)||
-             (window.sellerCrmData?.items||[]).find(c=>c.id===clientOrId)||
-             {id:clientOrId,razao_social:'Cliente'};
+  try {
+    let client = clientOrId;
+    if (!client) return alert('Selecione um cliente na carteira.');
+    if (typeof client === 'string') {
+      client = (window.sellerClients || []).find(c => c.id === clientOrId) ||
+        (window.sellerCrmData?.items || []).find(c => c.id === clientOrId) ||
+        { id: clientOrId, razao_social: 'Cliente' };
     }
-    if(!client.id)return alert('Cliente não identificado.');
-    window.sellerCurrentClientId=client.id;
-    window.sellerCurrentClient=client;
+    if (!client.id) return alert('Cliente não identificado.');
+    window.sellerCurrentClientId = client.id;
+    window.sellerCurrentClient = client;
 
-    window._sellerCurrentDiscountVal=0;
-    window._sellerCurrentDiscountType='VALOR';
-    window._sellerCurrentObs='';
+    window._sellerCurrentDiscountVal = 0;
+    window._sellerCurrentDiscountType = 'VALOR';
+    window._sellerCurrentObs = '';
 
-    let p={items:[]},s={items:[]},cats={categorias:[],subcategorias:[]};
-    try{
-      [p,s,cats]=await Promise.all([
-        api('/api/products?cliente_id='+encodeURIComponent(client.id)),
-        api('/api/seller/stock').catch(()=>({items:[]})),
-        api('/api/categories').catch(()=>({categorias:[],subcategorias:[]}))
+    let p = { items: [] }, s = { items: [] }, cats = { categorias: [], subcategorias: [] };
+    try {
+      [p, s, cats] = await Promise.all([
+        api('/api/products?cliente_id=' + encodeURIComponent(client.id)),
+        api('/api/seller/stock').catch(() => ({ items: [] })),
+        api('/api/categories').catch(() => ({ categorias: [], subcategorias: [] }))
       ]);
-      await offlinePut('kv','sellerProducts',p.items||[]);
-      await offlinePut('kv','sellerStock',s.items||[]);
-      await offlinePut('kv','sellerCategories',cats);
-    }catch(e){
-      console.warn('sellerNewOrder fallback cache',e);
-      const cp=await offlineGet('kv','sellerProducts');
-      const cs=await offlineGet('kv','sellerStock');
-      const ccats=await offlineGet('kv','sellerCategories');
-      if(cp)p={items:cp};
-      if(cs)s={items:cs};
-      if(ccats)cats=ccats;
-      if(!cp&&!p.items?.length)throw e;
+      await offlinePut('kv', 'sellerProducts', p.items || []);
+      await offlinePut('kv', 'sellerStock', s.items || []);
+      await offlinePut('kv', 'sellerCategories', cats);
+    } catch (e) {
+      console.warn('sellerNewOrder fallback cache', e);
+      const cp = await offlineGet('kv', 'sellerProducts');
+      const cs = await offlineGet('kv', 'sellerStock');
+      const ccats = await offlineGet('kv', 'sellerCategories');
+      if (cp) p = { items: cp };
+      if (cs) s = { items: cs };
+      if (ccats) cats = ccats;
+      if (!cp && !p.items?.length) throw e;
     }
-    const sm=new Map((s.items||[]).map(x=>[x.id,x]));
-    window.sellerProducts=(p.items||[]).map(x=>({...x,...(sm.get(x.id)||{})}));
-    window.sellerCategories=cats.categorias||[];
-    window.sellerSubcategories=cats.subcategorias||[];
-    window.sellerOrderItems=new Map();
-    window.sellerCatalogMode='ORDER';
-    document.body.innerHTML=`<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Novo pedido',`${esc(client.razao_social||client.nome_fantasia||'Cliente')} · Vendedor externo`)}<div class="mobile-nav" style="margin-top:15px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><button class="btn" onclick="seller()">← Voltar</button><button class="btn" onclick="sellerOrders()">Pedidos</button><button id="sellerFloatingCart" class="btn seller-floating-cart-btn" type="button" aria-label="Abrir carrinho do pedido" onclick="openSellerFloatingCart()"><span class="seller-cart-icon">🛒</span><span id="sellerFloatingCartLabel">Carrinho</span><b id="sellerFloatingCartCount">0</b></button></div><div id="sellerCatalogRoot" style="margin-top:12px"></div><section class="mobile-card seller-cart-dashboard" style="margin-top:18px"><div class="section-title"><h2>Carrinho do pedido</h2><span id="sellerCartCount" class="badge">0 itens</span></div><div id="sellerCartItems" class="seller-cart-items"><span class="muted">Nenhum produto selecionado.</span></div><div class="form" style="margin-top:14px"><div class="field"><label>Desconto</label><div style="display:flex;gap:6px"><select id="sellerDiscountType" style="width:110px" onchange="syncSellerCartDiscountFromPage()"><option value="VALOR">R$ valor</option><option value="PERCENTUAL">%</option></select><input id="sellerDiscount" type="number" min="0" step="0.01" value="0" style="flex:1" oninput="syncSellerCartDiscountFromPage()"></div></div><div class="field" style="grid-column:1/-1"><label>Observação</label><textarea id="sellerObs" rows="2" oninput="syncSellerCartObsFromPage()"></textarea></div></div><div class="seller-cart-summary-box" style="margin-top:14px;padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;"><div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:6px"><span>Subtotal dos itens:</span><strong id="sellerCartSubtotal">${money(0)}</strong></div><div id="sellerCartDiscountRow" style="display:none;justify-content:space-between;font-size:14px;color:#16a34a;margin-bottom:6px"><span>Desconto aplicado:</span><strong id="sellerCartDiscountDisplay">-R$ 0,00</strong></div><div class="seller-cart-total" style="display:flex;justify-content:space-between;font-size:17px;font-weight:800;border-top:1px solid #cbd5e1;padding-top:8px;color:var(--xv-brand-navy,#061a4f)"><span>Total a pagar:</span><strong id="sellerCartTotal" class="orange">${money(0)}</strong></div></div><button class="btn primary seller-finalize" style="width:100%;margin-top:14px;padding:12px;font-size:16px;font-weight:750" onclick="submitSellerOrder('${client.id}')">Finalizar pedido e gerar PDF</button></section></div></div>`;
+    const sm = new Map((s.items || []).map(x => [x.id, x]));
+    window.sellerProducts = (p.items || []).map(x => ({ ...x, ...(sm.get(x.id) || {}) }));
+    window.sellerCategories = cats.categorias || [];
+    window.sellerSubcategories = cats.subcategorias || [];
+    window.sellerOrderItems = new Map();
+    window.sellerCatalogMode = 'ORDER';
+    document.body.innerHTML = `<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Novo pedido', `${esc(client.razao_social || client.nome_fantasia || 'Cliente')} · Vendedor externo`)}<div class="mobile-nav" style="margin-top:15px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><button class="btn" onclick="seller()">← Voltar</button><button class="btn" onclick="sellerOrders()">Pedidos</button><button id="sellerFloatingCart" class="btn seller-floating-cart-btn" type="button" aria-label="Abrir carrinho do pedido" onclick="openSellerFloatingCart()"><span class="seller-cart-icon">🛒</span><span id="sellerFloatingCartLabel">Carrinho</span><b id="sellerFloatingCartCount">0</b></button></div><div id="sellerCatalogRoot" style="margin-top:12px"></div><section class="mobile-card seller-cart-dashboard" style="margin-top:18px"><div class="section-title"><h2>Carrinho do pedido</h2><span id="sellerCartCount" class="badge">0 itens</span></div><div id="sellerCartItems" class="seller-cart-items"><span class="muted">Nenhum produto selecionado.</span></div><div class="form" style="margin-top:14px"><div class="field"><label>Desconto</label><div style="display:flex;gap:6px"><select id="sellerDiscountType" style="width:110px" onchange="syncSellerCartDiscountFromPage()"><option value="VALOR">R$ valor</option><option value="PERCENTUAL">%</option></select><input id="sellerDiscount" type="number" min="0" step="0.01" value="0" style="flex:1" oninput="syncSellerCartDiscountFromPage()"></div></div><div class="field" style="grid-column:1/-1"><label>Observação</label><textarea id="sellerObs" rows="2" oninput="syncSellerCartObsFromPage()"></textarea></div></div><div class="seller-cart-summary-box" style="margin-top:14px;padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;"><div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:6px"><span>Subtotal dos itens:</span><strong id="sellerCartSubtotal">${money(0)}</strong></div><div id="sellerCartDiscountRow" style="display:none;justify-content:space-between;font-size:14px;color:#16a34a;margin-bottom:6px"><span>Desconto aplicado:</span><strong id="sellerCartDiscountDisplay">-R$ 0,00</strong></div><div class="seller-cart-total" style="display:flex;justify-content:space-between;font-size:17px;font-weight:800;border-top:1px solid #cbd5e1;padding-top:8px;color:var(--xv-brand-navy,#061a4f)"><span>Total a pagar:</span><strong id="sellerCartTotal" class="orange">${money(0)}</strong></div></div><button class="btn primary seller-finalize" style="width:100%;margin-top:14px;padding:12px;font-size:16px;font-weight:750" onclick="submitSellerOrder('${client.id}')">Finalizar pedido e gerar PDF</button></section></div></div>`;
     sellerShowCategories();
     renderSellerNewOrderCart();
     initSellerFloatingCart();
     initSellerScrollFloatingBack();
-  }catch(err){
-    console.error('Erro em sellerNewOrder:',err);
-    alert('Não foi possível iniciar o pedido para este cliente: '+(err.message||'Erro de comunicação ou dados'));
+  } catch (err) {
+    console.error('Erro em sellerNewOrder:', err);
+    alert('Não foi possível iniciar o pedido para este cliente: ' + (err.message || 'Erro de comunicação ou dados'));
   }
 }
-function sellerRender(items){const el=$('#sellerProducts');if(el)el.innerHTML=items.map(p=>{const tName=esc(p.tabela_preco_nome||p.tabela_nome||'Oferta');const hasMin=p.preco_tabela!=null&&Number(p.quantidade_minima)>1;const maxSt=p.quantidade_disponivel||99999;return `<article class="product-card" data-seller-product-id="${esc(p.id)}">${productThumbHtml(p,p.marca||'PRODUTO')}<h4>${esc(p.nome)}</h4><div class="muted">${esc(p.tamanho||p.sabor||p.sku||'')}</div>${hasMin?`<div class="promo-label" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap" onclick="selectSellerMinQty('${p.id}',${Number(p.quantidade_minima)},${maxSt})" title="Clique para selecionar ${p.quantidade_minima} un. com preço ${tName}"><span>🏷️ ${tName}: <strong>${money(p.preco_tabela)}</strong> (a partir de ${p.quantidade_minima} un.)</span><span style="background:rgba(255,255,255,0.25);padding:2px 7px;border-radius:6px;font-size:11px;font-weight:800;text-decoration:underline">Selecionar ${p.quantidade_minima} un.</span></div>`:(p.preco_tabela!=null?`<div class="promo-label">🏷️ ${tName}: ${money(p.preco_tabela)}</div>`:'')}<div class="product-price" id="seller_price_${esc(p.id)}">${money(p.preco_aplicado ?? p.preco_base)}</div>${Number(p.esgotado)?'<div class="promo-label" style="background:#b42318">ESGOTADO</div><button class="btn" disabled>Indisponível</button>':`<div class="muted" style="margin-bottom:6px">Estoque disponível: ${p.quantidade_disponivel ?? 'N/A'}</div><div class="seller-card-qty-row"><span class="seller-card-qty-label">Qtd:</span><div class="seller-qty-stepper"><button type="button" aria-label="Diminuir quantidade" onclick="stepSellerCardQty('${p.id}',-1,${maxSt})">−</button><input type="number" id="seller_qty_${esc(p.id)}" value="1" min="1" max="${maxSt}" step="1" inputmode="numeric" onchange="sanitizeSellerCardQty(this,${maxSt},'${p.id}')" oninput="updateSellerCardPriceDisplay('${p.id}')"><button type="button" aria-label="Aumentar quantidade" onclick="stepSellerCardQty('${p.id}',1,${maxSt})">＋</button></div></div><button class="btn primary seller-add-btn" style="width:100%" onclick="addSellerNewOrderItemWithQty('${p.id}')">Adicionar ao carrinho</button>`}</article>`}).join('')}
-function updateSellerCardPriceDisplay(id){const p=(window.sellerProducts||[]).find(x=>x.id===id);const el=document.getElementById('seller_qty_'+id);const priceEl=document.getElementById('seller_price_'+id);if(!p||!priceEl)return;const q=Math.max(1,parseInt(el?.value,10)||1);priceEl.textContent=money(priceForLine(p,q))}
-function selectSellerMinQty(id,minQty,maxStock){const el=document.getElementById('seller_qty_'+id);if(!el)return;const max=Number(maxStock)||99999;const target=Math.max(1,Math.min(max,Number(minQty)||1));el.value=target;updateSellerCardPriceDisplay(id);const p=(window.sellerProducts||[]).find(x=>x.id===id);const tName=p?.tabela_preco_nome||p?.tabela_nome||'Oferta';if(target<Number(minQty)){toastRole(`Estoque máximo disponível: ${max} un.`,true)}else{toastRole(`✓ ${target} un. selecionadas — ${tName}: ${money(priceForLine(p,target))}/un`)}}
-function setSellerCartMinQty(id,minQty){const item=window.sellerOrderItems?.get(id);if(!item)return;const max=item.estoque||99999;const next=Math.max(1,Math.min(max,Number(minQty)||1));item.quantidade=next;item.preco=priceForLine(item,next);renderSellerNewOrderCart();updateFloatingCartTotals();saveSellerDraftCart();if($('#sellerFloatingCartModal'))openSellerFloatingCart();toastRole(`✓ Quantidade ajustada para ${next} un. (${money(item.preco)}/un)`)}
-function stepSellerCardQty(id,delta,maxStock){const el=document.getElementById('seller_qty_'+id);if(!el)return;const cur=parseInt(el.value,10)||1,max=Number(maxStock)||99999;el.value=Math.max(1,Math.min(max,cur+delta));updateSellerCardPriceDisplay(id)}
-function sanitizeSellerCardQty(el,maxStock,id){if(!el)return;let v=parseInt(el.value,10),max=Number(maxStock)||99999;if(isNaN(v)||v<1)v=1;if(v>max){v=max;toastRole(`Estoque máximo disponível: ${max} un.`,true)}el.value=v;if(id)updateSellerCardPriceDisplay(id)}
-function addSellerNewOrderItemWithQty(id){const el=document.getElementById('seller_qty_'+id);const qty=parseInt(el?.value,10)||1;addSellerNewOrderItem(id,qty);if(el){el.value=1;updateSellerCardPriceDisplay(id)}}
-function addSellerNewOrderItem(id,qty=1){const p=(window.sellerProducts||[]).find(x=>x.id===id);if(!p||Number(p.esgotado))return;if(!window.sellerOrderItems)window.sellerOrderItems=new Map();const current=window.sellerOrderItems.get(id);const addQty=Math.max(1,Number(qty)||1);const maxStock=Number(p.quantidade_disponivel??99999);const next=Math.min(maxStock,Number(current?.quantidade||0)+addQty);window.sellerOrderItems.set(id,{...p,produto_id:id,quantidade:next,nome:p.nome,preco:priceForLine(p,next),estoque:Number(p.quantidade_disponivel||0)});renderSellerNewOrderCart();updateSellerCartFloating();flashSellerProductAdded(id);saveSellerDraftCart();}
-function flashSellerProductAdded(id){const card=document.querySelector(`[data-seller-product-id="${CSS.escape(id)}"]`);if(!card)return;card.classList.remove('seller-product-added');void card.offsetWidth;card.classList.add('seller-product-added');const btn=card.querySelector('.seller-add-btn');if(btn){const original=btn.textContent;btn.textContent='✓ Adicionado';btn.classList.add('seller-add-confirm');clearTimeout(btn._confirmTimer);btn._confirmTimer=setTimeout(()=>{btn.textContent=original;btn.classList.remove('seller-add-confirm')},900)}}
-function updateSellerCartFloating(){const count=[...(window.sellerOrderItems?.values()||[])].reduce((n,i)=>n+i.quantidade,0);const el=$('#sellerFloatingCartCount');if(el)el.textContent=count;const label=$('#sellerFloatingCartLabel');if(label)label.textContent=count?`${count} ${count===1?'item':'itens'}`:'Carrinho'}
-function openSellerFloatingCart(){
-  const items=[...(window.sellerOrderItems?.values()||[])];
-  const subtotal=items.reduce((n,i)=>n+i.quantidade*i.preco,0);
-  const count=items.reduce((n,i)=>n+i.quantidade,0);
-  const calc=getSellerDiscountCalculations(subtotal);
-  const existing=$('#sellerFloatingCartModal');
-  if(existing)existing.remove();
-  document.body.insertAdjacentHTML('beforeend',`<div id="sellerFloatingCartModal" class="seller-cart-overlay seller-cart-fullscreen-overlay"><aside class="seller-floating-cart seller-cart-fullscreen"><div class="panel-title seller-cart-fullscreen-header"><button type="button" class="btn seller-cart-back-btn" onclick="closeSellerFloatingCart()">← Voltar</button><h2>🛒 Carrinho do pedido</h2><div style="display:flex;gap:6px"><button type="button" class="btn" style="padding:4px 8px;font-size:12px;color:#b42318;border-color:#fecdca" onclick="sellerClearCartAndDraft()" title="Limpar carrinho">🗑️ Limpar</button><button type="button" class="btn" aria-label="Fechar carrinho" onclick="closeSellerFloatingCart()">✕</button></div></div><div class="seller-cart-fullscreen-body"><div class="seller-floating-count"><strong>${count} ${count===1?'item selecionado':'itens selecionados'}</strong></div><div class="seller-floating-items">${items.length?items.map(i=>{const tName=esc(i.tabela_preco_nome||i.tabela_nome||'Oferta');const hasMin=i.preco_tabela!=null&&Number(i.quantidade_minima)>1;return `<div class="seller-floating-line"><div><strong>${esc(i.nome)}</strong><div class="muted">${money(i.preco)} · estoque ${i.estoque}</div>${hasMin&&i.quantidade<Number(i.quantidade_minima)?`<button type="button" class="btn" style="margin-top:4px;padding:2px 8px;font-size:11px;font-weight:750;background:#fff7ed;color:var(--xv-orange,#fd5e02);border:1px solid #fdba74" onclick="setSellerCartMinQty('${i.produto_id}',${Number(i.quantidade_minima)})">🏷️ ${tName}: ${money(i.preco_tabela)} (mín. ${i.quantidade_minima} un.) · Aplicar</button>`:(hasMin?`<small style="color:#16a34a;font-weight:750;display:block">✓ ${tName} aplicado (${money(i.preco_tabela)}/un)</small>`:'')}</div><div class="seller-floating-controls"><button type="button" class="btn" onclick="changeSellerNewOrderQty('${i.produto_id}',-1);openSellerFloatingCart()">−</button><strong>${i.quantidade}</strong><button type="button" class="btn" onclick="changeSellerNewOrderQty('${i.produto_id}',1);openSellerFloatingCart()">+</button><button type="button" class="btn danger" onclick="removeSellerNewOrderItem('${i.produto_id}');openSellerFloatingCart()">Remover</button></div></div>`}).join(''):'<div class="empty-state">Nenhum produto adicionado.</div>'}</div><div class="form seller-floating-form"><div class="field"><label>Desconto</label><div class="seller-discount-row"><span>Tipo</span><select id="sellerFloatingDiscountType" onchange="syncSellerFloatingDiscount()"><option value="VALOR" ${calc.type==='VALOR'?'selected':''}>R$ valor</option><option value="PERCENTUAL" ${calc.type==='PERCENTUAL'?'selected':''}>%</option></select><input id="sellerFloatingDiscount" type="number" min="0" step="0.01" value="${calc.val||0}" oninput="syncSellerFloatingDiscount()"></div></div><div class="field"><label>Observação</label><textarea id="sellerFloatingObs" rows="2" oninput="syncSellerFloatingObs()">${esc(window._sellerCurrentObs||$('#sellerObs')?.value||'')}</textarea></div></div></div><div class="seller-cart-fullscreen-footer"><div class="seller-floating-summary-box" style="padding:12px;background:#f8fafc;border-radius:10px;margin-bottom:10px;border:1px solid #dfe5ed"><div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px"><span>Subtotal dos itens:</span><strong id="sellerFloatingSubtotal">${money(subtotal)}</strong></div><div id="sellerFloatingDiscountRow" style="display:${calc.discountAmount>0?'flex':'none'};justify-content:space-between;font-size:14px;color:#16a34a;margin-bottom:4px"><span>Desconto aplicado:</span><strong id="sellerFloatingDiscountDisplay">-${money(calc.discountAmount)}</strong></div><div class="seller-floating-total" style="display:flex;justify-content:space-between;font-size:17px;font-weight:800;border-top:1px solid #cbd5e1;padding-top:6px;color:var(--xv-brand-navy,#061a4f)"><span>Total a pagar:</span><strong id="sellerFloatingTotal" class="orange">${money(calc.total)}</strong></div></div><button class="btn primary seller-finalize" onclick="closeSellerFloatingCart();submitSellerOrder(window.sellerCurrentClientId)" ${items.length?'':'disabled'}>Finalizar pedido e gerar PDF</button></div></aside></div>`);
+function sellerRender(items) { const el = $('#sellerProducts'); if (el) el.innerHTML = items.map(p => { const tName = esc(p.tabela_preco_nome || p.tabela_nome || 'Oferta'); const hasMin = p.preco_tabela != null && Number(p.quantidade_minima) > 1; const maxSt = p.quantidade_disponivel || 99999; return `<article class="product-card" data-seller-product-id="${esc(p.id)}">${productThumbHtml(p, p.marca || 'PRODUTO')}<h4>${esc(p.nome)}</h4><div class="muted">${esc(p.tamanho || p.sabor || p.sku || '')}</div>${hasMin ? `<div class="promo-label" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap" onclick="selectSellerMinQty('${p.id}',${Number(p.quantidade_minima)},${maxSt})" title="Clique para selecionar ${p.quantidade_minima} un. com preço ${tName}"><span>🏷️ ${tName}: <strong>${money(p.preco_tabela)}</strong> (a partir de ${p.quantidade_minima} un.)</span><span style="background:rgba(255,255,255,0.25);padding:2px 7px;border-radius:6px;font-size:11px;font-weight:800;text-decoration:underline">Selecionar ${p.quantidade_minima} un.</span></div>` : (p.preco_tabela != null ? `<div class="promo-label">🏷️ ${tName}: ${money(p.preco_tabela)}</div>` : '')}<div class="product-price" id="seller_price_${esc(p.id)}">${money(p.preco_aplicado ?? p.preco_base)}</div>${Number(p.esgotado) ? '<div class="promo-label" style="background:#b42318">ESGOTADO</div><button class="btn" disabled>Indisponível</button>' : `<div class="muted" style="margin-bottom:6px">Estoque disponível: ${p.quantidade_disponivel ?? 'N/A'}</div><div class="seller-card-qty-row"><span class="seller-card-qty-label">Qtd:</span><div class="seller-qty-stepper"><button type="button" aria-label="Diminuir quantidade" onclick="stepSellerCardQty('${p.id}',-1,${maxSt})">−</button><input type="number" id="seller_qty_${esc(p.id)}" value="1" min="1" max="${maxSt}" step="1" inputmode="numeric" onchange="sanitizeSellerCardQty(this,${maxSt},'${p.id}')" oninput="updateSellerCardPriceDisplay('${p.id}')"><button type="button" aria-label="Aumentar quantidade" onclick="stepSellerCardQty('${p.id}',1,${maxSt})">＋</button></div></div><button class="btn primary seller-add-btn" style="width:100%" onclick="addSellerNewOrderItemWithQty('${p.id}')">Adicionar ao carrinho</button>`}</article>` }).join('') }
+function updateSellerCardPriceDisplay(id) { const p = (window.sellerProducts || []).find(x => x.id === id); const el = document.getElementById('seller_qty_' + id); const priceEl = document.getElementById('seller_price_' + id); if (!p || !priceEl) return; const q = Math.max(1, parseInt(el?.value, 10) || 1); priceEl.textContent = money(priceForLine(p, q)) }
+function selectSellerMinQty(id, minQty, maxStock) { const el = document.getElementById('seller_qty_' + id); if (!el) return; const max = Number(maxStock) || 99999; const target = Math.max(1, Math.min(max, Number(minQty) || 1)); el.value = target; updateSellerCardPriceDisplay(id); const p = (window.sellerProducts || []).find(x => x.id === id); const tName = p?.tabela_preco_nome || p?.tabela_nome || 'Oferta'; if (target < Number(minQty)) { toastRole(`Estoque máximo disponível: ${max} un.`, true) } else { toastRole(`✓ ${target} un. selecionadas — ${tName}: ${money(priceForLine(p, target))}/un`) } }
+function setSellerCartMinQty(id, minQty) { const item = window.sellerOrderItems?.get(id); if (!item) return; const max = item.estoque || 99999; const next = Math.max(1, Math.min(max, Number(minQty) || 1)); item.quantidade = next; item.preco = priceForLine(item, next); renderSellerNewOrderCart(); updateFloatingCartTotals(); saveSellerDraftCart(); if ($('#sellerFloatingCartModal')) openSellerFloatingCart(); toastRole(`✓ Quantidade ajustada para ${next} un. (${money(item.preco)}/un)`) }
+function stepSellerCardQty(id, delta, maxStock) { const el = document.getElementById('seller_qty_' + id); if (!el) return; const cur = parseInt(el.value, 10) || 1, max = Number(maxStock) || 99999; el.value = Math.max(1, Math.min(max, cur + delta)); updateSellerCardPriceDisplay(id) }
+function sanitizeSellerCardQty(el, maxStock, id) { if (!el) return; let v = parseInt(el.value, 10), max = Number(maxStock) || 99999; if (isNaN(v) || v < 1) v = 1; if (v > max) { v = max; toastRole(`Estoque máximo disponível: ${max} un.`, true) } el.value = v; if (id) updateSellerCardPriceDisplay(id) }
+function addSellerNewOrderItemWithQty(id) { const el = document.getElementById('seller_qty_' + id); const qty = parseInt(el?.value, 10) || 1; addSellerNewOrderItem(id, qty); if (el) { el.value = 1; updateSellerCardPriceDisplay(id) } }
+function addSellerNewOrderItem(id, qty = 1) { const p = (window.sellerProducts || []).find(x => x.id === id); if (!p || Number(p.esgotado)) return; if (!window.sellerOrderItems) window.sellerOrderItems = new Map(); const current = window.sellerOrderItems.get(id); const addQty = Math.max(1, Number(qty) || 1); const maxStock = Number(p.quantidade_disponivel ?? 99999); const next = Math.min(maxStock, Number(current?.quantidade || 0) + addQty); window.sellerOrderItems.set(id, { ...p, produto_id: id, quantidade: next, nome: p.nome, preco: priceForLine(p, next), estoque: Number(p.quantidade_disponivel || 0) }); renderSellerNewOrderCart(); updateSellerCartFloating(); flashSellerProductAdded(id); saveSellerDraftCart(); }
+function flashSellerProductAdded(id) { const card = document.querySelector(`[data-seller-product-id="${CSS.escape(id)}"]`); if (!card) return; card.classList.remove('seller-product-added'); void card.offsetWidth; card.classList.add('seller-product-added'); const btn = card.querySelector('.seller-add-btn'); if (btn) { const original = btn.textContent; btn.textContent = '✓ Adicionado'; btn.classList.add('seller-add-confirm'); clearTimeout(btn._confirmTimer); btn._confirmTimer = setTimeout(() => { btn.textContent = original; btn.classList.remove('seller-add-confirm') }, 900) } }
+function updateSellerCartFloating() { const count = [...(window.sellerOrderItems?.values() || [])].reduce((n, i) => n + i.quantidade, 0); const el = $('#sellerFloatingCartCount'); if (el) el.textContent = count; const label = $('#sellerFloatingCartLabel'); if (label) label.textContent = count ? `${count} ${count === 1 ? 'item' : 'itens'}` : 'Carrinho' }
+function openSellerFloatingCart() {
+  const items = [...(window.sellerOrderItems?.values() || [])];
+  const subtotal = items.reduce((n, i) => n + i.quantidade * i.preco, 0);
+  const count = items.reduce((n, i) => n + i.quantidade, 0);
+  const calc = getSellerDiscountCalculations(subtotal);
+  const existing = $('#sellerFloatingCartModal');
+  if (existing) existing.remove();
+  document.body.insertAdjacentHTML('beforeend', `<div id="sellerFloatingCartModal" class="seller-cart-overlay seller-cart-fullscreen-overlay"><aside class="seller-floating-cart seller-cart-fullscreen"><div class="panel-title seller-cart-fullscreen-header"><button type="button" class="btn seller-cart-back-btn" onclick="closeSellerFloatingCart()">← Voltar</button><h2>🛒 Carrinho do pedido</h2><div style="display:flex;gap:6px"><button type="button" class="btn" style="padding:4px 8px;font-size:12px;color:#b42318;border-color:#fecdca" onclick="sellerClearCartAndDraft()" title="Limpar carrinho">🗑️ Limpar</button><button type="button" class="btn" aria-label="Fechar carrinho" onclick="closeSellerFloatingCart()">✕</button></div></div><div class="seller-cart-fullscreen-body"><div class="seller-floating-count"><strong>${count} ${count === 1 ? 'item selecionado' : 'itens selecionados'}</strong></div><div class="seller-floating-items">${items.length ? items.map(i => { const tName = esc(i.tabela_preco_nome || i.tabela_nome || 'Oferta'); const hasMin = i.preco_tabela != null && Number(i.quantidade_minima) > 1; return `<div class="seller-floating-line"><div><strong>${esc(i.nome)}</strong><div class="muted">${money(i.preco)} · estoque ${i.estoque}</div>${hasMin && i.quantidade < Number(i.quantidade_minima) ? `<button type="button" class="btn" style="margin-top:4px;padding:2px 8px;font-size:11px;font-weight:750;background:#fff7ed;color:var(--xv-orange,#fd5e02);border:1px solid #fdba74" onclick="setSellerCartMinQty('${i.produto_id}',${Number(i.quantidade_minima)})">🏷️ ${tName}: ${money(i.preco_tabela)} (mín. ${i.quantidade_minima} un.) · Aplicar</button>` : (hasMin ? `<small style="color:#16a34a;font-weight:750;display:block">✓ ${tName} aplicado (${money(i.preco_tabela)}/un)</small>` : '')}</div><div class="seller-floating-controls"><button type="button" class="btn" onclick="changeSellerNewOrderQty('${i.produto_id}',-1);openSellerFloatingCart()">−</button><strong>${i.quantidade}</strong><button type="button" class="btn" onclick="changeSellerNewOrderQty('${i.produto_id}',1);openSellerFloatingCart()">+</button><button type="button" class="btn danger" onclick="removeSellerNewOrderItem('${i.produto_id}');openSellerFloatingCart()">Remover</button></div></div>` }).join('') : '<div class="empty-state">Nenhum produto adicionado.</div>'}</div><div class="form seller-floating-form"><div class="field"><label>Desconto</label><div class="seller-discount-row"><span>Tipo</span><select id="sellerFloatingDiscountType" onchange="syncSellerFloatingDiscount()"><option value="VALOR" ${calc.type === 'VALOR' ? 'selected' : ''}>R$ valor</option><option value="PERCENTUAL" ${calc.type === 'PERCENTUAL' ? 'selected' : ''}>%</option></select><input id="sellerFloatingDiscount" type="number" min="0" step="0.01" value="${calc.val || 0}" oninput="syncSellerFloatingDiscount()"></div></div><div class="field"><label>Observação</label><textarea id="sellerFloatingObs" rows="2" oninput="syncSellerFloatingObs()">${esc(window._sellerCurrentObs || $('#sellerObs')?.value || '')}</textarea></div></div></div><div class="seller-cart-fullscreen-footer"><div class="seller-floating-summary-box" style="padding:12px;background:#f8fafc;border-radius:10px;margin-bottom:10px;border:1px solid #dfe5ed"><div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px"><span>Subtotal dos itens:</span><strong id="sellerFloatingSubtotal">${money(subtotal)}</strong></div><div id="sellerFloatingDiscountRow" style="display:${calc.discountAmount > 0 ? 'flex' : 'none'};justify-content:space-between;font-size:14px;color:#16a34a;margin-bottom:4px"><span>Desconto aplicado:</span><strong id="sellerFloatingDiscountDisplay">-${money(calc.discountAmount)}</strong></div><div class="seller-floating-total" style="display:flex;justify-content:space-between;font-size:17px;font-weight:800;border-top:1px solid #cbd5e1;padding-top:6px;color:var(--xv-brand-navy,#061a4f)"><span>Total a pagar:</span><strong id="sellerFloatingTotal" class="orange">${money(calc.total)}</strong></div></div><button class="btn primary seller-finalize" onclick="closeSellerFloatingCart();submitSellerOrder(window.sellerCurrentClientId)" ${items.length ? '' : 'disabled'}>Finalizar pedido e gerar PDF</button></div></aside></div>`);
 }
-function closeSellerFloatingCart(){document.querySelector('#sellerFloatingCartModal')?.remove()}
-function syncSellerFloatingDiscount(){
-  const source=$('#sellerFloatingDiscount');
-  const type=$('#sellerFloatingDiscountType');
-  window._sellerCurrentDiscountVal=Number(source?.value||0);
-  window._sellerCurrentDiscountType=type?.value||'VALOR';
-  const target=$('#sellerDiscount');
-  const targetType=$('#sellerDiscountType');
-  if(target&&source)target.value=source.value;
-  if(targetType&&type)targetType.value=type.value;
+function closeSellerFloatingCart() { document.querySelector('#sellerFloatingCartModal')?.remove() }
+function syncSellerFloatingDiscount() {
+  const source = $('#sellerFloatingDiscount');
+  const type = $('#sellerFloatingDiscountType');
+  window._sellerCurrentDiscountVal = Number(source?.value || 0);
+  window._sellerCurrentDiscountType = type?.value || 'VALOR';
+  const target = $('#sellerDiscount');
+  const targetType = $('#sellerDiscountType');
+  if (target && source) target.value = source.value;
+  if (targetType && type) targetType.value = type.value;
   updateFloatingCartTotals();
   renderSellerNewOrderCart();
 }
-function syncSellerCartDiscountFromPage(){
-  const source=$('#sellerDiscount');
-  const type=$('#sellerDiscountType');
-  window._sellerCurrentDiscountVal=Number(source?.value||0);
-  window._sellerCurrentDiscountType=type?.value||'VALOR';
-  const target=$('#sellerFloatingDiscount');
-  const targetType=$('#sellerFloatingDiscountType');
-  if(target&&source)target.value=source.value;
-  if(targetType&&type)targetType.value=type.value;
+function syncSellerCartDiscountFromPage() {
+  const source = $('#sellerDiscount');
+  const type = $('#sellerDiscountType');
+  window._sellerCurrentDiscountVal = Number(source?.value || 0);
+  window._sellerCurrentDiscountType = type?.value || 'VALOR';
+  const target = $('#sellerFloatingDiscount');
+  const targetType = $('#sellerFloatingDiscountType');
+  if (target && source) target.value = source.value;
+  if (targetType && type) targetType.value = type.value;
   updateFloatingCartTotals();
   renderSellerNewOrderCart();
 }
-function syncSellerFloatingObs(){
-  const source=$('#sellerFloatingObs'),target=$('#sellerObs');
-  window._sellerCurrentObs=source?.value||'';
-  if(source&&target)target.value=source.value;
+function syncSellerFloatingObs() {
+  const source = $('#sellerFloatingObs'), target = $('#sellerObs');
+  window._sellerCurrentObs = source?.value || '';
+  if (source && target) target.value = source.value;
 }
-function syncSellerCartObsFromPage(){
-  const source=$('#sellerObs'),target=$('#sellerFloatingObs');
-  window._sellerCurrentObs=source?.value||'';
-  if(source&&target)target.value=source.value;
+function syncSellerCartObsFromPage() {
+  const source = $('#sellerObs'), target = $('#sellerFloatingObs');
+  window._sellerCurrentObs = source?.value || '';
+  if (source && target) target.value = source.value;
 }
-function updateFloatingCartTotals(){
-  const items=[...(window.sellerOrderItems?.values()||[])];
-  const subtotal=items.reduce((n,i)=>n+i.quantidade*i.preco,0);
-  const calc=getSellerDiscountCalculations(subtotal);
-  const sub=$('#sellerFloatingSubtotal');
-  const discRow=$('#sellerFloatingDiscountRow');
-  const discDisp=$('#sellerFloatingDiscountDisplay');
-  const tot=$('#sellerFloatingTotal');
-  if(sub)sub.textContent=money(subtotal);
-  if(discRow&&discDisp){
-    if(calc.discountAmount>0){
-      discRow.style.display='flex';
-      discDisp.textContent=`-${money(calc.discountAmount)}`;
-    }else{
-      discRow.style.display='none';
+function updateFloatingCartTotals() {
+  const items = [...(window.sellerOrderItems?.values() || [])];
+  const subtotal = items.reduce((n, i) => n + i.quantidade * i.preco, 0);
+  const calc = getSellerDiscountCalculations(subtotal);
+  const sub = $('#sellerFloatingSubtotal');
+  const discRow = $('#sellerFloatingDiscountRow');
+  const discDisp = $('#sellerFloatingDiscountDisplay');
+  const tot = $('#sellerFloatingTotal');
+  if (sub) sub.textContent = money(subtotal);
+  if (discRow && discDisp) {
+    if (calc.discountAmount > 0) {
+      discRow.style.display = 'flex';
+      discDisp.textContent = `-${money(calc.discountAmount)}`;
+    } else {
+      discRow.style.display = 'none';
     }
   }
-  if(tot)tot.textContent=money(calc.total);
+  if (tot) tot.textContent = money(calc.total);
 }
-function changeSellerNewOrderQty(id,delta){const item=window.sellerOrderItems?.get(id);if(!item)return;const next=Math.max(0,Math.min(item.estoque||99999,item.quantidade+delta));if(!next)window.sellerOrderItems.delete(id);else{item.quantidade=next;item.preco=priceForLine(item,next)}renderSellerNewOrderCart();updateFloatingCartTotals();saveSellerDraftCart();}
-function removeSellerNewOrderItem(id){window.sellerOrderItems?.delete(id);renderSellerNewOrderCart();updateFloatingCartTotals();saveSellerDraftCart();}
-function renderSellerNewOrderCart(){
-  const host=$('#sellerCartItems');
-  if(!host)return;
-  const items=[...(window.sellerOrderItems?.values()||[])];
-  const count=items.reduce((n,i)=>n+i.quantidade,0);
-  const subtotal=items.reduce((n,i)=>n+i.quantidade*i.preco,0);
-  const calc=getSellerDiscountCalculations(subtotal);
-  if($('#sellerCartCount'))$('#sellerCartCount').textContent=`${count} ${count===1?'item':'itens'}`;
+function changeSellerNewOrderQty(id, delta) { const item = window.sellerOrderItems?.get(id); if (!item) return; const next = Math.max(0, Math.min(item.estoque || 99999, item.quantidade + delta)); if (!next) window.sellerOrderItems.delete(id); else { item.quantidade = next; item.preco = priceForLine(item, next) } renderSellerNewOrderCart(); updateFloatingCartTotals(); saveSellerDraftCart(); }
+function removeSellerNewOrderItem(id) { window.sellerOrderItems?.delete(id); renderSellerNewOrderCart(); updateFloatingCartTotals(); saveSellerDraftCart(); }
+function renderSellerNewOrderCart() {
+  const host = $('#sellerCartItems');
+  if (!host) return;
+  const items = [...(window.sellerOrderItems?.values() || [])];
+  const count = items.reduce((n, i) => n + i.quantidade, 0);
+  const subtotal = items.reduce((n, i) => n + i.quantidade * i.preco, 0);
+  const calc = getSellerDiscountCalculations(subtotal);
+  if ($('#sellerCartCount')) $('#sellerCartCount').textContent = `${count} ${count === 1 ? 'item' : 'itens'}`;
   updateSellerCartFloating();
-  if($('#sellerCartSubtotal'))$('#sellerCartSubtotal').textContent=money(subtotal);
-  const discRow=$('#sellerCartDiscountRow');
-  const discDisplay=$('#sellerCartDiscountDisplay');
-  const totalDisplay=$('#sellerCartTotal');
-  if(discRow&&discDisplay&&totalDisplay){
-    if(calc.discountAmount>0){
-      discRow.style.display='flex';
-      discDisplay.textContent=`-${money(calc.discountAmount)}`;
-    }else{
-      discRow.style.display='none';
+  if ($('#sellerCartSubtotal')) $('#sellerCartSubtotal').textContent = money(subtotal);
+  const discRow = $('#sellerCartDiscountRow');
+  const discDisplay = $('#sellerCartDiscountDisplay');
+  const totalDisplay = $('#sellerCartTotal');
+  if (discRow && discDisplay && totalDisplay) {
+    if (calc.discountAmount > 0) {
+      discRow.style.display = 'flex';
+      discDisplay.textContent = `-${money(calc.discountAmount)}`;
+    } else {
+      discRow.style.display = 'none';
     }
-    totalDisplay.textContent=money(calc.total);
+    totalDisplay.textContent = money(calc.total);
   }
-  host.innerHTML=items.length?items.map(i=>{const tName=esc(i.tabela_preco_nome||i.tabela_nome||'Oferta');const hasMin=i.preco_tabela!=null&&Number(i.quantidade_minima)>1;return `<div class="seller-cart-line"><div class="seller-cart-info"><strong>${esc(i.nome)}</strong><span class="muted">${money(i.preco)} · estoque ${i.estoque}</span>${hasMin&&i.quantidade<Number(i.quantidade_minima)?`<button type="button" class="btn" style="margin-top:4px;padding:2px 8px;font-size:11px;font-weight:750;background:#fff7ed;color:var(--xv-orange,#fd5e02);border:1px solid #fdba74" onclick="setSellerCartMinQty('${i.produto_id}',${Number(i.quantidade_minima)})">🏷️ ${tName}: ${money(i.preco_tabela)} (mín. ${i.quantidade_minima} un.) · Aplicar ${i.quantidade_minima} un.</button>`:(hasMin?`<small style="color:#16a34a;font-weight:750;display:block">✓ ${tName} aplicado (${money(i.preco_tabela)}/un)</small>`:'')}</div><div class="seller-cart-controls"><button type="button" class="btn" onclick="changeSellerNewOrderQty('${i.produto_id}',-1)">−</button><strong>${i.quantidade}</strong><button type="button" class="btn" onclick="changeSellerNewOrderQty('${i.produto_id}',1)">+</button><button type="button" class="btn danger" onclick="removeSellerNewOrderItem('${i.produto_id}')">Remover</button></div></div>`}).join(''):'<span class="muted">Nenhum produto selecionado. Use "Adicionar ao carrinho" no catálogo acima.</span>';
+  host.innerHTML = items.length ? items.map(i => { const tName = esc(i.tabela_preco_nome || i.tabela_nome || 'Oferta'); const hasMin = i.preco_tabela != null && Number(i.quantidade_minima) > 1; return `<div class="seller-cart-line"><div class="seller-cart-info"><strong>${esc(i.nome)}</strong><span class="muted">${money(i.preco)} · estoque ${i.estoque}</span>${hasMin && i.quantidade < Number(i.quantidade_minima) ? `<button type="button" class="btn" style="margin-top:4px;padding:2px 8px;font-size:11px;font-weight:750;background:#fff7ed;color:var(--xv-orange,#fd5e02);border:1px solid #fdba74" onclick="setSellerCartMinQty('${i.produto_id}',${Number(i.quantidade_minima)})">🏷️ ${tName}: ${money(i.preco_tabela)} (mín. ${i.quantidade_minima} un.) · Aplicar ${i.quantidade_minima} un.</button>` : (hasMin ? `<small style="color:#16a34a;font-weight:750;display:block">✓ ${tName} aplicado (${money(i.preco_tabela)}/un)</small>` : '')}</div><div class="seller-cart-controls"><button type="button" class="btn" onclick="changeSellerNewOrderQty('${i.produto_id}',-1)">−</button><strong>${i.quantidade}</strong><button type="button" class="btn" onclick="changeSellerNewOrderQty('${i.produto_id}',1)">+</button><button type="button" class="btn danger" onclick="removeSellerNewOrderItem('${i.produto_id}')">Remover</button></div></div>` }).join('') : '<span class="muted">Nenhum produto selecionado. Use "Adicionar ao carrinho" no catálogo acima.</span>';
 }
-function initSellerFloatingCart(){const nav=document.querySelector('.mobile-nav');if(!document.querySelector('#sellerFloatingCart')){const btnHtml=`<button id="sellerFloatingCart" class="btn seller-floating-cart-btn" type="button" aria-label="Abrir carrinho do pedido" onclick="openSellerFloatingCart()"><span class="seller-cart-icon">🛒</span><span id="sellerFloatingCartLabel">Carrinho</span><b id="sellerFloatingCartCount">0</b></button>`;if(nav)nav.insertAdjacentHTML('beforeend',btnHtml);else document.body.insertAdjacentHTML('beforeend',btnHtml);}updateSellerCartFloating()}
-function handleSellerScrollFloatingBack(){
-  const lvl=window._sellerBackNavLevel;
-  if(lvl==='PRODUCTS_SUB'){
-    if(window.sellerCurrentCatId)sellerShowSubcategories(window.sellerCurrentCatId);
+function initSellerFloatingCart() { const nav = document.querySelector('.mobile-nav'); if (!document.querySelector('#sellerFloatingCart')) { const btnHtml = `<button id="sellerFloatingCart" class="btn seller-floating-cart-btn" type="button" aria-label="Abrir carrinho do pedido" onclick="openSellerFloatingCart()"><span class="seller-cart-icon">🛒</span><span id="sellerFloatingCartLabel">Carrinho</span><b id="sellerFloatingCartCount">0</b></button>`; if (nav) nav.insertAdjacentHTML('beforeend', btnHtml); else document.body.insertAdjacentHTML('beforeend', btnHtml); } updateSellerCartFloating() }
+function handleSellerScrollFloatingBack() {
+  const lvl = window._sellerBackNavLevel;
+  if (lvl === 'PRODUCTS_SUB') {
+    if (window.sellerCurrentCatId) sellerShowSubcategories(window.sellerCurrentCatId);
     else sellerShowCategories();
     return;
   }
-  if(lvl==='SUBCATEGORIES'){
+  if (lvl === 'SUBCATEGORIES') {
     sellerShowCategories();
     return;
   }
   seller();
 }
-function updateSellerScrollFloatingBackLabel(){
-  const btn=document.getElementById('sellerScrollBackBtn');
-  if(!btn)return;
-  const lvl=window._sellerBackNavLevel;
-  let text='← Voltar';
-  if(lvl==='PRODUCTS_SUB')text='← Voltar às Subcategorias';
-  else if(lvl==='SUBCATEGORIES')text='← Voltar às Categorias';
-  else if(lvl==='STOCK')text='← Voltar para Clientes';
-  else if(lvl==='CATEGORIES')text='← Voltar para Clientes';
-  const span=btn.querySelector('.seller-scroll-back-label');
-  if(span)span.textContent=text;
+function updateSellerScrollFloatingBackLabel() {
+  const btn = document.getElementById('sellerScrollBackBtn');
+  if (!btn) return;
+  const lvl = window._sellerBackNavLevel;
+  let text = '← Voltar';
+  if (lvl === 'PRODUCTS_SUB') text = '← Voltar às Subcategorias';
+  else if (lvl === 'SUBCATEGORIES') text = '← Voltar às Categorias';
+  else if (lvl === 'STOCK') text = '← Voltar para Clientes';
+  else if (lvl === 'CATEGORIES') text = '← Voltar para Clientes';
+  const span = btn.querySelector('.seller-scroll-back-label');
+  if (span) span.textContent = text;
 }
-function initSellerScrollFloatingBack(){
-  let btn=document.getElementById('sellerScrollBackBtn');
-  if(!btn){
-    document.body.insertAdjacentHTML('beforeend',`<button id="sellerScrollBackBtn" type="button" class="seller-scroll-back-btn" aria-label="Voltar" onclick="handleSellerScrollFloatingBack()"><span class="seller-scroll-back-label">← Voltar</span></button>`);
-    btn=document.getElementById('sellerScrollBackBtn');
+function initSellerScrollFloatingBack() {
+  let btn = document.getElementById('sellerScrollBackBtn');
+  if (!btn) {
+    document.body.insertAdjacentHTML('beforeend', `<button id="sellerScrollBackBtn" type="button" class="seller-scroll-back-btn" aria-label="Voltar" onclick="handleSellerScrollFloatingBack()"><span class="seller-scroll-back-label">← Voltar</span></button>`);
+    btn = document.getElementById('sellerScrollBackBtn');
   }
   updateSellerScrollFloatingBackLabel();
-  const onScroll=()=>{
-    const b=document.getElementById('sellerScrollBackBtn');
-    if(!b)return;
-    const hasCatalogOrStock=Boolean(document.getElementById('sellerCatalogRoot')||document.getElementById('sellerStockList'));
-    if(!hasCatalogOrStock){
+  const onScroll = () => {
+    const b = document.getElementById('sellerScrollBackBtn');
+    if (!b) return;
+    const hasCatalogOrStock = Boolean(document.getElementById('sellerCatalogRoot') || document.getElementById('sellerStockList'));
+    if (!hasCatalogOrStock) {
       b.classList.remove('visible');
       return;
     }
-    const y=window.scrollY||document.documentElement.scrollTop||document.body.scrollTop||0;
-    if(y>140)b.classList.add('visible');
+    const y = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    if (y > 140) b.classList.add('visible');
     else b.classList.remove('visible');
   };
-  if(window._sellerScrollBackHandler)window.removeEventListener('scroll',window._sellerScrollBackHandler);
-  window._sellerScrollBackHandler=onScroll;
-  window.addEventListener('scroll',onScroll,{passive:true});
+  if (window._sellerScrollBackHandler) window.removeEventListener('scroll', window._sellerScrollBackHandler);
+  window._sellerScrollBackHandler = onScroll;
+  window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 }
-window.handleSellerScrollFloatingBack=handleSellerScrollFloatingBack;
-window.initSellerScrollFloatingBack=initSellerScrollFloatingBack;
-function sellerFilter(i){sellerRender(window.sellerProducts.filter(x=>(x.nome+' '+x.sku+' '+(x.marca||'')).toLowerCase().includes(i.value.toLowerCase())))}
+window.handleSellerScrollFloatingBack = handleSellerScrollFloatingBack;
+window.initSellerScrollFloatingBack = initSellerScrollFloatingBack;
+function sellerFilter(i) { sellerRender(window.sellerProducts.filter(x => (x.nome + ' ' + x.sku + ' ' + (x.marca || '')).toLowerCase().includes(i.value.toLowerCase()))) }
 
 async function getSellerOrderLocation() {
   try {
@@ -1379,179 +1381,179 @@ async function getSellerOrderLocation() {
 }
 window.getSellerOrderLocation = getSellerOrderLocation;
 
-async function submitSellerOrder(clientId){
-  const items=[...(window.sellerOrderItems?.values()||[])].filter(x=>x.quantidade>0);
-  if(!items.length)return toastRole('Adicione pelo menos um produto ao carrinho.',true);
-  const targetClientId=clientId||window.sellerCurrentClientId;
-  if(!targetClientId)return toastRole('Cliente não selecionado para o pedido.',true);
+async function submitSellerOrder(clientId) {
+  const items = [...(window.sellerOrderItems?.values() || [])].filter(x => x.quantidade > 0);
+  if (!items.length) return toastRole('Adicione pelo menos um produto ao carrinho.', true);
+  const targetClientId = clientId || window.sellerCurrentClientId;
+  if (!targetClientId) return toastRole('Cliente não selecionado para o pedido.', true);
 
   // Capture discount and notes before closing modals or resetting DOM
-  const discType=window._sellerCurrentDiscountType||$('#sellerDiscountType')?.value||$('#sellerFloatingDiscountType')?.value||'VALOR';
-  const discVal=Number(window._sellerCurrentDiscountVal!==undefined?window._sellerCurrentDiscountVal:($('#sellerDiscount')?.value||$('#sellerFloatingDiscount')?.value||0));
-  const obs=(window._sellerCurrentObs!==undefined?window._sellerCurrentObs:($('#sellerObs')?.value||$('#sellerFloatingObs')?.value||'')).trim();
+  const discType = window._sellerCurrentDiscountType || $('#sellerDiscountType')?.value || $('#sellerFloatingDiscountType')?.value || 'VALOR';
+  const discVal = Number(window._sellerCurrentDiscountVal !== undefined ? window._sellerCurrentDiscountVal : ($('#sellerDiscount')?.value || $('#sellerFloatingDiscount')?.value || 0));
+  const obs = (window._sellerCurrentObs !== undefined ? window._sellerCurrentObs : ($('#sellerObs')?.value || $('#sellerFloatingObs')?.value || '')).trim();
 
-  const itens=items.map(x=>({produto_id:x.produto_id,quantidade:Number(x.quantidade)}));
-  window.sellerOrderItems=new Map();
+  const itens = items.map(x => ({ produto_id: x.produto_id, quantidade: Number(x.quantidade) }));
+  window.sellerOrderItems = new Map();
   closeSellerFloatingCart();
   toastRole('Enviando pedido...');
   sellerOrders();
   Realtime.emit('orders_changed');
   Realtime.emit('stock_changed');
-  try{
+  try {
     let sellerGeo = { lat: null, lng: null };
-    try { sellerGeo = await getSellerOrderLocation(); } catch(_) {}
-    const x=await api('/api/orders',{method:'POST',body:JSON.stringify({cliente_id:targetClientId,itens,origem:'VENDEDOR',desconto_tipo:discType,desconto_valor:discVal,observacoes:obs,origem_lat:sellerGeo?.lat??null,origem_lng:sellerGeo?.lng??null}),headers:{'Idempotency-Key':'SELLER-'+crypto.randomUUID()}});
-    toastRole(x.offline?'Pedido salvo offline.':'✓ Pedido '+x.item.numero+' criado e PDF gerado!');
+    try { sellerGeo = await getSellerOrderLocation(); } catch (_) { }
+    const x = await api('/api/orders', { method: 'POST', body: JSON.stringify({ cliente_id: targetClientId, itens, origem: 'VENDEDOR', desconto_tipo: discType, desconto_valor: discVal, observacoes: obs, origem_lat: sellerGeo?.lat ?? null, origem_lng: sellerGeo?.lng ?? null }), headers: { 'Idempotency-Key': 'SELLER-' + crypto.randomUUID() } });
+    toastRole(x.offline ? 'Pedido salvo offline.' : '✓ Pedido ' + x.item.numero + ' criado e PDF gerado!');
     roleRealtimeRefresh('orders_changed');
-  }catch(e){toastRole(e.message,true)}
+  } catch (e) { toastRole(e.message, true) }
 }
-async function sellerStock(){const x=await api('/api/seller/stock');window._sellerBackNavLevel='STOCK';document.body.innerHTML=`<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Estoque disponível',`${esc(me.nome)} · Somente consulta`)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="seller()">← Clientes</button><button class="btn" onclick="sellerOrders()">▣ Pedidos</button><button class="btn primary" onclick="sellerStock()">↻ Atualizar</button></div><div class="mobile-card"><input id="sellerStockSearch" class="search" style="background:#fff;color:#172033" placeholder="Pesquisar produto" oninput="sellerStockFilter(this)"></div><div id="sellerStockList">${x.items.map(sellerStockRow).join('')}</div></div></div>`;initSellerScrollFloatingBack()}
-function sellerStockRow(x){return `<article class="mobile-card seller-stock-row" data-search="${esc((x.nome+' '+x.sku+' '+(x.descricao||'')).toLowerCase())}"><div class="route-row">${x.foto_url?`<img class="catalog-mini-photo" src="${esc(x.foto_url)}" alt="${esc(x.nome)}" onerror="this.style.display='none'">`:`<div class="client-icon">◉</div>`}<div><h3>${esc(x.nome)}</h3><div class="muted">SKU: ${esc(x.sku)}</div><div class="muted">${esc(x.descricao||'Sem descrição')}</div></div><strong class="orange">${x.quantidade_disponivel}</strong></div></article>`}
-function sellerStockFilter(i){const q=i.value.toLowerCase();document.querySelectorAll('.seller-stock-row').forEach(x=>x.style.display=x.dataset.search.includes(q)?'':'none')}
-async function sellerOrders(){let x;try{x=await api('/api/orders');await offlinePut('kv','sellerOrders',x)}catch(e){x=await offlineGet('kv','sellerOrders')||{items:[]}}document.body.innerHTML=`<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Meus pedidos',`${esc(me.nome)} · Apenas pedidos do vendedor`)}<div class="mobile-nav" style="margin-top:15px;display:flex;gap:6px;flex-wrap:wrap;"><button class="btn" onclick="seller()">♙ Clientes</button><button class="btn primary" onclick="sellerOrders()">↻ Atualizar</button><button class="btn" onclick="sellerDashboard()">▦ Painel do mês</button></div><div class="section-title"><h2>Histórico</h2><span class="muted">${x.items.length} pedidos</span></div>${x.items.map(o=>`<article class="mobile-card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:10px"><strong>${esc(o.numero)}</strong><span class="badge status-${String(o.status).toLowerCase()}">${esc(({PENDENTE:'Pendente',SEPARACAO:'Em separação',ROTA:'Em rota',CONCLUIDO:'Concluído',CANCELADO:'Cancelado'})[o.status]||o.status)}</span></div><h3 style="margin-top:8px">${esc(o.cliente_nome)}</h3><div class="muted">${formatBrasiliaDateTime(o.created_at)} · ${esc(o.origem)}</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:8px"><strong class="orange" style="font-size:20px">${money(o.total)}</strong><div style="display:flex;gap:6px;flex-wrap:wrap">${o.status==='PENDENTE'?`<button class="btn primary" onclick="sellerEditOrder('${o.id}')">Editar pedido</button>`:''}<button class="btn" onclick="downloadAuthFile('/api/orders/${o.id}/pdf','pedido-${o.numero}.pdf')">Ver PDF</button>${['PENDENTE','SEPARACAO'].includes(o.status)?`<button class="btn danger" onclick="sellerCancelOrder('${o.id}','${esc(o.numero)}')">🗑️ Excluir pedido</button>`:''}</div></div></article>`).join('')||'<div class="empty-state">Nenhum pedido encontrado.</div>'}</div>${bottom('orders')}</div>`}
-function pdvGetDefaultClient(){return (window.pdvClients||[]).find(x=>x.id==='CLIENTE-BALCAO'||x.razao_social==='Cliente Balcão')||{id:'CLIENTE-BALCAO',razao_social:'Cliente Balcão'}}
-function pdvResetClient(){const def=pdvGetDefaultClient();const hidden=$('#pdvClient'),search=$('#pdvClientSearch'),badge=$('#pdvClientBadge'),drop=$('#pdvClientDropdown');if(hidden)hidden.value=def.id;if(search){search.value='';search.focus()}if(badge)badge.textContent='Cliente Balcão (Padrão)';if(drop)drop.style.display='none';if(search)pdvClientInput(search)}
-async function pdvSelectClient(id){const c=(window.pdvClients||[]).find(x=>x.id===id);if(!c)return;const hidden=$('#pdvClient'),search=$('#pdvClientSearch'),badge=$('#pdvClientBadge'),drop=$('#pdvClientDropdown');if(hidden)hidden.value=c.id;const name=c.razao_social||c.nome_fantasia||'Cliente';if(search)search.value=name;const isDefault=c.id==='CLIENTE-BALCAO'||name==='Cliente Balcão';if(badge)badge.textContent=isDefault?'Cliente Balcão (Padrão)':name;if(drop)drop.style.display='none';try{const result=await api('/api/products?cliente_id='+encodeURIComponent(c.id));const byId=new Map(result.items.map(product=>[product.id,product]));window.pdvProducts=window.pdvProducts.map(product=>({...(byId.get(product.id)||product),quantidade_disponivel:product.quantidade_disponivel,quantidade_reservada:product.quantidade_reservada,estoque_minimo:product.estoque_minimo}));const curSearch=$('#pdvSearch');if(curSearch&&curSearch.value.trim())pdvFilter(curSearch);else pdvRender([]);pdvCartRender()}catch(error){toastRole('Nao foi possivel atualizar os precos deste cliente. O servidor recalculara ao finalizar.',true)}}
-function pdvClientFocus(){const search=$('#pdvClientSearch');if(!search)return;if(search.value==='Cliente Balcão')search.select();pdvClientInput(search)}
-function pdvClientInput(input){const q=String(input?.value||'').trim().toLowerCase();const drop=$('#pdvClientDropdown');const hidden=$('#pdvClient');const badge=$('#pdvClientBadge');if(!drop)return;if(!q){const def=pdvGetDefaultClient();if(hidden)hidden.value=def.id;if(badge)badge.textContent='Cliente Balcão (Padrão)';const items=(window.pdvClients||[]);if(items.length){drop.innerHTML=items.slice(0,15).map(c=>`<div class="pdv-client-option" onclick="pdvSelectClient('${c.id}')"><strong>${esc(c.razao_social||c.nome_fantasia)}</strong><small>${esc(c.cnpj_cpf||'Sem documento')}${c.telefone?' · '+esc(c.telefone):''}${c.bairro?' · '+esc(c.bairro):''}</small></div>`).join('');drop.style.display='block'}else{drop.style.display='none'}return}if(badge&&badge.textContent!=='Buscando cliente...')badge.textContent='Buscando...';const items=(window.pdvClients||[]).filter(c=>(c.razao_social||'').toLowerCase().includes(q)||(c.nome_fantasia||'').toLowerCase().includes(q)||(c.cnpj_cpf||'').toLowerCase().includes(q)||(c.telefone||'').toLowerCase().includes(q)||(c.bairro||'').toLowerCase().includes(q));if(!items.length){drop.innerHTML='<div style="padding:12px;color:#718198;text-align:center">Nenhum cliente encontrado</div>';drop.style.display='block';return}drop.innerHTML=items.slice(0,15).map(c=>`<div class="pdv-client-option" onclick="pdvSelectClient('${c.id}')"><strong>${esc(c.razao_social||c.nome_fantasia)}</strong><small>${esc(c.cnpj_cpf||'Sem documento')}${c.telefone?' · '+esc(c.telefone):''}${c.bairro?' · '+esc(c.bairro):''}</small></div>`).join('');drop.style.display='block'}
-function pdvClientFilter(input){return pdvClientInput(input)}
-function pdvClientKeydown(event){if(event.key==='Escape'){const drop=$('#pdvClientDropdown');if(drop)drop.style.display='none'}}
-function pdvRemoveItem(id){delete window.pdvCart[id];pdvCartRender()}
-async function pdvPrintOrder(orderId,orderNum){try{const pdfUrl='/api/orders/'+orderId+'/pdf';const authedUrl=getAuthPdfUrl(pdfUrl);const filename=`cupom-${orderNum||'pedido'}.pdf`;if(window.AndroidApp?.openPdf){try{window.AndroidApp.openPdf(authedUrl,filename)}catch(_){}}const reqId=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);const r=await fetch(pdfUrl,{headers:{'x-request-id':reqId,...(token?{authorization:'Bearer '+token}:{})}});if(!r.ok)throw new Error('Não foi possível gerar o cupom para impressão');const b=await r.blob();openPdfViewerModal(authedUrl,filename,b)}catch(e){if(window.AndroidApp?.openPdf){try{window.AndroidApp.openPdf(getAuthPdfUrl('/api/orders/'+orderId+'/pdf'),`cupom-${orderNum||'pedido'}.pdf`);return}catch(_){}}toastRole(e.message,true)}}
-function pdvReprintLast(){const last=window.pdvLastOrder||(localStorage.getItem('xv_pdv_last_order')?JSON.parse(localStorage.getItem('xv_pdv_last_order')):null);if(!last||!last.id){toastRole('Nenhum pedido anterior encontrado para reimpressão.');return}pdvPrintOrder(last.id,last.numero)}
-async function pdv(){
-  let c,p,s;
-  try{
-    [c,p,s]=await Promise.all([api('/api/clients'),api('/api/products?cliente_id=CLIENTE-BALCAO'),api('/api/stock')]);
-    await offlinePut('kv','pdvClients',c.items||[]);
-    await offlinePut('kv','pdvProducts',p.items||[]);
-    await offlinePut('kv','pdvStock',s.items||[]);
-  }catch(e){
-    const cp=await offlineGet('kv','pdvClients');
-    const pp=await offlineGet('kv','pdvProducts');
-    const sp=await offlineGet('kv','pdvStock');
-    if(!cp||!pp)throw e;
-    c={items:cp,offline:true};
-    p={items:pp,offline:true};
-    s={items:sp||[],offline:true};
+async function sellerStock() { const x = await api('/api/seller/stock'); window._sellerBackNavLevel = 'STOCK'; document.body.innerHTML = `<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Estoque disponível', `${esc(me.nome)} · Somente consulta`)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="seller()">← Clientes</button><button class="btn" onclick="sellerOrders()">▣ Pedidos</button><button class="btn primary" onclick="sellerStock()">↻ Atualizar</button></div><div class="mobile-card"><input id="sellerStockSearch" class="search" style="background:#fff;color:#172033" placeholder="Pesquisar produto" oninput="sellerStockFilter(this)"></div><div id="sellerStockList">${x.items.map(sellerStockRow).join('')}</div></div></div>`; initSellerScrollFloatingBack() }
+function sellerStockRow(x) { return `<article class="mobile-card seller-stock-row" data-search="${esc((x.nome + ' ' + x.sku + ' ' + (x.descricao || '')).toLowerCase())}"><div class="route-row">${x.foto_url ? `<img class="catalog-mini-photo" src="${esc(x.foto_url)}" alt="${esc(x.nome)}" onerror="this.style.display='none'">` : `<div class="client-icon">◉</div>`}<div><h3>${esc(x.nome)}</h3><div class="muted">SKU: ${esc(x.sku)}</div><div class="muted">${esc(x.descricao || 'Sem descrição')}</div></div><strong class="orange">${x.quantidade_disponivel}</strong></div></article>` }
+function sellerStockFilter(i) { const q = i.value.toLowerCase(); document.querySelectorAll('.seller-stock-row').forEach(x => x.style.display = x.dataset.search.includes(q) ? '' : 'none') }
+async function sellerOrders() { let x; try { x = await api('/api/orders'); await offlinePut('kv', 'sellerOrders', x) } catch (e) { x = await offlineGet('kv', 'sellerOrders') || { items: [] } } document.body.innerHTML = `<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Meus pedidos', `${esc(me.nome)} · Apenas pedidos do vendedor`)}<div class="mobile-nav" style="margin-top:15px;display:flex;gap:6px;flex-wrap:wrap;"><button class="btn" onclick="seller()">♙ Clientes</button><button class="btn primary" onclick="sellerOrders()">↻ Atualizar</button><button class="btn" onclick="sellerDashboard()">▦ Painel do mês</button></div><div class="section-title"><h2>Histórico</h2><span class="muted">${x.items.length} pedidos</span></div>${x.items.map(o => `<article class="mobile-card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:10px"><strong>${esc(o.numero)}</strong><span class="badge status-${String(o.status).toLowerCase()}">${esc(({ PENDENTE: 'Pendente', SEPARACAO: 'Em separação', ROTA: 'Em rota', CONCLUIDO: 'Concluído', CANCELADO: 'Cancelado' })[o.status] || o.status)}</span></div><h3 style="margin-top:8px">${esc(o.cliente_nome)}</h3><div class="muted">${formatBrasiliaDateTime(o.created_at)} · ${esc(o.origem)}</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:8px"><strong class="orange" style="font-size:20px">${money(o.total)}</strong><div style="display:flex;gap:6px;flex-wrap:wrap">${o.status === 'PENDENTE' ? `<button class="btn primary" onclick="sellerEditOrder('${o.id}')">Editar pedido</button>` : ''}<button class="btn" onclick="downloadAuthFile('/api/orders/${o.id}/pdf','pedido-${o.numero}.pdf')">Ver PDF</button>${['PENDENTE', 'SEPARACAO'].includes(o.status) ? `<button class="btn danger" onclick="sellerCancelOrder('${o.id}','${esc(o.numero)}')">🗑️ Excluir pedido</button>` : ''}</div></div></article>`).join('') || '<div class="empty-state">Nenhum pedido encontrado.</div>'}</div>${bottom('orders')}</div>` }
+function pdvGetDefaultClient() { return (window.pdvClients || []).find(x => x.id === 'CLIENTE-BALCAO' || x.razao_social === 'Cliente Balcão') || { id: 'CLIENTE-BALCAO', razao_social: 'Cliente Balcão' } }
+function pdvResetClient() { const def = pdvGetDefaultClient(); const hidden = $('#pdvClient'), search = $('#pdvClientSearch'), badge = $('#pdvClientBadge'), drop = $('#pdvClientDropdown'); if (hidden) hidden.value = def.id; if (search) { search.value = ''; search.focus() } if (badge) badge.textContent = 'Cliente Balcão (Padrão)'; if (drop) drop.style.display = 'none'; if (search) pdvClientInput(search) }
+async function pdvSelectClient(id) { const c = (window.pdvClients || []).find(x => x.id === id); if (!c) return; const hidden = $('#pdvClient'), search = $('#pdvClientSearch'), badge = $('#pdvClientBadge'), drop = $('#pdvClientDropdown'); if (hidden) hidden.value = c.id; const name = c.razao_social || c.nome_fantasia || 'Cliente'; if (search) search.value = name; const isDefault = c.id === 'CLIENTE-BALCAO' || name === 'Cliente Balcão'; if (badge) badge.textContent = isDefault ? 'Cliente Balcão (Padrão)' : name; if (drop) drop.style.display = 'none'; try { const result = await api('/api/products?cliente_id=' + encodeURIComponent(c.id)); const byId = new Map(result.items.map(product => [product.id, product])); window.pdvProducts = window.pdvProducts.map(product => ({ ...(byId.get(product.id) || product), quantidade_disponivel: product.quantidade_disponivel, quantidade_reservada: product.quantidade_reservada, estoque_minimo: product.estoque_minimo })); const curSearch = $('#pdvSearch'); if (curSearch && curSearch.value.trim()) pdvFilter(curSearch); else pdvRender([]); pdvCartRender() } catch (error) { toastRole('Nao foi possivel atualizar os precos deste cliente. O servidor recalculara ao finalizar.', true) } }
+function pdvClientFocus() { const search = $('#pdvClientSearch'); if (!search) return; if (search.value === 'Cliente Balcão') search.select(); pdvClientInput(search) }
+function pdvClientInput(input) { const q = String(input?.value || '').trim().toLowerCase(); const drop = $('#pdvClientDropdown'); const hidden = $('#pdvClient'); const badge = $('#pdvClientBadge'); if (!drop) return; if (!q) { const def = pdvGetDefaultClient(); if (hidden) hidden.value = def.id; if (badge) badge.textContent = 'Cliente Balcão (Padrão)'; const items = (window.pdvClients || []); if (items.length) { drop.innerHTML = items.slice(0, 15).map(c => `<div class="pdv-client-option" onclick="pdvSelectClient('${c.id}')"><strong>${esc(c.razao_social || c.nome_fantasia)}</strong><small>${esc(c.cnpj_cpf || 'Sem documento')}${c.telefone ? ' · ' + esc(c.telefone) : ''}${c.bairro ? ' · ' + esc(c.bairro) : ''}</small></div>`).join(''); drop.style.display = 'block' } else { drop.style.display = 'none' } return } if (badge && badge.textContent !== 'Buscando cliente...') badge.textContent = 'Buscando...'; const items = (window.pdvClients || []).filter(c => (c.razao_social || '').toLowerCase().includes(q) || (c.nome_fantasia || '').toLowerCase().includes(q) || (c.cnpj_cpf || '').toLowerCase().includes(q) || (c.telefone || '').toLowerCase().includes(q) || (c.bairro || '').toLowerCase().includes(q)); if (!items.length) { drop.innerHTML = '<div style="padding:12px;color:#718198;text-align:center">Nenhum cliente encontrado</div>'; drop.style.display = 'block'; return } drop.innerHTML = items.slice(0, 15).map(c => `<div class="pdv-client-option" onclick="pdvSelectClient('${c.id}')"><strong>${esc(c.razao_social || c.nome_fantasia)}</strong><small>${esc(c.cnpj_cpf || 'Sem documento')}${c.telefone ? ' · ' + esc(c.telefone) : ''}${c.bairro ? ' · ' + esc(c.bairro) : ''}</small></div>`).join(''); drop.style.display = 'block' }
+function pdvClientFilter(input) { return pdvClientInput(input) }
+function pdvClientKeydown(event) { if (event.key === 'Escape') { const drop = $('#pdvClientDropdown'); if (drop) drop.style.display = 'none' } }
+function pdvRemoveItem(id) { delete window.pdvCart[id]; pdvCartRender() }
+async function pdvPrintOrder(orderId, orderNum) { try { const pdfUrl = '/api/orders/' + orderId + '/pdf'; const authedUrl = getAuthPdfUrl(pdfUrl); const filename = `cupom-${orderNum || 'pedido'}.pdf`; if (window.AndroidApp?.openPdf) { try { window.AndroidApp.openPdf(authedUrl, filename) } catch (_) { } } const reqId = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10); const r = await fetch(pdfUrl, { headers: { 'x-request-id': reqId, ...(token ? { authorization: 'Bearer ' + token } : {}) } }); if (!r.ok) throw new Error('Não foi possível gerar o cupom para impressão'); const b = await r.blob(); openPdfViewerModal(authedUrl, filename, b) } catch (e) { if (window.AndroidApp?.openPdf) { try { window.AndroidApp.openPdf(getAuthPdfUrl('/api/orders/' + orderId + '/pdf'), `cupom-${orderNum || 'pedido'}.pdf`); return } catch (_) { } } toastRole(e.message, true) } }
+function pdvReprintLast() { const last = window.pdvLastOrder || (localStorage.getItem('xv_pdv_last_order') ? JSON.parse(localStorage.getItem('xv_pdv_last_order')) : null); if (!last || !last.id) { toastRole('Nenhum pedido anterior encontrado para reimpressão.'); return } pdvPrintOrder(last.id, last.numero) }
+async function pdv() {
+  let c, p, s;
+  try {
+    [c, p, s] = await Promise.all([api('/api/clients'), api('/api/products?cliente_id=CLIENTE-BALCAO'), api('/api/stock')]);
+    await offlinePut('kv', 'pdvClients', c.items || []);
+    await offlinePut('kv', 'pdvProducts', p.items || []);
+    await offlinePut('kv', 'pdvStock', s.items || []);
+  } catch (e) {
+    const cp = await offlineGet('kv', 'pdvClients');
+    const pp = await offlineGet('kv', 'pdvProducts');
+    const sp = await offlineGet('kv', 'pdvStock');
+    if (!cp || !pp) throw e;
+    c = { items: cp, offline: true };
+    p = { items: pp, offline: true };
+    s = { items: sp || [], offline: true };
   }
-  const sm=new Map(s.items.map(x=>[x.id,x]));window.pdvClients=c.items;window.pdvProducts=p.items.map(x=>({...x,...(sm.get(x.id)||{})}));window.pdvCart={};
-  const defaultClient=pdvGetDefaultClient();
-  document.body.innerHTML=`<div class="pdv-shell pdv-white"><header class="pdv-top"><div class="pdv-top-brand"><img class="xv-logo" src="/assets/institucional/01_Logo_Xiquim_Vargas_HD.png" alt="Xiquim Vargas Frente de Loja"><div class="pdv-title">PDV – Frente de Loja</div></div><div class="pdv-top-actions"><div class="pdv-top-meta"><span class="pdv-top-clock">◷ ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span><span class="pdv-top-user" title="Operador">${esc(me.nome)}</span></div><div class="pdv-top-buttons"><button type="button" class="btn pdv-top-reprint-btn" title="Reimprimir último cupom emitido" onclick="pdvReprintLast()">🖨️ Reimprimir</button><button type="button" class="btn pdv-top-logout-btn" title="Sair da conta" aria-label="Sair da conta" onclick="logout()">⇥ Sair</button></div></div></header><main class="pdv-layout"><section class="pdv-left"><input id="pdvSearch" class="pdv-search" placeholder="▥ Código de barras ou nome do produto... F2" oninput="pdvFilter(this)"><div class="pdv-barcode-tools"><div class="pdv-barcode-row"><button type="button" id="pdvBarcodeButton" class="btn" onclick="togglePdvBarcode()">▣ Ler código de barras</button><div class="field"><label>Quantidade</label><input id="pdvBarcodeQty" type="number" min="1" max="99999" step="1" value="1" inputmode="numeric"></div></div><div id="pdvBarcodeStatus" class="muted">Leitor opcional. Conecte leitor físico USB/Bluetooth para bipagem contínua.</div><input id="pdvBarcodeInput" class="pdv-barcode-input" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="Clique em Ler código de barras para bipagem contínua" onkeydown="pdvBarcodeKeydown(event)"></div><div style="display:flex;justify-content:space-between;margin:14px 0 8px;color:var(--xv-brand-navy,#061a4f);font-size:16px;font-weight:800"><span>PRODUTOS ENCONTRADOS</span><span id="pdvCount">0 resultado(s)</span></div><div id="pdvProducts" class="pdv-results"></div></section><section class="pdv-right"><div class="pdv-order"><div class="pdv-order-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h2 style="margin:0;color:var(--xv-brand-navy,#061a4f)">PEDIDO ATUAL</h2><button class="btn pdv-btn-clear" onclick="pdvClear()">Limpar pedido</button></div><div id="pdvOrderList" class="pdv-order-list"></div><div class="pdv-footer pdv-order-footer"><div class="pdv-total"><div style="display:flex;justify-content:space-between;color:var(--xv-brand-navy,#061a4f);font-weight:800"><span>TOTAL DO PEDIDO</span><span id="pdvUnits">0 (un)</span></div><div class="amount" id="pdvTotal">R$ 0,00</div></div><div class="pdv-client-bar-wrap"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><label class="pdv-client-label" style="margin:0;font-size:13px;font-weight:800;color:var(--xv-brand-navy,#061a4f)">CLIENTE DO PEDIDO</label><span id="pdvClientBadge" class="pdv-client-badge">Cliente Balcão (Padrão)</span></div><div class="pdv-client-input-group"><input id="pdvClientSearch" class="search pdv-client-search" type="text" autocomplete="off" spellcheck="false" placeholder="Digite o nome, razão social, CPF/CNPJ ou bairro..." value="${esc(defaultClient.razao_social||'Cliente Balcão')}" oninput="pdvClientInput(this)" onfocus="pdvClientFocus()" onkeydown="pdvClientKeydown(event)"><button type="button" id="pdvClientClearBtn" class="pdv-client-clear-btn" title="Remover cliente e retornar ao Cliente Balcão" onclick="pdvResetClient()">✕</button></div><input type="hidden" id="pdvClient" value="${defaultClient.id}"><div id="pdvClientDropdown" class="pdv-client-dropdown" style="display:none"></div></div><div class="form pdv-checkout-form" style="margin-top:10px"><div class="field"><label>Modalidade do pedido</label><select id="pdvFulfillment"><option value="RETIRADA" selected>Retirada no balcão</option><option value="ENTREGA">Entrega</option></select></div><div class="field"><label>Forma de pagamento</label><select id="pdvPayment" onchange="pdvPaymentUI()"><option value="">Selecionar</option><option value="DINHEIRO">Dinheiro</option><option value="DEBITO">Cartão de débito</option><option value="CREDITO">Cartão de crédito</option><option value="PIX">PIX</option></select></div></div><div id="pdvPaymentCard" class="mobile-card" style="margin-top:8px"></div><button id="pdvReceived" class="btn" style="width:100%;margin-top:8px" onclick="togglePdvReceived()">Pagamento: Não recebido</button><textarea id="pdvObs" class="search" style="margin-top:8px;width:100%" rows="2" placeholder="Observação do pedido"></textarea><button class="pdv-final" style="margin-top:10px" onclick="submitPDV()">▣ Finalizar e Imprimir Cupom</button></div></div></section></main></div>`;
-  if(!window._pdvOutsideListener){window._pdvOutsideListener=true;document.addEventListener('click',e=>{const wrap=e.target.closest('.pdv-client-bar-wrap');const drop=$('#pdvClientDropdown');if(!wrap&&drop)drop.style.display='none'})}
-  if(!window._pdvBarcodeGlobalListener){window._pdvBarcodeGlobalListener=true;window.addEventListener('keydown',e=>{if(!window.pdvBarcodeActive)return;const input=$('#pdvBarcodeInput');if(!input||input.dataset.active!=='1')return;const activeEl=document.activeElement;const tag=activeEl?activeEl.tagName.toLowerCase():'';const id=activeEl?activeEl.id:'';if((tag==='input'||tag==='textarea'||tag==='select')&&id!=='pdvBarcodeInput')return;if(activeEl!==input)input.focus()})}
-  pdvRender([]);pdvPaymentUI();
+  const sm = new Map(s.items.map(x => [x.id, x])); window.pdvClients = c.items; window.pdvProducts = p.items.map(x => ({ ...x, ...(sm.get(x.id) || {}) })); window.pdvCart = {};
+  const defaultClient = pdvGetDefaultClient();
+  document.body.innerHTML = `<div class="pdv-shell pdv-white"><header class="pdv-top"><div class="pdv-top-brand"><img class="xv-logo" src="/assets/institucional/01_Logo_Xiquim_Vargas_HD.png" alt="Xiquim Vargas Frente de Loja"><div class="pdv-title">PDV – Frente de Loja</div></div><div class="pdv-top-actions"><div class="pdv-top-meta"><span class="pdv-top-clock">◷ ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span><span class="pdv-top-user" title="Operador">${esc(me.nome)}</span></div><div class="pdv-top-buttons"><button type="button" class="btn pdv-top-reprint-btn" title="Reimprimir último cupom emitido" onclick="pdvReprintLast()">🖨️ Reimprimir</button><button type="button" class="btn pdv-top-logout-btn" title="Sair da conta" aria-label="Sair da conta" onclick="logout()">⇥ Sair</button></div></div></header><main class="pdv-layout"><section class="pdv-left"><input id="pdvSearch" class="pdv-search" placeholder="▥ Código de barras ou nome do produto... F2" oninput="pdvFilter(this)"><div class="pdv-barcode-tools"><div class="pdv-barcode-row"><button type="button" id="pdvBarcodeButton" class="btn" onclick="togglePdvBarcode()">▣ Ler código de barras</button><div class="field"><label>Quantidade</label><input id="pdvBarcodeQty" type="number" min="1" max="99999" step="1" value="1" inputmode="numeric"></div></div><div id="pdvBarcodeStatus" class="muted">Leitor opcional. Conecte leitor físico USB/Bluetooth para bipagem contínua.</div><input id="pdvBarcodeInput" class="pdv-barcode-input" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="Clique em Ler código de barras para bipagem contínua" onkeydown="pdvBarcodeKeydown(event)"></div><div style="display:flex;justify-content:space-between;margin:14px 0 8px;color:var(--xv-brand-navy,#061a4f);font-size:16px;font-weight:800"><span>PRODUTOS ENCONTRADOS</span><span id="pdvCount">0 resultado(s)</span></div><div id="pdvProducts" class="pdv-results"></div></section><section class="pdv-right"><div class="pdv-order"><div class="pdv-order-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h2 style="margin:0;color:var(--xv-brand-navy,#061a4f)">PEDIDO ATUAL</h2><button class="btn pdv-btn-clear" onclick="pdvClear()">Limpar pedido</button></div><div id="pdvOrderList" class="pdv-order-list"></div><div class="pdv-footer pdv-order-footer"><div class="pdv-total"><div style="display:flex;justify-content:space-between;color:var(--xv-brand-navy,#061a4f);font-weight:800"><span>TOTAL DO PEDIDO</span><span id="pdvUnits">0 (un)</span></div><div class="amount" id="pdvTotal">R$ 0,00</div></div><div class="pdv-client-bar-wrap"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><label class="pdv-client-label" style="margin:0;font-size:13px;font-weight:800;color:var(--xv-brand-navy,#061a4f)">CLIENTE DO PEDIDO</label><span id="pdvClientBadge" class="pdv-client-badge">Cliente Balcão (Padrão)</span></div><div class="pdv-client-input-group"><input id="pdvClientSearch" class="search pdv-client-search" type="text" autocomplete="off" spellcheck="false" placeholder="Digite o nome, razão social, CPF/CNPJ ou bairro..." value="${esc(defaultClient.razao_social || 'Cliente Balcão')}" oninput="pdvClientInput(this)" onfocus="pdvClientFocus()" onkeydown="pdvClientKeydown(event)"><button type="button" id="pdvClientClearBtn" class="pdv-client-clear-btn" title="Remover cliente e retornar ao Cliente Balcão" onclick="pdvResetClient()">✕</button></div><input type="hidden" id="pdvClient" value="${defaultClient.id}"><div id="pdvClientDropdown" class="pdv-client-dropdown" style="display:none"></div></div><div class="form pdv-checkout-form" style="margin-top:10px"><div class="field"><label>Modalidade do pedido</label><select id="pdvFulfillment"><option value="RETIRADA" selected>Retirada no balcão</option><option value="ENTREGA">Entrega</option></select></div><div class="field"><label>Forma de pagamento</label><select id="pdvPayment" onchange="pdvPaymentUI()"><option value="">Selecionar</option><option value="DINHEIRO">Dinheiro</option><option value="DEBITO">Cartão de débito</option><option value="CREDITO">Cartão de crédito</option><option value="PIX">PIX</option></select></div></div><div id="pdvPaymentCard" class="mobile-card" style="margin-top:8px"></div><button id="pdvReceived" class="btn" style="width:100%;margin-top:8px" onclick="togglePdvReceived()">Pagamento: Não recebido</button><textarea id="pdvObs" class="search" style="margin-top:8px;width:100%" rows="2" placeholder="Observação do pedido"></textarea><button class="pdv-final" style="margin-top:10px" onclick="submitPDV()">▣ Finalizar e Imprimir Cupom</button></div></div></section></main></div>`;
+  if (!window._pdvOutsideListener) { window._pdvOutsideListener = true; document.addEventListener('click', e => { const wrap = e.target.closest('.pdv-client-bar-wrap'); const drop = $('#pdvClientDropdown'); if (!wrap && drop) drop.style.display = 'none' }) }
+  if (!window._pdvBarcodeGlobalListener) { window._pdvBarcodeGlobalListener = true; window.addEventListener('keydown', e => { if (!window.pdvBarcodeActive) return; const input = $('#pdvBarcodeInput'); if (!input || input.dataset.active !== '1') return; const activeEl = document.activeElement; const tag = activeEl ? activeEl.tagName.toLowerCase() : ''; const id = activeEl ? activeEl.id : ''; if ((tag === 'input' || tag === 'textarea' || tag === 'select') && id !== 'pdvBarcodeInput') return; if (activeEl !== input) input.focus() }) }
+  pdvRender([]); pdvPaymentUI();
 }
-function pdvPaymentUI(){const f=$('#pdvPayment')?.value,c=$('#pdvPaymentCard');if(!c)return;if(f==='DINHEIRO')c.innerHTML='<strong>Dinheiro</strong><div class="field"><label>Valor recebido</label><input id="pdvReceivedValue" type="number" min="0" step="0.01" oninput="pdvChange()"></div><div id="pdvChange" class="product-price">Troco: R$ 0,00</div>';else if(f==='DEBITO')c.innerHTML='<strong>Débito</strong><p class="muted" style="margin:4px 0 0">Cartão de débito</p>';else if(f==='CREDITO')c.innerHTML='<strong>Crédito</strong><div class="field"><label>Modalidade</label><select id="pdvCreditMode" onchange="pdvCreditUI()"><option value="A_VISTA">À vista</option><option value="PARCELADO">Parcelado</option></select></div><div id="pdvParcelas"></div>';else if(f==='PIX')c.innerHTML='<strong>PIX</strong><p class="muted" style="margin:4px 0 0">Chave ou QR Code PIX para recebimento imediato.</p>';else c.innerHTML='<span class="muted">Selecione a forma de pagamento.</span>'}
-function pdvCreditUI(){const x=$('#pdvParcelas');if(!x)return;x.innerHTML=$('#pdvCreditMode').value==='PARCELADO'?'<div class="field"><label>Parcelas</label><select id="pdvInstallments">'+Array.from({length:11},(_,i)=>`<option value="${i+2}">${i+2}x</option>`).join('')+'</select></div>':''}
-function pdvChange(){const total=Object.entries(window.pdvCart||{}).reduce((s,[id,q])=>{const p=window.pdvProducts.find(x=>x.id===id);return s+Number(q)*priceForLine(p,q)},0);const rec=Number($('#pdvReceivedValue')?.value||0);if($('#pdvChange'))$('#pdvChange').textContent='Troco: '+money(Math.max(0,rec-total))}
-function togglePdvReceived(){const b=$('#pdvReceived');if(!b)return;const on=b.dataset.received==='1';b.dataset.received=on?'0':'1';b.textContent='Pagamento: '+(on?'Não recebido':'Recebido');b.classList.toggle('good',!on)}
-function togglePdvBarcode(){const input=$('#pdvBarcodeInput'),button=$('#pdvBarcodeButton'),status=$('#pdvBarcodeStatus');if(!input||!button)return;const active=input.dataset.active==='1';input.dataset.active=active?'0':'1';window.pdvBarcodeActive=!active;button.classList.toggle('good',!active);button.textContent=active?'▣ Ler código de barras':'■ Leitor ativo — bipagem contínua';status.textContent=active?'Leitor desativado. Clique para ativar.':'Leitor contínuo ATIVO. Pode ler produtos seguidos com o leitor físico sem clicar novamente.';if(!active){input.value='';input.focus()}}
-function pdvBarcodeKeydown(event){if(event.key!=='Enter')return;event.preventDefault();const input=event.currentTarget;if(input.dataset.active!=='1')return;const code=String(input.value||'').trim();if(!code)return;pdvReadBarcode(code)}
-async function pdvReadBarcode(code){const input=$('#pdvBarcodeInput'),qtyInput=$('#pdvBarcodeQty');const qty=Math.max(1,Math.min(99999,Number(qtyInput?.value||1)));if(!Number.isInteger(qty)){toastRole('Quantidade inválida.',true);qtyInput?.focus();return}const clienteId=$('#pdvClient')?.value||'CLIENTE-BALCAO';try{const x=await api('/api/pdv/barcode?code='+encodeURIComponent(code)+'&cliente_id='+encodeURIComponent(clienteId));const p=x.item;if(Number(p.esgotado)){toastRole(`Produto esgotado: ${p.nome}`,true);return}const available=Number(p.quantidade_disponivel||0);if(available<qty){toastRole(`Estoque insuficiente para ${p.nome}. Disponível: ${available}.`,true);return}const existing=Number(window.pdvCart[p.id]||0);if(existing+qty>available){toastRole(`A quantidade de ${p.nome} ultrapassa o estoque disponível.`,true);return}const cached=window.pdvProducts.find(x=>x.id===p.id);window.pdvProducts=cached?window.pdvProducts.map(x=>x.id===p.id?{...x,...p}:x):[...window.pdvProducts,p];window.pdvCart[p.id]=existing+qty;if(qtyInput)qtyInput.value='1';pdvRender([]);pdvCartRender();toastRole(`✓ ${p.nome} (+${qty})`)}catch(e){toastRole(e.message==='Código de barras não cadastrado'?'Código não cadastrado':e.message,true)}finally{if(input&&input.dataset.active==='1'){input.value='';input.focus()}}}
-function updatePdvCardPriceDisplay(id){const p=window.pdvProducts.find(x=>x.id===id);const el=$('#pdvSearchQty_'+id);const priceEl=$('#pdv_price_'+id);if(!p||!priceEl)return;const q=Math.max(1,Number(el?.value||1));priceEl.textContent=money(priceForLine(p,q))}
-function pdvSelectMinQty(id,minQty,max){const el=$('#pdvSearchQty_'+id);if(!el)return;const maxVal=max!=null&&max>0?Number(max):99999;const target=Math.max(1,Math.min(maxVal,Number(minQty)||1));el.value=target;updatePdvCardPriceDisplay(id);const p=window.pdvProducts.find(x=>x.id===id);const tName=p?.tabela_preco_nome||p?.tabela_nome||'Oferta';if(target<Number(minQty)){toastRole(`Estoque máximo disponível: ${maxVal} un.`,true)}else{toastRole(`✓ ${target} un. selecionadas — ${tName}: ${money(priceForLine(p,target))}/un`)}}
-function pdvSetCartQty(id,minQty){const p=window.pdvProducts.find(x=>x.id===id);if(!p)return;const avail=Number(p.quantidade_disponivel||0);const target=Math.max(1,Math.min(avail,Number(minQty)||1));window.pdvCart[id]=target;pdvCartRender();const tName=p.tabela_preco_nome||p.tabela_nome||'Oferta';toastRole(`✓ Quantidade ajustada para ${target} un. (${tName}: ${money(priceForLine(p,target))}/un)`)}
-function pdvChangeSearchQty(id,delta,max){const el=$('#pdvSearchQty_'+id);if(!el)return;const cur=Math.max(1,Number(el.value||1));const maxVal=max!=null&&max>0?Number(max):99999;el.value=Math.max(1,Math.min(maxVal,cur+delta));updatePdvCardPriceDisplay(id)}
-function pdvAddWithQty(id,explicitQty){const p=window.pdvProducts.find(x=>x.id===id);if(!p||Number(p.esgotado))return;let q=explicitQty!=null?Number(explicitQty):Number($('#pdvSearchQty_'+id)?.value||1);if(!Number.isInteger(q)||q<=0)q=1;const avail=Number(p.quantidade_disponivel||0);const cur=Number(window.pdvCart[id]||0);if(avail<=0){toastRole(`Produto sem estoque disponível: ${p.nome}`,true);return}if(cur+q>avail){const diff=Math.max(0,avail-cur);if(diff<=0){toastRole(`Limite de estoque atingido para ${p.nome} (${avail} un).`,true);return}toastRole(`Quantidade ajustada para o saldo em estoque (${diff} un).`);q=diff}window.pdvCart[id]=cur+q;const s=$('#pdvSearch');if(s){s.value='';$('#pdvCount').textContent='0 resultado(s)'}pdvRender([]);s?.focus();pdvCartRender();toastRole(`✓ ${q}x ${p.nome} adicionado(s)`)}
-function pdvAdd(id){pdvAddWithQty(id)}
-function pdvFilter(i){const q=i.value.trim().toLowerCase();if(!q){$('#pdvCount').textContent='0 resultado(s)';return pdvRender([])}const items=window.pdvProducts.filter(x=>(x.nome+' '+(x.sku||'')+' '+(x.codigo_barras||'')).toLowerCase().includes(q));$('#pdvCount').textContent=items.length+' resultado(s)';pdvRender(items)}
-function pdvRender(items){const defaultQty=Math.max(1,Number($('#pdvBarcodeQty')?.value||1));$('#pdvProducts').innerHTML=items.map(p=>{const esgotado=Number(p.esgotado)||Number(p.quantidade_disponivel)<=0;const maxQty=Number(p.quantidade_disponivel||0);const initialQty=Math.min(defaultQty,maxQty>0?maxQty:1);const tName=esc(p.tabela_preco_nome||p.tabela_nome||'Oferta');const hasMin=p.preco_tabela!=null&&Number(p.quantidade_minima)>1;return `<article class="pdv-product" id="pdv_prod_${p.id}" ${esgotado?'style="opacity:.5;cursor:not-allowed" title="Produto esgotado"':''}><div class="pdv-thumb" ${!esgotado?`onclick="pdvAddWithQty('${p.id}')"`:''} style="${!esgotado?'cursor:pointer':''}">${p.foto_url?`<img class="catalog-mini-photo" src="${esc(p.foto_url)}" alt="${esc(p.nome)}" onerror="this.parentElement.innerHTML='${esc(p.marca||'◉')}'">`:esc(p.marca||'◉')}</div><div class="pdv-product-info" ${!esgotado?`onclick="pdvAddWithQty('${p.id}')"`:''} style="${!esgotado?'cursor:pointer;flex:1':''}"><h4 style="margin:0 0 3px">${esc(p.nome)}${esgotado?' <span style="color:#ef4444;font-size:11px;font-weight:800;background:#fee2e2;padding:2px 6px;border-radius:4px">ESGOTADO</span>':''}</h4><small>${esc(p.tamanho||'')} · Estoque: <strong style="color:var(--xv-brand-navy,#061a4f)">${p.quantidade_disponivel} un</strong></small><br><small>Cód: ${esc(p.codigo_barras||p.sku||'-')}</small>${hasMin?`<br><button type="button" class="btn" style="margin-top:4px;padding:3px 8px;font-size:11px;font-weight:800;background:#fff7ed;color:var(--xv-orange,#fd5e02);border:1px solid #fdba74;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap;text-align:left" onclick="event.stopPropagation();pdvSelectMinQty('${p.id}',${Number(p.quantidade_minima)},${maxQty})" title="Clique para selecionar ${p.quantidade_minima} un. com preço ${tName}"><span>🏷️ ${tName}: <strong>${money(p.preco_tabela)}</strong> a partir de ${p.quantidade_minima} un.</span><u style="margin-left:2px">Selecionar ${p.quantidade_minima} un.</u></button>`:(p.preco_tabela!=null?`<br><small style="color:#16a34a;font-weight:750">🏷️ ${tName}: ${money(p.preco_tabela)}</small>`:'')}</div><div class="pdv-product-right"><div class="price" id="pdv_price_${p.id}">${money(priceForLine(p,initialQty))}</div>${!esgotado?`<div class="pdv-product-actions" onclick="event.stopPropagation()"><div class="pdv-qty-box"><button type="button" class="pdv-qty-btn" title="Diminuir quantidade" aria-label="Diminuir" onclick="pdvChangeSearchQty('${p.id}',-1,${maxQty})">−</button><input type="number" id="pdvSearchQty_${p.id}" class="pdv-search-qty-input" value="${initialQty}" min="1" max="${maxQty}" step="1" inputmode="numeric" onclick="this.select()" oninput="updatePdvCardPriceDisplay('${p.id}')" onkeydown="if(event.key==='Enter'){event.preventDefault();pdvAddWithQty('${p.id}')}"><button type="button" class="pdv-qty-btn" title="Aumentar quantidade" aria-label="Aumentar" onclick="pdvChangeSearchQty('${p.id}',1,${maxQty})">＋</button></div><button type="button" class="btn primary pdv-btn-add-item" onclick="pdvAddWithQty('${p.id}')">＋ Adicionar</button></div>`:''}</div></article>`}).join('')}
-function pdvClear(){window.pdvCart={};pdvCartRender()}
-function pdvCartRender(){const rows=Object.entries(window.pdvCart).filter(([,q])=>q>0).map(([id,q],i)=>{const p=window.pdvProducts.find(x=>x.id===id),unit=priceForLine(p,q),total=q*unit,tName=esc(p?.tabela_preco_nome||p?.tabela_nome||'Oferta'),hasMin=p?.preco_tabela!=null&&Number(p?.quantidade_minima)>1;return `<div class="pdv-row"><div class="pdv-row-header"><span class="num">${String(i+1).padStart(2,'0')}</span><div class="pdv-row-title"><strong>${esc(p.nome)}</strong><small style="color:#64748b;display:block">Cód: ${esc(p.codigo_barras||p.sku||'-')}</small>${hasMin&&q<Number(p.quantidade_minima)?`<button type="button" class="btn" style="margin-top:4px;padding:2px 8px;font-size:11px;font-weight:750;background:#fff7ed;color:var(--xv-orange,#fd5e02);border:1px solid #fdba74;border-radius:6px" onclick="pdvSetCartQty('${id}',${Number(p.quantidade_minima)})">🏷️ ${tName}: ${money(p.preco_tabela)} (mín. ${p.quantidade_minima} un.) · Aplicar ${p.quantidade_minima} un.</button>`:(hasMin?`<small style="color:#16a34a;font-weight:750;display:block">✓ ${tName} aplicado (${money(unit)}/un)</small>`:'')}</div><button type="button" class="pdv-btn-remove" title="Remover item" aria-label="Remover item" onclick="pdvRemoveItem('${id}')">✕</button></div><div class="pdv-row-actions"><div class="qty-control"><button type="button" aria-label="Diminuir quantidade" onclick="pdvQty('${id}',-1)">−</button><span>${q}</span><button type="button" aria-label="Aumentar quantidade" onclick="pdvQty('${id}',1)">＋</button></div><div class="pdv-row-totals"><span class="muted" style="font-size:12px;margin-right:6px">(${money(unit)} un)</span><strong class="pdv-subtotal" style="color:var(--xv-orange);font-size:16px">${money(total)}</strong></div></div></div>`}).join('');$('#pdvOrderList').innerHTML=rows||'<div style="padding:30px;text-align:center;color:#64748b">Adicione produtos ao pedido usando a lista ao lado.</div>';const total=Object.entries(window.pdvCart).reduce((s,[id,q])=>{const p=window.pdvProducts.find(x=>x.id===id);return s+q*priceForLine(p,q)},0);const units=Object.values(window.pdvCart).reduce((s,x)=>s+x,0);$('#pdvTotal').textContent=money(total);$('#pdvUnits').textContent=units+' (un)'}
-function pdvQty(id,delta){const p=window.pdvProducts.find(x=>x.id===id);window.pdvCart[id]=Math.max(0,Math.min(p.quantidade_disponivel,(window.pdvCart[id]||0)+delta));pdvCartRender()}
-async function submitPDV(){
-  const itens=Object.entries(window.pdvCart).filter(([,q])=>q>0).map(([produto_id,quantidade])=>({produto_id,quantidade}));
-  if(!itens.length)return toastRole('O pedido está vazio.',true);
-  const clientSearch=String($('#pdvClientSearch')?.value||'').trim();
-  let clientId=$('#pdvClient')?.value||'CLIENTE-BALCAO';
-  if(!clientSearch){
-    const def=pdvGetDefaultClient();
-    clientId=def.id;
-  }else if(clientSearch&&clientId==='CLIENTE-BALCAO'){
-    const match=(window.pdvClients||[]).find(c=>(c.razao_social||'').toLowerCase()===clientSearch.toLowerCase()||(c.nome_fantasia||'').toLowerCase()===clientSearch.toLowerCase());
-    if(match)clientId=match.id;
+function pdvPaymentUI() { const f = $('#pdvPayment')?.value, c = $('#pdvPaymentCard'); if (!c) return; if (f === 'DINHEIRO') c.innerHTML = '<strong>Dinheiro</strong><div class="field"><label>Valor recebido</label><input id="pdvReceivedValue" type="number" min="0" step="0.01" oninput="pdvChange()"></div><div id="pdvChange" class="product-price">Troco: R$ 0,00</div>'; else if (f === 'DEBITO') c.innerHTML = '<strong>Débito</strong><p class="muted" style="margin:4px 0 0">Cartão de débito</p>'; else if (f === 'CREDITO') c.innerHTML = '<strong>Crédito</strong><div class="field"><label>Modalidade</label><select id="pdvCreditMode" onchange="pdvCreditUI()"><option value="A_VISTA">À vista</option><option value="PARCELADO">Parcelado</option></select></div><div id="pdvParcelas"></div>'; else if (f === 'PIX') c.innerHTML = '<strong>PIX</strong><p class="muted" style="margin:4px 0 0">Chave ou QR Code PIX para recebimento imediato.</p>'; else c.innerHTML = '<span class="muted">Selecione a forma de pagamento.</span>' }
+function pdvCreditUI() { const x = $('#pdvParcelas'); if (!x) return; x.innerHTML = $('#pdvCreditMode').value === 'PARCELADO' ? '<div class="field"><label>Parcelas</label><select id="pdvInstallments">' + Array.from({ length: 11 }, (_, i) => `<option value="${i + 2}">${i + 2}x</option>`).join('') + '</select></div>' : '' }
+function pdvChange() { const total = Object.entries(window.pdvCart || {}).reduce((s, [id, q]) => { const p = window.pdvProducts.find(x => x.id === id); return s + Number(q) * priceForLine(p, q) }, 0); const rec = Number($('#pdvReceivedValue')?.value || 0); if ($('#pdvChange')) $('#pdvChange').textContent = 'Troco: ' + money(Math.max(0, rec - total)) }
+function togglePdvReceived() { const b = $('#pdvReceived'); if (!b) return; const on = b.dataset.received === '1'; b.dataset.received = on ? '0' : '1'; b.textContent = 'Pagamento: ' + (on ? 'Não recebido' : 'Recebido'); b.classList.toggle('good', !on) }
+function togglePdvBarcode() { const input = $('#pdvBarcodeInput'), button = $('#pdvBarcodeButton'), status = $('#pdvBarcodeStatus'); if (!input || !button) return; const active = input.dataset.active === '1'; input.dataset.active = active ? '0' : '1'; window.pdvBarcodeActive = !active; button.classList.toggle('good', !active); button.textContent = active ? '▣ Ler código de barras' : '■ Leitor ativo — bipagem contínua'; status.textContent = active ? 'Leitor desativado. Clique para ativar.' : 'Leitor contínuo ATIVO. Pode ler produtos seguidos com o leitor físico sem clicar novamente.'; if (!active) { input.value = ''; input.focus() } }
+function pdvBarcodeKeydown(event) { if (event.key !== 'Enter') return; event.preventDefault(); const input = event.currentTarget; if (input.dataset.active !== '1') return; const code = String(input.value || '').trim(); if (!code) return; pdvReadBarcode(code) }
+async function pdvReadBarcode(code) { const input = $('#pdvBarcodeInput'), qtyInput = $('#pdvBarcodeQty'); const qty = Math.max(1, Math.min(99999, Number(qtyInput?.value || 1))); if (!Number.isInteger(qty)) { toastRole('Quantidade inválida.', true); qtyInput?.focus(); return } const clienteId = $('#pdvClient')?.value || 'CLIENTE-BALCAO'; try { const x = await api('/api/pdv/barcode?code=' + encodeURIComponent(code) + '&cliente_id=' + encodeURIComponent(clienteId)); const p = x.item; if (Number(p.esgotado)) { toastRole(`Produto esgotado: ${p.nome}`, true); return } const available = Number(p.quantidade_disponivel || 0); if (available < qty) { toastRole(`Estoque insuficiente para ${p.nome}. Disponível: ${available}.`, true); return } const existing = Number(window.pdvCart[p.id] || 0); if (existing + qty > available) { toastRole(`A quantidade de ${p.nome} ultrapassa o estoque disponível.`, true); return } const cached = window.pdvProducts.find(x => x.id === p.id); window.pdvProducts = cached ? window.pdvProducts.map(x => x.id === p.id ? { ...x, ...p } : x) : [...window.pdvProducts, p]; window.pdvCart[p.id] = existing + qty; if (qtyInput) qtyInput.value = '1'; pdvRender([]); pdvCartRender(); toastRole(`✓ ${p.nome} (+${qty})`) } catch (e) { toastRole(e.message === 'Código de barras não cadastrado' ? 'Código não cadastrado' : e.message, true) } finally { if (input && input.dataset.active === '1') { input.value = ''; input.focus() } } }
+function updatePdvCardPriceDisplay(id) { const p = window.pdvProducts.find(x => x.id === id); const el = $('#pdvSearchQty_' + id); const priceEl = $('#pdv_price_' + id); if (!p || !priceEl) return; const q = Math.max(1, Number(el?.value || 1)); priceEl.textContent = money(priceForLine(p, q)) }
+function pdvSelectMinQty(id, minQty, max) { const el = $('#pdvSearchQty_' + id); if (!el) return; const maxVal = max != null && max > 0 ? Number(max) : 99999; const target = Math.max(1, Math.min(maxVal, Number(minQty) || 1)); el.value = target; updatePdvCardPriceDisplay(id); const p = window.pdvProducts.find(x => x.id === id); const tName = p?.tabela_preco_nome || p?.tabela_nome || 'Oferta'; if (target < Number(minQty)) { toastRole(`Estoque máximo disponível: ${maxVal} un.`, true) } else { toastRole(`✓ ${target} un. selecionadas — ${tName}: ${money(priceForLine(p, target))}/un`) } }
+function pdvSetCartQty(id, minQty) { const p = window.pdvProducts.find(x => x.id === id); if (!p) return; const avail = Number(p.quantidade_disponivel || 0); const target = Math.max(1, Math.min(avail, Number(minQty) || 1)); window.pdvCart[id] = target; pdvCartRender(); const tName = p.tabela_preco_nome || p.tabela_nome || 'Oferta'; toastRole(`✓ Quantidade ajustada para ${target} un. (${tName}: ${money(priceForLine(p, target))}/un)`) }
+function pdvChangeSearchQty(id, delta, max) { const el = $('#pdvSearchQty_' + id); if (!el) return; const cur = Math.max(1, Number(el.value || 1)); const maxVal = max != null && max > 0 ? Number(max) : 99999; el.value = Math.max(1, Math.min(maxVal, cur + delta)); updatePdvCardPriceDisplay(id) }
+function pdvAddWithQty(id, explicitQty) { const p = window.pdvProducts.find(x => x.id === id); if (!p || Number(p.esgotado)) return; let q = explicitQty != null ? Number(explicitQty) : Number($('#pdvSearchQty_' + id)?.value || 1); if (!Number.isInteger(q) || q <= 0) q = 1; const avail = Number(p.quantidade_disponivel || 0); const cur = Number(window.pdvCart[id] || 0); if (avail <= 0) { toastRole(`Produto sem estoque disponível: ${p.nome}`, true); return } if (cur + q > avail) { const diff = Math.max(0, avail - cur); if (diff <= 0) { toastRole(`Limite de estoque atingido para ${p.nome} (${avail} un).`, true); return } toastRole(`Quantidade ajustada para o saldo em estoque (${diff} un).`); q = diff } window.pdvCart[id] = cur + q; const s = $('#pdvSearch'); if (s) { s.value = ''; $('#pdvCount').textContent = '0 resultado(s)' } pdvRender([]); s?.focus(); pdvCartRender(); toastRole(`✓ ${q}x ${p.nome} adicionado(s)`) }
+function pdvAdd(id) { pdvAddWithQty(id) }
+function pdvFilter(i) { const q = i.value.trim().toLowerCase(); if (!q) { $('#pdvCount').textContent = '0 resultado(s)'; return pdvRender([]) } const items = window.pdvProducts.filter(x => (x.nome + ' ' + (x.sku || '') + ' ' + (x.codigo_barras || '')).toLowerCase().includes(q)); $('#pdvCount').textContent = items.length + ' resultado(s)'; pdvRender(items) }
+function pdvRender(items) { const defaultQty = Math.max(1, Number($('#pdvBarcodeQty')?.value || 1)); $('#pdvProducts').innerHTML = items.map(p => { const esgotado = Number(p.esgotado) || Number(p.quantidade_disponivel) <= 0; const maxQty = Number(p.quantidade_disponivel || 0); const initialQty = Math.min(defaultQty, maxQty > 0 ? maxQty : 1); const tName = esc(p.tabela_preco_nome || p.tabela_nome || 'Oferta'); const hasMin = p.preco_tabela != null && Number(p.quantidade_minima) > 1; return `<article class="pdv-product" id="pdv_prod_${p.id}" ${esgotado ? 'style="opacity:.5;cursor:not-allowed" title="Produto esgotado"' : ''}><div class="pdv-thumb" ${!esgotado ? `onclick="pdvAddWithQty('${p.id}')"` : ''} style="${!esgotado ? 'cursor:pointer' : ''}">${p.foto_url ? `<img class="catalog-mini-photo" src="${esc(p.foto_url)}" alt="${esc(p.nome)}" onerror="this.parentElement.innerHTML='${esc(p.marca || '◉')}'">` : esc(p.marca || '◉')}</div><div class="pdv-product-info" ${!esgotado ? `onclick="pdvAddWithQty('${p.id}')"` : ''} style="${!esgotado ? 'cursor:pointer;flex:1' : ''}"><h4 style="margin:0 0 3px">${esc(p.nome)}${esgotado ? ' <span style="color:#ef4444;font-size:11px;font-weight:800;background:#fee2e2;padding:2px 6px;border-radius:4px">ESGOTADO</span>' : ''}</h4><small>${esc(p.tamanho || '')} · Estoque: <strong style="color:var(--xv-brand-navy,#061a4f)">${p.quantidade_disponivel} un</strong></small><br><small>Cód: ${esc(p.codigo_barras || p.sku || '-')}</small>${hasMin ? `<br><button type="button" class="btn" style="margin-top:4px;padding:3px 8px;font-size:11px;font-weight:800;background:#fff7ed;color:var(--xv-orange,#fd5e02);border:1px solid #fdba74;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap;text-align:left" onclick="event.stopPropagation();pdvSelectMinQty('${p.id}',${Number(p.quantidade_minima)},${maxQty})" title="Clique para selecionar ${p.quantidade_minima} un. com preço ${tName}"><span>🏷️ ${tName}: <strong>${money(p.preco_tabela)}</strong> a partir de ${p.quantidade_minima} un.</span><u style="margin-left:2px">Selecionar ${p.quantidade_minima} un.</u></button>` : (p.preco_tabela != null ? `<br><small style="color:#16a34a;font-weight:750">🏷️ ${tName}: ${money(p.preco_tabela)}</small>` : '')}</div><div class="pdv-product-right"><div class="price" id="pdv_price_${p.id}">${money(priceForLine(p, initialQty))}</div>${!esgotado ? `<div class="pdv-product-actions" onclick="event.stopPropagation()"><div class="pdv-qty-box"><button type="button" class="pdv-qty-btn" title="Diminuir quantidade" aria-label="Diminuir" onclick="pdvChangeSearchQty('${p.id}',-1,${maxQty})">−</button><input type="number" id="pdvSearchQty_${p.id}" class="pdv-search-qty-input" value="${initialQty}" min="1" max="${maxQty}" step="1" inputmode="numeric" onclick="this.select()" oninput="updatePdvCardPriceDisplay('${p.id}')" onkeydown="if(event.key==='Enter'){event.preventDefault();pdvAddWithQty('${p.id}')}"><button type="button" class="pdv-qty-btn" title="Aumentar quantidade" aria-label="Aumentar" onclick="pdvChangeSearchQty('${p.id}',1,${maxQty})">＋</button></div><button type="button" class="btn primary pdv-btn-add-item" onclick="pdvAddWithQty('${p.id}')">＋ Adicionar</button></div>` : ''}</div></article>` }).join('') }
+function pdvClear() { window.pdvCart = {}; pdvCartRender() }
+function pdvCartRender() { const rows = Object.entries(window.pdvCart).filter(([, q]) => q > 0).map(([id, q], i) => { const p = window.pdvProducts.find(x => x.id === id), unit = priceForLine(p, q), total = q * unit, tName = esc(p?.tabela_preco_nome || p?.tabela_nome || 'Oferta'), hasMin = p?.preco_tabela != null && Number(p?.quantidade_minima) > 1; return `<div class="pdv-row"><div class="pdv-row-header"><span class="num">${String(i + 1).padStart(2, '0')}</span><div class="pdv-row-title"><strong>${esc(p.nome)}</strong><small style="color:#64748b;display:block">Cód: ${esc(p.codigo_barras || p.sku || '-')}</small>${hasMin && q < Number(p.quantidade_minima) ? `<button type="button" class="btn" style="margin-top:4px;padding:2px 8px;font-size:11px;font-weight:750;background:#fff7ed;color:var(--xv-orange,#fd5e02);border:1px solid #fdba74;border-radius:6px" onclick="pdvSetCartQty('${id}',${Number(p.quantidade_minima)})">🏷️ ${tName}: ${money(p.preco_tabela)} (mín. ${p.quantidade_minima} un.) · Aplicar ${p.quantidade_minima} un.</button>` : (hasMin ? `<small style="color:#16a34a;font-weight:750;display:block">✓ ${tName} aplicado (${money(unit)}/un)</small>` : '')}</div><button type="button" class="pdv-btn-remove" title="Remover item" aria-label="Remover item" onclick="pdvRemoveItem('${id}')">✕</button></div><div class="pdv-row-actions"><div class="qty-control"><button type="button" aria-label="Diminuir quantidade" onclick="pdvQty('${id}',-1)">−</button><span>${q}</span><button type="button" aria-label="Aumentar quantidade" onclick="pdvQty('${id}',1)">＋</button></div><div class="pdv-row-totals"><span class="muted" style="font-size:12px;margin-right:6px">(${money(unit)} un)</span><strong class="pdv-subtotal" style="color:var(--xv-orange);font-size:16px">${money(total)}</strong></div></div></div>` }).join(''); $('#pdvOrderList').innerHTML = rows || '<div style="padding:30px;text-align:center;color:#64748b">Adicione produtos ao pedido usando a lista ao lado.</div>'; const total = Object.entries(window.pdvCart).reduce((s, [id, q]) => { const p = window.pdvProducts.find(x => x.id === id); return s + q * priceForLine(p, q) }, 0); const units = Object.values(window.pdvCart).reduce((s, x) => s + x, 0); $('#pdvTotal').textContent = money(total); $('#pdvUnits').textContent = units + ' (un)' }
+function pdvQty(id, delta) { const p = window.pdvProducts.find(x => x.id === id); window.pdvCart[id] = Math.max(0, Math.min(p.quantidade_disponivel, (window.pdvCart[id] || 0) + delta)); pdvCartRender() }
+async function submitPDV() {
+  const itens = Object.entries(window.pdvCart).filter(([, q]) => q > 0).map(([produto_id, quantidade]) => ({ produto_id, quantidade }));
+  if (!itens.length) return toastRole('O pedido está vazio.', true);
+  const clientSearch = String($('#pdvClientSearch')?.value || '').trim();
+  let clientId = $('#pdvClient')?.value || 'CLIENTE-BALCAO';
+  if (!clientSearch) {
+    const def = pdvGetDefaultClient();
+    clientId = def.id;
+  } else if (clientSearch && clientId === 'CLIENTE-BALCAO') {
+    const match = (window.pdvClients || []).find(c => (c.razao_social || '').toLowerCase() === clientSearch.toLowerCase() || (c.nome_fantasia || '').toLowerCase() === clientSearch.toLowerCase());
+    if (match) clientId = match.id;
   }
-  if($('#pdvFulfillment').value==='ENTREGA'){
-    const client=window.pdvClients.find(x=>x.id===clientId);
-    if(!String(client?.endereco||'').trim())return toastRole('Este cliente não possui endereço cadastrado.',true);
+  if ($('#pdvFulfillment').value === 'ENTREGA') {
+    const client = window.pdvClients.find(x => x.id === clientId);
+    if (!String(client?.endereco || '').trim()) return toastRole('Este cliente não possui endereço cadastrado.', true);
   }
-  const forma=$('#pdvPayment').value;
-  const payload={
-    cliente_id:clientId,
+  const forma = $('#pdvPayment').value;
+  const payload = {
+    cliente_id: clientId,
     itens,
-    origem:'BALCAO',
-    modalidade_entrega:$('#pdvFulfillment').value,
-    forma_pagamento:forma||null,
-    pagamento_status:$('#pdvReceived').dataset.received==='1'?'RECEBIDO':'NAO_RECEBIDO',
-    valor_recebido:Number($('#pdvReceivedValue')?.value||0)||null,
-    cartao_modalidade:$('#pdvCreditMode')?.value||null,
-    parcelas:$('#pdvCreditMode')?.value==='PARCELADO'?Math.max(2,Math.min(12,Number($('#pdvInstallments')?.value||2))):1,
-    observacoes:$('#pdvObs')?.value||''
+    origem: 'BALCAO',
+    modalidade_entrega: $('#pdvFulfillment').value,
+    forma_pagamento: forma || null,
+    pagamento_status: $('#pdvReceived').dataset.received === '1' ? 'RECEBIDO' : 'NAO_RECEBIDO',
+    valor_recebido: Number($('#pdvReceivedValue')?.value || 0) || null,
+    cartao_modalidade: $('#pdvCreditMode')?.value || null,
+    parcelas: $('#pdvCreditMode')?.value === 'PARCELADO' ? Math.max(2, Math.min(12, Number($('#pdvInstallments')?.value || 2))) : 1,
+    observacoes: $('#pdvObs')?.value || ''
   };
 
-  const total=Object.entries(window.pdvCart).reduce((s,[id,q])=>{
-    const p=window.pdvProducts.find(x=>x.id===id);
-    return s+q*priceForLine(p,q);
-  },0);
+  const total = Object.entries(window.pdvCart).reduce((s, [id, q]) => {
+    const p = window.pdvProducts.find(x => x.id === id);
+    return s + q * priceForLine(p, q);
+  }, 0);
 
-  itens.forEach(it=>{
-    const prod=window.pdvProducts.find(p=>p.id===it.produto_id);
-    if(prod&&prod.quantidade_disponivel!=null){
-      prod.quantidade_disponivel=Math.max(0,Number(prod.quantidade_disponivel)-Number(it.quantidade));
+  itens.forEach(it => {
+    const prod = window.pdvProducts.find(p => p.id === it.produto_id);
+    if (prod && prod.quantidade_disponivel != null) {
+      prod.quantidade_disponivel = Math.max(0, Number(prod.quantidade_disponivel) - Number(it.quantidade));
     }
   });
 
-  window.pdvCart={};
+  window.pdvCart = {};
   pdvResetClient();
-  if($('#pdvSearch'))$('#pdvSearch').value='';
-  if($('#pdvCount'))$('#pdvCount').textContent='0 resultado(s)';
+  if ($('#pdvSearch')) $('#pdvSearch').value = '';
+  if ($('#pdvCount')) $('#pdvCount').textContent = '0 resultado(s)';
   pdvRender([]);
-  if($('#pdvBarcodeQty'))$('#pdvBarcodeQty').value='1';
-  if($('#pdvPayment')){$('#pdvPayment').value='';pdvPaymentUI()}
-  const rcv=$('#pdvReceived');
-  if(rcv){rcv.dataset.received='0';rcv.textContent='Pagamento: Não recebido';rcv.classList.remove('good')}
-  if($('#pdvObs'))$('#pdvObs').value='';
-  if($('#pdvReceivedValue'))$('#pdvReceivedValue').value='';
-  if($('#pdvChange'))$('#pdvChange').textContent='Troco: R$ 0,00';
-  if($('#pdvFulfillment'))$('#pdvFulfillment').value='RETIRADA';
+  if ($('#pdvBarcodeQty')) $('#pdvBarcodeQty').value = '1';
+  if ($('#pdvPayment')) { $('#pdvPayment').value = ''; pdvPaymentUI() }
+  const rcv = $('#pdvReceived');
+  if (rcv) { rcv.dataset.received = '0'; rcv.textContent = 'Pagamento: Não recebido'; rcv.classList.remove('good') }
+  if ($('#pdvObs')) $('#pdvObs').value = '';
+  if ($('#pdvReceivedValue')) $('#pdvReceivedValue').value = '';
+  if ($('#pdvChange')) $('#pdvChange').textContent = 'Troco: R$ 0,00';
+  if ($('#pdvFulfillment')) $('#pdvFulfillment').value = 'RETIRADA';
   pdvCartRender();
 
-  const bInput=$('#pdvBarcodeInput');
-  if(bInput&&bInput.dataset.active==='1'){bInput.value='';bInput.focus()}
+  const bInput = $('#pdvBarcodeInput');
+  if (bInput && bInput.dataset.active === '1') { bInput.value = ''; bInput.focus() }
 
   toastRole('Enviando pedido...');
   Realtime.emit('orders_changed');
   Realtime.emit('stock_changed');
 
-  try{
-    const x=await api('/api/orders',{method:'POST',headers:{'Idempotency-Key':'PDV-'+crypto.randomUUID()},body:JSON.stringify(payload)});
-    if(x.offline){
+  try {
+    const x = await api('/api/orders', { method: 'POST', headers: { 'Idempotency-Key': 'PDV-' + crypto.randomUUID() }, body: JSON.stringify(payload) });
+    if (x.offline) {
       toastRole('✓ Pedido gravado offline no PDV! Sincronizará automaticamente com a rede.');
-    }else{
-      window.pdvLastOrder=x.item;
-      try{localStorage.setItem('xv_pdv_last_order',JSON.stringify(x.item))}catch(_){}
-      toastRole(payload.modalidade_entrega==='ENTREGA'?'✓ Pedido '+x.item.numero+' enviado direto para Separação (Entrega)!':'✓ Pedido '+x.item.numero+' concluído imediatamente (Retirada)!');
-      if(x.item?.id){
-        pdvPrintOrder(x.item.id,x.item.numero);
+    } else {
+      window.pdvLastOrder = x.item;
+      try { localStorage.setItem('xv_pdv_last_order', JSON.stringify(x.item)) } catch (_) { }
+      toastRole(payload.modalidade_entrega === 'ENTREGA' ? '✓ Pedido ' + x.item.numero + ' enviado direto para Separação (Entrega)!' : '✓ Pedido ' + x.item.numero + ' concluído imediatamente (Retirada)!');
+      if (x.item?.id) {
+        pdvPrintOrder(x.item.id, x.item.numero);
       }
     }
-    const orderList=$('#pdvOrderList');
-    if(orderList){
-      const statusBadge=x.offline?'<b>Salvo Offline</b>':(payload.modalidade_entrega==='ENTREGA'?'<b style="color:#a78bfa">🚚 Em Separação (Entrega)</b>':'<b style="color:#10b981">✓ Concluído (Retirada)</b>');orderList.innerHTML=`<div class="pdv-sale-alert xv-flash-updated"><div style="font-size:28px">✓</div><h3 style="color:#10b981;margin:6px 0;font-size:17px">Venda Realizada com Sucesso!</h3><p style="color:#95a4b6;margin:4px 0">${itens.length} produto(s) · <strong style="color:#fff">${money(total)}</strong> · ${x.offline?'Status: <b>Salvo Offline</b>':`Pedido #${esc(x.item?.numero||'')} · ${statusBadge}`}</p><div style="display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap">${x.offline?'':'<button class="btn pdv-print-btn" onclick="pdvPrintOrder(\''+x.item?.id+'\',\''+esc(x.item?.numero||'')+'\')">🖨️ Imprimir Cupom Térmico</button>'}<button class="btn" onclick="pdvCartRender()">＋ Iniciar Novo Pedido</button></div></div><div style="padding:15px;text-align:center;color:#718198">Caixa pronto para o próximo cliente. Adicione produtos na lista.</div>`;
+    const orderList = $('#pdvOrderList');
+    if (orderList) {
+      const statusBadge = x.offline ? '<b>Salvo Offline</b>' : (payload.modalidade_entrega === 'ENTREGA' ? '<b style="color:#a78bfa">🚚 Em Separação (Entrega)</b>' : '<b style="color:#10b981">✓ Concluído (Retirada)</b>'); orderList.innerHTML = `<div class="pdv-sale-alert xv-flash-updated"><div style="font-size:28px">✓</div><h3 style="color:#10b981;margin:6px 0;font-size:17px">Venda Realizada com Sucesso!</h3><p style="color:#95a4b6;margin:4px 0">${itens.length} produto(s) · <strong style="color:#fff">${money(total)}</strong> · ${x.offline ? 'Status: <b>Salvo Offline</b>' : `Pedido #${esc(x.item?.numero || '')} · ${statusBadge}`}</p><div style="display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap">${x.offline ? '' : '<button class="btn pdv-print-btn" onclick="pdvPrintOrder(\'' + x.item?.id + '\',\'' + esc(x.item?.numero || '') + '\')">🖨️ Imprimir Cupom Térmico</button>'}<button class="btn" onclick="pdvCartRender()">＋ Iniciar Novo Pedido</button></div></div><div style="padding:15px;text-align:center;color:#718198">Caixa pronto para o próximo cliente. Adicione produtos na lista.</div>`;
     }
-  }catch(e){toastRole(e.message,true)}
+  } catch (e) { toastRole(e.message, true) }
 }
 
-async function loja(){const [c,p,sc,cats]=await Promise.all([api('/api/clients'),api('/api/products'),api('/api/store-config'),api('/api/categories')]);const cfg=sc.config||{};window.lojaProducts=p.items;window.lojaCategories=cats.categorias;window.lojaSubcategories=cats.subcategorias;window.lojaCart=window.lojaCart||{};const activeIds=new Set(window.lojaProducts.map(x=>x.id));const removed=Object.keys(window.lojaCart).filter(id=>!activeIds.has(id));for(const id of removed)delete window.lojaCart[id];if(removed.length)setTimeout(()=>alert(`${removed.length} produto(s) indisponível(is) foram removidos automaticamente do carrinho.`),0);window.lojaClientId=c.items[0]?.id||'';if(window.lojaClientId){try{const priced=await api('/api/products?cliente_id='+encodeURIComponent(window.lojaClientId));window.lojaProducts=priced.items}catch(error){console.warn('Falha ao atualizar precos da loja',error)}}document.body.innerHTML=`<div><header class="store-header"><img class="xv-logo" src="/assets/institucional/01_Logo_Xiquim_Vargas_HD.png" alt="Xiquim Vargas"><nav class="store-links"><button class="store-nav active" onclick="lojaCatalogo()">Catálogo</button><button class="store-nav" onclick="lojaPedidos()">Pedidos</button><button class="store-nav" onclick="lojaPerfil()">Perfil</button><button class="store-nav" onclick="lojaSobreNos()">Sobre Nós</button><button class="store-nav store-nav-contact" onclick="lojaFaleConosco()" title="Fale com nosso atendimento">📞 Fale Conosco</button></nav><div class="store-actions"><span>♙ ${esc(me.nome)}</span><button class="btn cart-button" onclick="openCart()">🛒 <b id="cartCount">0</b></button><button class="btn" onclick="logout()">⇥</button></div></header><main id="storeMain"></main><footer class="store-footer"><strong>Xiquim Vargas</strong><div style="margin-top:7px">${esc(cfg['store.footer']||'Pedido, catálogo e operação integrados.')}</div></footer><div id="cartDrawer"></div></div>`;window.storeCfg=cfg;lojaCatalogo()}
+async function loja() { const [c, p, sc, cats] = await Promise.all([api('/api/clients'), api('/api/products'), api('/api/store-config'), api('/api/categories')]); const cfg = sc.config || {}; window.lojaProducts = p.items; window.lojaCategories = cats.categorias; window.lojaSubcategories = cats.subcategorias; window.lojaCart = window.lojaCart || {}; const activeIds = new Set(window.lojaProducts.map(x => x.id)); const removed = Object.keys(window.lojaCart).filter(id => !activeIds.has(id)); for (const id of removed) delete window.lojaCart[id]; if (removed.length) setTimeout(() => alert(`${removed.length} produto(s) indisponível(is) foram removidos automaticamente do carrinho.`), 0); window.lojaClientId = c.items[0]?.id || ''; if (window.lojaClientId) { try { const priced = await api('/api/products?cliente_id=' + encodeURIComponent(window.lojaClientId)); window.lojaProducts = priced.items } catch (error) { console.warn('Falha ao atualizar precos da loja', error) } } document.body.innerHTML = `<div><header class="store-header"><img class="xv-logo" src="/assets/institucional/01_Logo_Xiquim_Vargas_HD.png" alt="Xiquim Vargas"><nav class="store-links"><button class="store-nav active" onclick="lojaCatalogo()">Catálogo</button><button class="store-nav" onclick="lojaPedidos()">Pedidos</button><button class="store-nav" onclick="lojaPerfil()">Perfil</button><button class="store-nav" onclick="lojaSobreNos()">Sobre Nós</button><button class="store-nav store-nav-contact" onclick="lojaFaleConosco()" title="Fale com nosso atendimento">📞 Fale Conosco</button></nav><div class="store-actions"><span>♙ ${esc(me.nome)}</span><button class="btn cart-button" onclick="openCart()">🛒 <b id="cartCount">0</b></button><button class="btn" onclick="logout()">⇥</button></div></header><main id="storeMain"></main><footer class="store-footer"><strong>Xiquim Vargas</strong><div style="margin-top:7px">${esc(cfg['store.footer'] || 'Pedido, catálogo e operação integrados.')}</div></footer><div id="cartDrawer"></div></div>`; window.storeCfg = cfg; lojaCatalogo() }
 
-function lojaNav(active){document.querySelectorAll('.store-nav').forEach(b=>b.classList.toggle('active',b.textContent.toLowerCase().startsWith(active)))}
-function lojaDashboard(){return lojaCatalogo()}
-function storeHeroHtml(){
-  const cfg=window.storeCfg||{};
-  const cover=cfg['store.cover'];
-  const minVal=Number(cfg['store.min_order_value']||0);
-  const minNotice=minVal>0?`
+function lojaNav(active) { document.querySelectorAll('.store-nav').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase().startsWith(active))) }
+function lojaDashboard() { return lojaCatalogo() }
+function storeHeroHtml() {
+  const cfg = window.storeCfg || {};
+  const cover = cfg['store.cover'];
+  const minVal = Number(cfg['store.min_order_value'] || 0);
+  const minNotice = minVal > 0 ? `
     <div class="min-order-banner">
       <div style="display:flex;align-items:center;gap:10px">
         <span style="font-size:24px">🛒</span>
@@ -1562,8 +1564,8 @@ function storeHeroHtml(){
       </div>
       <span class="badge" style="background:rgba(244,90,8,0.15);color:var(--xv-brand-orange,#f45a08);border:1px solid rgba(244,90,8,0.3);font-weight:700">Mínimo: ${money(minVal)}</span>
     </div>
-  `:'';
-  return `<section class="store-cover-hero"${cover?` style="background-image:url('${esc(cover)}')"`:''}><div class="store-cover-content"><h1>${esc(cfg['store.title']||'Catálogo Xiquim Vargas')}</h1><h2>${esc(cfg['store.subtitle']||'')}</h2><p>${esc(cfg['store.hero']||'')}</p></div></section>${minNotice}`;
+  `: '';
+  return `<section class="store-cover-hero"${cover ? ` style="background-image:url('${esc(cover)}')"` : ''}><div class="store-cover-content"><h1>${esc(cfg['store.title'] || 'Catálogo Xiquim Vargas')}</h1><h2>${esc(cfg['store.subtitle'] || '')}</h2><p>${esc(cfg['store.hero'] || '')}</p></div></section>${minNotice}`;
 }
 
 const defaultAboutCards = [
@@ -1606,30 +1608,30 @@ const defaultDeliveryRoutesSchedule = [
   { dia: 'SABADO', dia_nome: 'Sábado', bairros: ['Carapina', 'Santa Helena', 'Nossa Senhora das Graças', 'Grã-Duquesa', 'Esperança', 'Morro do Carapina'] }
 ];
 
-function normalizeBairroStr(s){
-  return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+function normalizeBairroStr(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 }
 
-function getDeliveryForecastForBairro(bairro, scheduleArr){
+function getDeliveryForecastForBairro(bairro, scheduleArr) {
   const clean = normalizeBairroStr(bairro);
-  if(!clean) return { dia: 'A Combinar', detalhe: 'Entrega padrão em até 1 a 2 dias úteis', isTodos: false };
+  if (!clean) return { dia: 'A Combinar', detalhe: 'Entrega padrão em até 1 a 2 dias úteis', isTodos: false };
   const list = (Array.isArray(scheduleArr) && scheduleArr.length) ? scheduleArr : defaultDeliveryRoutesSchedule;
-  for(const item of list){
-    const match = (item.bairros||[]).some(b=>{
+  for (const item of list) {
+    const match = (item.bairros || []).some(b => {
       const cb = normalizeBairroStr(b);
       return cb && (cb === clean || clean.includes(cb) || cb.includes(clean));
     });
-    if(match){
-      if(item.dia === 'TODOS_OS_DIAS' || (item.dia_nome||'').toLowerCase().includes('todos')) {
-        return { dia: 'Todos os Dias', detalhe: 'Entregas diárias (Segunda a Sábado)', isTodos: true, motorista: item.motorista_nome||'' };
+    if (match) {
+      if (item.dia === 'TODOS_OS_DIAS' || (item.dia_nome || '').toLowerCase().includes('todos')) {
+        return { dia: 'Todos os Dias', detalhe: 'Entregas diárias (Segunda a Sábado)', isTodos: true, motorista: item.motorista_nome || '' };
       }
-      return { dia: item.dia_nome || item.dia, detalhe: `Próxima entrega programada para ${item.dia_nome || item.dia}`, isTodos: false, motorista: item.motorista_nome||'' };
+      return { dia: item.dia_nome || item.dia, detalhe: `Próxima entrega programada para ${item.dia_nome || item.dia}`, isTodos: false, motorista: item.motorista_nome || '' };
     }
   }
   return { dia: 'A Combinar', detalhe: 'Entrega padrão em até 1 a 2 dias úteis', isTodos: false };
 }
 
-function showMinOrderToast(minOrderVal){
+function showMinOrderToast(minOrderVal) {
   document.querySelector('#minOrderToastCard')?.remove();
   const c = document.createElement('div');
   c.id = 'minOrderToastCard';
@@ -1643,39 +1645,39 @@ function showMinOrderToast(minOrderVal){
     </div>
   `;
   document.body.appendChild(c);
-  setTimeout(()=>{
+  setTimeout(() => {
     c.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
     c.style.opacity = '0';
     c.style.transform = 'translate(-50%, 20px)';
-    setTimeout(()=>c.remove(), 420);
+    setTimeout(() => c.remove(), 420);
   }, 4500);
 }
 
-function getStoreAboutCards(){
+function getStoreAboutCards() {
   const cfg = window.storeCfg || {};
-  if(cfg['store.about_cards']){
-    try{
+  if (cfg['store.about_cards']) {
+    try {
       const parsed = JSON.parse(cfg['store.about_cards']);
-      if(Array.isArray(parsed) && parsed.length) return parsed;
-    }catch(e){}
+      if (Array.isArray(parsed) && parsed.length) return parsed;
+    } catch (e) { }
   }
   return defaultAboutCards;
 }
 
-window.openLightboxImage = function(src, title){
+window.openLightboxImage = function (src, title) {
   document.querySelector('#lightboxModal')?.remove();
   const d = document.createElement('div');
   d.id = 'lightboxModal';
   d.className = 'lightbox-modal';
-  d.onclick = (e)=>{ if(e.target === d || e.target.classList.contains('lightbox-close')) d.remove(); };
+  d.onclick = (e) => { if (e.target === d || e.target.classList.contains('lightbox-close')) d.remove(); };
   d.innerHTML = `
     <button class="lightbox-close" title="Fechar">✕</button>
-    <img src="${esc(src)}" alt="${esc(title||'Imagem')}">
+    <img src="${esc(src)}" alt="${esc(title || 'Imagem')}">
   `;
   document.body.appendChild(d);
 };
 
-async function lojaSobreNos(){
+async function lojaSobreNos() {
   lojaNav('sob');
   const cards = getStoreAboutCards();
   $('#storeMain').innerHTML = `
@@ -1708,58 +1710,58 @@ async function lojaSobreNos(){
   `;
 }
 
-function isLojaCellularDevice(){
+function isLojaCellularDevice() {
   const ua = navigator.userAgent || navigator.vendor || window.opera || '';
   const isMobileUA = /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua);
   return isMobileUA && !/iPad|Macintosh/i.test(ua);
 }
 
-function copyToClipboard(text, btnEl){
-  if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(text).then(()=>{
-      if(btnEl){
+function copyToClipboard(text, btnEl) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      if (btnEl) {
         const orig = btnEl.innerHTML;
         btnEl.innerHTML = '✓ Copiado!';
         btnEl.style.background = '#10b981';
         btnEl.style.color = '#fff';
-        setTimeout(()=>{
+        setTimeout(() => {
           btnEl.innerHTML = orig;
           btnEl.style.background = '';
           btnEl.style.color = '';
         }, 2200);
       }
       toastRole('✓ Número copiado para a área de transferência!');
-    }).catch(()=>{
+    }).catch(() => {
       window.prompt('Copie o número de telefone:', text);
     });
-  }else{
+  } else {
     window.prompt('Copie o número de telefone:', text);
   }
 }
 window.copyToClipboard = copyToClipboard;
 
-function lojaFaleConosco(){
+function lojaFaleConosco() {
   const cfg = window.storeCfg || {};
   const phone = cfg['store.phone'] || '(33) 3221-4210';
   const cleanDigits = String(phone).replace(/\D/g, '');
-  
-  if(isLojaCellularDevice() && cleanDigits){
+
+  if (isLojaCellularDevice() && cleanDigits) {
     window.location.href = 'tel:' + cleanDigits;
     return;
   }
-  
+
   openLojaContactModal();
 }
 window.lojaFaleConosco = lojaFaleConosco;
 
-function openLojaContactModal(){
+function openLojaContactModal() {
   const cfg = window.storeCfg || {};
   const phone = cfg['store.phone'] || '(33) 3221-4210';
   const whatsapp = cfg['store.whatsapp'] || phone || '';
   const contactInfo = cfg['store.contact_info'] || 'Segunda à Sexta: 07:30 às 17:30 | Sábado: 07:30 às 12:30\nRua José Luís Nogueira, 645 - Centro, Governador Valadares/MG';
   const cleanPhone = String(phone).replace(/\D/g, '');
   const cleanWpp = String(whatsapp).replace(/\D/g, '');
-  
+
   modal('📞 Fale Conosco — Canais de Atendimento', `
     <div class="store-contact-modal-body" style="font-family:inherit;color:#1e293b">
       <div style="text-align:center;padding:6px 0 16px;border-bottom:1px solid #e2e8f0">
@@ -1818,27 +1820,27 @@ function openLojaContactModal(){
   `, '560px');
 }
 window.openLojaContactModal = openLojaContactModal;
-async function lojaCatalogo(){lojaNav('cat');const cats=window.lojaCategories||[];const catCards=cats.length?`<div class="grid" style="margin-top:14px;margin-bottom:24px;">${cats.map(c=>`<div class="mobile-card" style="cursor:pointer" onclick="lojaSubcategorias('${c.id}')"><h3>${esc(c.nome)}</h3><p class="muted">${esc(c.descricao||'')}</p></div>`).join('')}</div>`:'';$('#storeMain').innerHTML=`${storeHeroHtml()}<section class="store-main">${catCards}<div class="section-title"><h2>Catálogo de Produtos</h2></div><div class="form" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;"><input id="storeSearch" class="search" style="grid-column:1/-1" placeholder="Pesquisar produto por nome, marca ou SKU..." oninput="lojaFilter()"><div class="field"><label>Menor preço (R$)</label><input type="number" step="0.01" min="0" id="storeMin" class="search" placeholder="0,00" onkeydown="if(event.key==='Enter')lojaFilter()"></div><div class="field"><label>Maior preço (R$)</label><input type="number" step="0.01" min="0" id="storeMax" class="search" placeholder="Sem limite" onkeydown="if(event.key==='Enter')lojaFilter()"></div><div style="grid-column:1/-1;display:flex;gap:8px;margin-top:4px;"><button type="button" class="btn primary" style="flex:1" onclick="lojaFilter()">🔍 Filtrar por preço</button><button type="button" class="btn" onclick="lojaClearFilters()">Limpar filtros</button></div></div><div id="storeProducts" class="product-grid" style="margin-top:14px"></div></section>`;lojaFilter()}
-function lojaClearFilters(){const s=$('#storeSearch');if(s)s.value='';const mn=$('#storeMin');if(mn)mn.value='';const mx=$('#storeMax');if(mx)mx.value='';lojaFilter()}
-function lojaSubcategorias(catId){const cat=window.lojaCategories.find(c=>c.id===catId);const subs=(window.lojaSubcategories||[]).filter(s=>s.categoria_id===catId);window.lojaCurrentCatId=catId;const catItems=(window.lojaProducts||[]).filter(p=>p.categoria_id===catId);$('#storeMain').innerHTML=`${storeHeroHtml()}<section class="store-main"><div class="mobile-nav" style="margin-bottom:14px"><button class="btn" onclick="lojaCatalogo()">← Todas as Categorias</button></div><div class="section-title"><h2>${esc(cat?.nome||'Categoria')}</h2><span class="badge">${catItems.length} produtos</span></div><div class="grid" style="margin-top:14px;margin-bottom:20px;"><div class="mobile-card" style="cursor:pointer;border-left:4px solid #f97316" onclick="lojaProdutosSub('','Todos os Produtos (${catItems.length})','${catId}')"><h3>Todos os Produtos</h3><p class="muted">Ver toda a linha de ${esc(cat?.nome||'')}</p></div>${subs.length?subs.map(s=>{const cnt=(window.lojaProducts||[]).filter(p=>p.subcategoria_id===s.id).length;return `<div class="mobile-card" style="cursor:pointer" onclick="lojaProdutosSub('${s.id}','${esc(s.nome).replace(/'/g,"\\'").replace(/"/g,"&quot;")}','${catId}')"><h3>${esc(s.nome)}</h3><p class="muted">${cnt} produtos</p></div>`}).join(''):'<p class="muted">Nenhuma subcategoria encontrada.</p>'}</div><div class="section-title"><h2>Produtos em ${esc(cat?.nome||'')}</h2></div><div id="storeProducts" class="product-grid" style="margin-top:14px"></div></section>`;lojaRender(catItems)}
-function lojaProdutosSub(subId,subName,catId){window.lojaCurrentSubId=subId;window.lojaCurrentCatId=catId;$('#storeMain').innerHTML=`${storeHeroHtml()}<section class="store-main"><div class="mobile-nav" style="margin-bottom:14px;display:flex;gap:8px"><button class="btn" onclick="lojaSubcategorias('${catId||''}')">← Subcategorias</button><button class="btn" onclick="lojaCatalogo()">🏠 Categorias</button></div><div class="section-title"><h2>${esc(subName)}</h2></div><div class="form" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;"><input id="storeSubSearch" class="search" style="grid-column:1/-1" placeholder="Pesquisar produto por nome, marca ou SKU..." oninput="lojaFilterSub()"><div class="field"><label>Menor preço (R$)</label><input type="number" step="0.01" min="0" id="storeSubMin" class="search" placeholder="0,00" oninput="lojaFilterSub()"></div><div class="field"><label>Maior preço (R$)</label><input type="number" step="0.01" min="0" id="storeSubMax" class="search" placeholder="Sem limite" oninput="lojaFilterSub()"></div><div style="grid-column:1/-1;display:flex;gap:8px;margin-top:4px;"><button type="button" class="btn primary" style="flex:1" onclick="lojaFilterSub()">🔍 Filtrar por preço</button><button type="button" class="btn" onclick="lojaClearSubFilters()">Limpar filtros</button></div></div><div id="storeProducts" class="product-grid" style="margin-top:14px"></div></section>`;lojaFilterSub()}
-function lojaFilterSub(){const q=($('#storeSubSearch')?.value||'').trim().toLowerCase();const minRaw=$('#storeSubMin')?.value;const maxRaw=$('#storeSubMax')?.value;const min=minRaw!==''&&minRaw!=null?Number(minRaw):0;const max=maxRaw!==''&&maxRaw!=null?Number(maxRaw):Infinity;const subId=window.lojaCurrentSubId;const catId=window.lojaCurrentCatId;const filtered=(window.lojaProducts||[]).filter(x=>{if(catId&&x.categoria_id!==catId)return false;if(subId&&x.subcategoria_id!==subId)return false;const price=Number(x.promocao_preco!=null?x.promocao_preco:(x.preco_aplicado??x.preco_base));if(price<min||price>max)return false;if(q&&!(x.nome+' '+(x.sku||'')+' '+(x.marca||'')+' '+(x.codigo_barras||'')).toLowerCase().includes(q))return false;return true;});lojaRender(filtered)}
-function lojaClearSubFilters(){const s=$('#storeSubSearch');if(s)s.value='';const mn=$('#storeSubMin');if(mn)mn.value='';const mx=$('#storeSubMax')||$('#storeMax');if(mx)mx.value='';lojaFilterSub()}
-async function lojaPedidos(){
+async function lojaCatalogo() { lojaNav('cat'); const cats = window.lojaCategories || []; const catCards = cats.length ? `<div class="grid" style="margin-top:14px;margin-bottom:24px;">${cats.map(c => `<div class="mobile-card" style="cursor:pointer" onclick="lojaSubcategorias('${c.id}')"><h3>${esc(c.nome)}</h3><p class="muted">${esc(c.descricao || '')}</p></div>`).join('')}</div>` : ''; $('#storeMain').innerHTML = `${storeHeroHtml()}<section class="store-main">${catCards}<div class="section-title"><h2>Catálogo de Produtos</h2></div><div class="form" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;"><input id="storeSearch" class="search" style="grid-column:1/-1" placeholder="Pesquisar produto por nome, marca ou SKU..." oninput="lojaFilter()"><div class="field"><label>Menor preço (R$)</label><input type="number" step="0.01" min="0" id="storeMin" class="search" placeholder="0,00" onkeydown="if(event.key==='Enter')lojaFilter()"></div><div class="field"><label>Maior preço (R$)</label><input type="number" step="0.01" min="0" id="storeMax" class="search" placeholder="Sem limite" onkeydown="if(event.key==='Enter')lojaFilter()"></div><div style="grid-column:1/-1;display:flex;gap:8px;margin-top:4px;"><button type="button" class="btn primary" style="flex:1" onclick="lojaFilter()">🔍 Filtrar por preço</button><button type="button" class="btn" onclick="lojaClearFilters()">Limpar filtros</button></div></div><div id="storeProducts" class="product-grid" style="margin-top:14px"></div></section>`; lojaFilter() }
+function lojaClearFilters() { const s = $('#storeSearch'); if (s) s.value = ''; const mn = $('#storeMin'); if (mn) mn.value = ''; const mx = $('#storeMax'); if (mx) mx.value = ''; lojaFilter() }
+function lojaSubcategorias(catId) { const cat = window.lojaCategories.find(c => c.id === catId); const subs = (window.lojaSubcategories || []).filter(s => s.categoria_id === catId); window.lojaCurrentCatId = catId; const catItems = (window.lojaProducts || []).filter(p => p.categoria_id === catId); $('#storeMain').innerHTML = `${storeHeroHtml()}<section class="store-main"><div class="mobile-nav" style="margin-bottom:14px"><button class="btn" onclick="lojaCatalogo()">← Todas as Categorias</button></div><div class="section-title"><h2>${esc(cat?.nome || 'Categoria')}</h2><span class="badge">${catItems.length} produtos</span></div><div class="grid" style="margin-top:14px;margin-bottom:20px;"><div class="mobile-card" style="cursor:pointer;border-left:4px solid #f97316" onclick="lojaProdutosSub('','Todos os Produtos (${catItems.length})','${catId}')"><h3>Todos os Produtos</h3><p class="muted">Ver toda a linha de ${esc(cat?.nome || '')}</p></div>${subs.length ? subs.map(s => { const cnt = (window.lojaProducts || []).filter(p => p.subcategoria_id === s.id).length; return `<div class="mobile-card" style="cursor:pointer" onclick="lojaProdutosSub('${s.id}','${esc(s.nome).replace(/'/g, "\\'").replace(/"/g, "&quot;")}','${catId}')"><h3>${esc(s.nome)}</h3><p class="muted">${cnt} produtos</p></div>` }).join('') : '<p class="muted">Nenhuma subcategoria encontrada.</p>'}</div><div class="section-title"><h2>Produtos em ${esc(cat?.nome || '')}</h2></div><div id="storeProducts" class="product-grid" style="margin-top:14px"></div></section>`; lojaRender(catItems) }
+function lojaProdutosSub(subId, subName, catId) { window.lojaCurrentSubId = subId; window.lojaCurrentCatId = catId; $('#storeMain').innerHTML = `${storeHeroHtml()}<section class="store-main"><div class="mobile-nav" style="margin-bottom:14px;display:flex;gap:8px"><button class="btn" onclick="lojaSubcategorias('${catId || ''}')">← Subcategorias</button><button class="btn" onclick="lojaCatalogo()">🏠 Categorias</button></div><div class="section-title"><h2>${esc(subName)}</h2></div><div class="form" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;"><input id="storeSubSearch" class="search" style="grid-column:1/-1" placeholder="Pesquisar produto por nome, marca ou SKU..." oninput="lojaFilterSub()"><div class="field"><label>Menor preço (R$)</label><input type="number" step="0.01" min="0" id="storeSubMin" class="search" placeholder="0,00" oninput="lojaFilterSub()"></div><div class="field"><label>Maior preço (R$)</label><input type="number" step="0.01" min="0" id="storeSubMax" class="search" placeholder="Sem limite" oninput="lojaFilterSub()"></div><div style="grid-column:1/-1;display:flex;gap:8px;margin-top:4px;"><button type="button" class="btn primary" style="flex:1" onclick="lojaFilterSub()">🔍 Filtrar por preço</button><button type="button" class="btn" onclick="lojaClearSubFilters()">Limpar filtros</button></div></div><div id="storeProducts" class="product-grid" style="margin-top:14px"></div></section>`; lojaFilterSub() }
+function lojaFilterSub() { const q = ($('#storeSubSearch')?.value || '').trim().toLowerCase(); const minRaw = $('#storeSubMin')?.value; const maxRaw = $('#storeSubMax')?.value; const min = minRaw !== '' && minRaw != null ? Number(minRaw) : 0; const max = maxRaw !== '' && maxRaw != null ? Number(maxRaw) : Infinity; const subId = window.lojaCurrentSubId; const catId = window.lojaCurrentCatId; const filtered = (window.lojaProducts || []).filter(x => { if (catId && x.categoria_id !== catId) return false; if (subId && x.subcategoria_id !== subId) return false; const price = Number(x.promocao_preco != null ? x.promocao_preco : (x.preco_aplicado ?? x.preco_base)); if (price < min || price > max) return false; if (q && !(x.nome + ' ' + (x.sku || '') + ' ' + (x.marca || '') + ' ' + (x.codigo_barras || '')).toLowerCase().includes(q)) return false; return true; }); lojaRender(filtered) }
+function lojaClearSubFilters() { const s = $('#storeSubSearch'); if (s) s.value = ''; const mn = $('#storeSubMin'); if (mn) mn.value = ''; const mx = $('#storeSubMax') || $('#storeMax'); if (mx) mx.value = ''; lojaFilterSub() }
+async function lojaPedidos() {
   lojaNav('ped');
   const [x, schedRes] = await Promise.all([
     api('/api/orders'),
-    api('/api/logistics/delivery-routes-config').catch(()=>({items:[]}))
+    api('/api/logistics/delivery-routes-config').catch(() => ({ items: [] }))
   ]);
   const schedule = schedRes?.items?.length ? schedRes.items : defaultDeliveryRoutesSchedule;
 
-  $('#storeMain').innerHTML=`<section class="store-main"><div class="section-title"><h2>Pedidos</h2><span class="muted">Histórico da sua conta</span></div>${x.items.map(o=>{
+  $('#storeMain').innerHTML = `<section class="store-main"><div class="section-title"><h2>Pedidos</h2><span class="muted">Histórico da sua conta</span></div>${x.items.map(o => {
     let previsaoText = '';
-    if(o.observacoes && o.observacoes.includes('Previsão de entrega:')){
+    if (o.observacoes && o.observacoes.includes('Previsão de entrega:')) {
       const m = o.observacoes.match(/Previsão de entrega:\s*([^(\n\r]+)/i);
-      if(m) previsaoText = m[1].trim();
+      if (m) previsaoText = m[1].trim();
     }
-    if(!previsaoText && o.bairro){
+    if (!previsaoText && o.bairro) {
       const prev = getDeliveryForecastForBairro(o.bairro, schedule);
       previsaoText = prev.dia;
     }
@@ -1863,36 +1865,37 @@ async function lojaPedidos(){
         <button class="btn primary" onclick="storeRepeatOrder('${o.id}')">↻ Repetir pedido</button>
       </div>
     </article>`;
-  }).join('')||'<div class="empty-state">Nenhum pedido.</div>'}</section>`}
-
-async function storeViewOrder(id){
-  try{
-    const x=await api('/api/orders/'+id+'/detail');
-    const o=x.order;
-    let prevHtml = '';
-    if(o.observacoes && o.observacoes.includes('Previsão de entrega:')){
-      const m = o.observacoes.match(/Previsão de entrega:\s*([^\n\r]+)/i);
-      if(m) prevHtml = `<div style="background:#10b98115;border:1px solid #10b98140;border-radius:8px;padding:10px;margin-top:8px;font-size:13px;color:#10b981"><strong>🚚 Previsão de Entrega:</strong> ${esc(m[1].trim())}</div>`;
-    }
-    storeOrderModal('Pedido '+esc(o.numero),`<div class="panel"><strong>${esc(o.cliente_nome||'')}</strong><p class="muted">${formatBrasiliaDateTime(o.created_at)} · ${esc(o.modalidade_entrega==='ENTREGA'?'Entrega':'Retirada')}</p>${prevHtml}</div><div class="tablewrap"><table class="table"><thead><tr><th>Produto</th><th>Quantidade</th><th>Preço</th><th>Total</th></tr></thead><tbody>${x.items.map(i=>`<tr><td>${esc(i.produto_nome)}</td><td>${i.quantidade}</td><td>${money(i.preco_unitario_aplicado)}</td><td>${money(i.subtotal)}</td></tr>`).join('')}</tbody></table></div><div class="actions" style="margin-top:12px"><button class="btn" onclick="document.querySelector('#storeOrderModal')?.remove()">Fechar</button><button class="btn primary" onclick="storeRepeatOrder('${id}');document.querySelector('#storeOrderModal')?.remove()">↻ Repetir pedido</button></div>`);
-  }catch(e){toastStore(e.message)}
+  }).join('') || '<div class="empty-state">Nenhum pedido.</div>'}</section>`
 }
 
-function storeOrderModal(title,body){const old=$('#storeOrderModal');old?.remove();const d=document.createElement('div');d.id='storeOrderModal';d.className='store-order-modal';d.innerHTML=`<div class="store-order-overlay" onclick="if(event.target===this)document.querySelector('#storeOrderModal')?.remove()"><section class="store-order-dialog"><div class="panel-title"><h2>${title}</h2><button class="btn" onclick="document.querySelector('#storeOrderModal')?.remove()">×</button></div>${body}</section></div>`;document.body.appendChild(d)}
-async function lojaPerfil(){lojaNav('per');try{const [x,baseBairros]=await Promise.all([api('/api/store/profile'),loadCityBairrosForRole()]);const p=x.item;const bairros=p.bairro&&!baseBairros.some(b=>b.toLowerCase()===String(p.bairro).trim().toLowerCase())?[String(p.bairro).trim(),...baseBairros]:baseBairros;$('#storeMain').innerHTML=`<section class="store-main"><div class="mobile-card"><h2>Meu perfil</h2><p class="muted">${esc(p.email)}</p><form id="storeProfileForm" class="form" style="margin-top:14px"><div class="field"><label>Nome</label><input value="${esc(p.nome)}" disabled></div><div class="field"><label>Telefone</label><input name="telefone" type="tel" maxlength="40" value="${esc(p.telefone||p.cliente_telefone||'')}" required></div><div class="field" style="grid-column:1/-1"><label>Endereço</label><input name="endereco" autocomplete="street-address" maxlength="240" value="${esc(p.endereco||'')}" required></div><div class="field"><label>Bairro (Governador Valadares - MG)</label><select name="bairro" required><option value="" disabled ${!p.bairro?'selected':''}>Selecione o seu bairro...</option>${bairros.map(b=>`<option value="${esc(b)}" ${String(p.bairro||'').trim().toLowerCase()===b.toLowerCase()?'selected':''}>${esc(b)}</option>`).join('')}</select></div><div class="field"><label>Cidade</label><select name="cidade" required><option value="Governador Valadares" selected>Governador Valadares - MG</option></select></div><div class="field"><label>Estado (UF)</label><select name="estado" required><option value="MG" selected>MG</option></select></div><div class="actions" style="grid-column:1/-1"><button class="btn primary">Salvar perfil</button></div></form></div></section>`;$('#storeProfileForm').onsubmit=async e=>{e.preventDefault();const b=Object.fromEntries(new FormData(e.currentTarget));try{const saved=await api('/api/store/profile',{method:'PUT',body:JSON.stringify(b)});me.telefone=saved.item.telefone;toastStore('Perfil atualizado com sucesso.')}catch(err){alert(err.message)}}}catch(e){$('#storeMain').innerHTML=`<section class="store-main"><div class="mobile-card"><h2>Meu perfil</h2><p>${esc(e.message)}</p></div></section>`}}
-async function refreshStorePrices(clientId){try{window.lojaClientId=clientId;const p=await api('/api/products?cliente_id='+encodeURIComponent(clientId));window.lojaProducts=p.items;lojaFilter()}catch(e){alert(e.message)}}
-function lojaFilter(){const q=($('#storeSearch')?.value||'').trim().toLowerCase();const minRaw=$('#storeMin')?.value;const maxRaw=$('#storeMax')?.value;const min=minRaw!==''&&minRaw!=null?Number(minRaw):0;const max=maxRaw!==''&&maxRaw!=null?Number(maxRaw):Infinity;const filtered=(window.lojaProducts||[]).filter(x=>{const price=Number(x.promocao_preco!=null?x.promocao_preco:(x.preco_aplicado??x.preco_base));if(price<min||price>max)return false;if(q&&!(x.nome+' '+(x.sku||'')+' '+(x.marca||'')+' '+(x.codigo_barras||'')).toLowerCase().includes(q))return false;return true;});lojaRender(filtered)}
-function updateLojaCardPriceDisplay(id){const p=(window.lojaProducts||[]).find(x=>x.id===id);const el=$('#qty-'+id);const priceEl=$('#loja_price_'+id);if(!p||!priceEl)return;const q=Math.max(1,Number(el?.value||1));priceEl.textContent=money(priceForLine(p,q))}
-function lojaSelectMinQty(id,minQty){const el=$('#qty-'+id);if(!el)return;const target=Math.max(1,Number(minQty)||1);el.value=target;updateLojaCardPriceDisplay(id);const p=(window.lojaProducts||[]).find(x=>x.id===id);const tName=p?.tabela_preco_nome||p?.tabela_nome||'Oferta';toastStore(`✓ ${target} un. selecionadas — ${tName}: ${money(priceForLine(p,target))}/un`)}
-function setLojaCartQty(id,minQty){if(!window.lojaCart)window.lojaCart={};window.lojaCart[id]=Math.max(1,Math.min(99999,Number(minQty)||1));updateCartCount();openCart()}
-function lojaRender(items){$('#storeProducts').innerHTML=items.map(p=>{const tName=esc(p.tabela_preco_nome||p.tabela_nome||'Oferta');const hasMin=p.preco_tabela!=null&&Number(p.quantidade_minima)>1;return `<article class="product-card">${productThumbHtml(p,p.marca||'XV')}<h4>${esc(p.nome)}</h4><div class="muted">${esc(p.descricao||[p.tamanho,p.sabor].filter(Boolean).join(' · ')||p.categoria_nome||'Produto')}</div>${hasMin?`<div class="promo-label" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap" onclick="lojaSelectMinQty('${p.id}',${Number(p.quantidade_minima)})" title="Clique para selecionar ${p.quantidade_minima} unidades com preço ${tName}"><span>🏷️ ${tName}: <strong>${money(p.preco_tabela)}</strong> a partir de ${p.quantidade_minima} unidades</span><span style="background:rgba(255,255,255,0.25);padding:2px 7px;border-radius:6px;font-size:11px;font-weight:800;text-decoration:underline">Selecionar ${p.quantidade_minima} un.</span></div>`:(p.preco_tabela!=null?`<div class="promo-label">🏷️ ${tName}: ${money(p.preco_tabela)}</div>`:'')}${p.promocao_preco!=null&&!(p.preco_tabela!=null&&Number(p.quantidade_minima)<=1)?`<div class="promo-label">PROMOÇÃO</div><div><span class="muted strike">R$ ${Number(p.preco_base).toFixed(2)}</span> <span class="product-price" id="loja_price_${esc(p.id)}">R$ ${Number(p.promocao_preco).toFixed(2)}</span></div>`:`<div class="product-price" id="loja_price_${esc(p.id)}">${money(p.preco_aplicado ?? p.preco_base)}</div>`}${Number(p.esgotado)?'<div class="quantity-line"><button class="btn" disabled style="width:100%;opacity:.7;cursor:not-allowed">Esgotado</button></div>':`<div class="quantity-line"><input id="qty-${p.id}" type="number" min="1" max="99999" value="1" class="search quantity-input" style="background:#fff;color:#172033" oninput="updateLojaCardPriceDisplay('${p.id}')"><button class="btn primary" onclick="addToCart('${p.id}')">Adicionar</button></div>`}</article>`}).join('')}
-function addToCart(id){const p=window.lojaProducts.find(x=>x.id===id);const input=$('#qty-'+id);const raw=Number(input?.value||1);const q=Number.isFinite(raw)?Math.max(1,Math.min(99999,Math.floor(raw))):1;if(!p||Number(p.esgotado))return;const current=Number(window.lojaCart[id]||0);const next=Math.min(99999,current+q);const added=next-current;window.lojaCart[id]=next;updateCartCount();toastStore(added<q?'Limite de 99.999 unidades por produto atingido.':`${added} unidade(s) adicionada(s) ao carrinho`)}
-function updateCartCount(){const n=Object.values(window.lojaCart||{}).reduce((a,x)=>a+Number(x),0);const el=$('#cartCount');if(el)el.textContent=n}
-function toastStore(m){let t=$('#storeToast');if(!t){t=document.createElement('div');t.id='storeToast';t.className='toast';document.body.appendChild(t)}t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',1800)}
-function openCart(){const rows=Object.entries(window.lojaCart||{}).filter(([,q])=>q>0).map(([id,q])=>{const p=window.lojaProducts.find(x=>x.id===id);if(!p)return '';const price=priceForLine(p,q);const tName=esc(p.tabela_preco_nome||p.tabela_nome||'Oferta');const hasMin=p.preco_tabela!=null&&Number(p.quantidade_minima)>1;return `<div class="cart-row"><div class="cart-product-info"><strong>${esc(p.nome)}</strong><small>${money(price)} por unidade</small>${hasMin&&q<Number(p.quantidade_minima)?`<button type="button" class="btn" style="margin-top:4px;padding:2px 8px;font-size:11px;font-weight:750;background:#fff7ed;color:var(--xv-orange,#fd5e02);border:1px solid #fdba74" onclick="setLojaCartQty('${id}',${Number(p.quantidade_minima)})">🏷️ ${tName}: ${money(p.preco_tabela)} (mín. ${p.quantidade_minima} un.) · Aplicar ${p.quantidade_minima} un.</button>`:(hasMin?`<small style="color:#16a34a;font-weight:750;display:block">✓ ${tName} aplicado (${money(price)}/un)</small>`:'')}<div class="cart-qty-controls"><button type="button" aria-label="Diminuir quantidade" onclick="changeCartQty('${id}',-1)">−</button><span>${q}</span><button type="button" aria-label="Aumentar quantidade" onclick="changeCartQty('${id}',1)">＋</button></div></div><div class="cart-line-total"><strong>${money(q*price)}</strong><button class="btn cart-remove" onclick="removeFromCart('${id}')">Remover</button></div></div>`}).join('');const total=Object.entries(window.lojaCart||{}).reduce((s,[id,q])=>{const p=window.lojaProducts.find(x=>x.id===id);return s+(p?Number(q)*priceForLine(p,q):0)},0);modalStoreCart(rows,total)}
-function modalStoreCart(rows,total){
-  const d=$('#cartDrawer');
-  const minVal=Number(window.storeCfg?.['store.min_order_value']||0);
+async function storeViewOrder(id) {
+  try {
+    const x = await api('/api/orders/' + id + '/detail');
+    const o = x.order;
+    let prevHtml = '';
+    if (o.observacoes && o.observacoes.includes('Previsão de entrega:')) {
+      const m = o.observacoes.match(/Previsão de entrega:\s*([^\n\r]+)/i);
+      if (m) prevHtml = `<div style="background:#10b98115;border:1px solid #10b98140;border-radius:8px;padding:10px;margin-top:8px;font-size:13px;color:#10b981"><strong>🚚 Previsão de Entrega:</strong> ${esc(m[1].trim())}</div>`;
+    }
+    storeOrderModal('Pedido ' + esc(o.numero), `<div class="panel"><strong>${esc(o.cliente_nome || '')}</strong><p class="muted">${formatBrasiliaDateTime(o.created_at)} · ${esc(o.modalidade_entrega === 'ENTREGA' ? 'Entrega' : 'Retirada')}</p>${prevHtml}</div><div class="tablewrap"><table class="table"><thead><tr><th>Produto</th><th>Quantidade</th><th>Preço</th><th>Total</th></tr></thead><tbody>${x.items.map(i => `<tr><td>${esc(i.produto_nome)}</td><td>${i.quantidade}</td><td>${money(i.preco_unitario_aplicado)}</td><td>${money(i.subtotal)}</td></tr>`).join('')}</tbody></table></div><div class="actions" style="margin-top:12px"><button class="btn" onclick="document.querySelector('#storeOrderModal')?.remove()">Fechar</button><button class="btn primary" onclick="storeRepeatOrder('${id}');document.querySelector('#storeOrderModal')?.remove()">↻ Repetir pedido</button></div>`);
+  } catch (e) { toastStore(e.message) }
+}
+
+function storeOrderModal(title, body) { const old = $('#storeOrderModal'); old?.remove(); const d = document.createElement('div'); d.id = 'storeOrderModal'; d.className = 'store-order-modal'; d.innerHTML = `<div class="store-order-overlay" onclick="if(event.target===this)document.querySelector('#storeOrderModal')?.remove()"><section class="store-order-dialog"><div class="panel-title"><h2>${title}</h2><button class="btn" onclick="document.querySelector('#storeOrderModal')?.remove()">×</button></div>${body}</section></div>`; document.body.appendChild(d) }
+async function lojaPerfil() { lojaNav('per'); try { const [x, baseBairros] = await Promise.all([api('/api/store/profile'), loadCityBairrosForRole()]); const p = x.item; const bairros = p.bairro && !baseBairros.some(b => b.toLowerCase() === String(p.bairro).trim().toLowerCase()) ? [String(p.bairro).trim(), ...baseBairros] : baseBairros; $('#storeMain').innerHTML = `<section class="store-main"><div class="mobile-card"><h2>Meu perfil</h2><p class="muted">${esc(p.email)}</p><form id="storeProfileForm" class="form" style="margin-top:14px"><div class="field"><label>Nome</label><input value="${esc(p.nome)}" disabled></div><div class="field"><label>Telefone</label><input name="telefone" type="tel" maxlength="40" value="${esc(p.telefone || p.cliente_telefone || '')}" required></div><div class="field" style="grid-column:1/-1"><label>Endereço</label><input name="endereco" autocomplete="street-address" maxlength="240" value="${esc(p.endereco || '')}" required></div><div class="field"><label>Bairro (Governador Valadares - MG)</label><select name="bairro" required><option value="" disabled ${!p.bairro ? 'selected' : ''}>Selecione o seu bairro...</option>${bairros.map(b => `<option value="${esc(b)}" ${String(p.bairro || '').trim().toLowerCase() === b.toLowerCase() ? 'selected' : ''}>${esc(b)}</option>`).join('')}</select></div><div class="field"><label>Cidade</label><select name="cidade" required><option value="Governador Valadares" selected>Governador Valadares - MG</option></select></div><div class="field"><label>Estado (UF)</label><select name="estado" required><option value="MG" selected>MG</option></select></div><div class="actions" style="grid-column:1/-1"><button class="btn primary">Salvar perfil</button></div></form></div></section>`; $('#storeProfileForm').onsubmit = async e => { e.preventDefault(); const b = Object.fromEntries(new FormData(e.currentTarget)); try { const saved = await api('/api/store/profile', { method: 'PUT', body: JSON.stringify(b) }); me.telefone = saved.item.telefone; toastStore('Perfil atualizado com sucesso.') } catch (err) { alert(err.message) } } } catch (e) { $('#storeMain').innerHTML = `<section class="store-main"><div class="mobile-card"><h2>Meu perfil</h2><p>${esc(e.message)}</p></div></section>` } }
+async function refreshStorePrices(clientId) { try { window.lojaClientId = clientId; const p = await api('/api/products?cliente_id=' + encodeURIComponent(clientId)); window.lojaProducts = p.items; lojaFilter() } catch (e) { alert(e.message) } }
+function lojaFilter() { const q = ($('#storeSearch')?.value || '').trim().toLowerCase(); const minRaw = $('#storeMin')?.value; const maxRaw = $('#storeMax')?.value; const min = minRaw !== '' && minRaw != null ? Number(minRaw) : 0; const max = maxRaw !== '' && maxRaw != null ? Number(maxRaw) : Infinity; const filtered = (window.lojaProducts || []).filter(x => { const price = Number(x.promocao_preco != null ? x.promocao_preco : (x.preco_aplicado ?? x.preco_base)); if (price < min || price > max) return false; if (q && !(x.nome + ' ' + (x.sku || '') + ' ' + (x.marca || '') + ' ' + (x.codigo_barras || '')).toLowerCase().includes(q)) return false; return true; }); lojaRender(filtered) }
+function updateLojaCardPriceDisplay(id) { const p = (window.lojaProducts || []).find(x => x.id === id); const el = $('#qty-' + id); const priceEl = $('#loja_price_' + id); if (!p || !priceEl) return; const q = Math.max(1, Number(el?.value || 1)); priceEl.textContent = money(priceForLine(p, q)) }
+function lojaSelectMinQty(id, minQty) { const el = $('#qty-' + id); if (!el) return; const target = Math.max(1, Number(minQty) || 1); el.value = target; updateLojaCardPriceDisplay(id); const p = (window.lojaProducts || []).find(x => x.id === id); const tName = p?.tabela_preco_nome || p?.tabela_nome || 'Oferta'; toastStore(`✓ ${target} un. selecionadas — ${tName}: ${money(priceForLine(p, target))}/un`) }
+function setLojaCartQty(id, minQty) { if (!window.lojaCart) window.lojaCart = {}; window.lojaCart[id] = Math.max(1, Math.min(99999, Number(minQty) || 1)); updateCartCount(); openCart() }
+function lojaRender(items) { $('#storeProducts').innerHTML = items.map(p => { const tName = esc(p.tabela_preco_nome || p.tabela_nome || 'Oferta'); const hasMin = p.preco_tabela != null && Number(p.quantidade_minima) > 1; return `<article class="product-card">${productThumbHtml(p, p.marca || 'XV')}<h4>${esc(p.nome)}</h4><div class="muted">${esc(p.descricao || [p.tamanho, p.sabor].filter(Boolean).join(' · ') || p.categoria_nome || 'Produto')}</div>${hasMin ? `<div class="promo-label" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap" onclick="lojaSelectMinQty('${p.id}',${Number(p.quantidade_minima)})" title="Clique para selecionar ${p.quantidade_minima} unidades com preço ${tName}"><span>🏷️ ${tName}: <strong>${money(p.preco_tabela)}</strong> a partir de ${p.quantidade_minima} unidades</span><span style="background:rgba(255,255,255,0.25);padding:2px 7px;border-radius:6px;font-size:11px;font-weight:800;text-decoration:underline">Selecionar ${p.quantidade_minima} un.</span></div>` : (p.preco_tabela != null ? `<div class="promo-label">🏷️ ${tName}: ${money(p.preco_tabela)}</div>` : '')}${p.promocao_preco != null && !(p.preco_tabela != null && Number(p.quantidade_minima) <= 1) ? `<div class="promo-label">PROMOÇÃO</div><div><span class="muted strike">R$ ${Number(p.preco_base).toFixed(2)}</span> <span class="product-price" id="loja_price_${esc(p.id)}">R$ ${Number(p.promocao_preco).toFixed(2)}</span></div>` : `<div class="product-price" id="loja_price_${esc(p.id)}">${money(p.preco_aplicado ?? p.preco_base)}</div>`}${Number(p.esgotado) ? '<div class="quantity-line"><button class="btn" disabled style="width:100%;opacity:.7;cursor:not-allowed">Esgotado</button></div>' : `<div class="quantity-line"><input id="qty-${p.id}" type="number" min="1" max="99999" value="1" class="search quantity-input" style="background:#fff;color:#172033" oninput="updateLojaCardPriceDisplay('${p.id}')"><button class="btn primary" onclick="addToCart('${p.id}')">Adicionar</button></div>`}</article>` }).join('') }
+function addToCart(id) { const p = window.lojaProducts.find(x => x.id === id); const input = $('#qty-' + id); const raw = Number(input?.value || 1); const q = Number.isFinite(raw) ? Math.max(1, Math.min(99999, Math.floor(raw))) : 1; if (!p || Number(p.esgotado)) return; const current = Number(window.lojaCart[id] || 0); const next = Math.min(99999, current + q); const added = next - current; window.lojaCart[id] = next; updateCartCount(); toastStore(added < q ? 'Limite de 99.999 unidades por produto atingido.' : `${added} unidade(s) adicionada(s) ao carrinho`) }
+function updateCartCount() { const n = Object.values(window.lojaCart || {}).reduce((a, x) => a + Number(x), 0); const el = $('#cartCount'); if (el) el.textContent = n }
+function toastStore(m) { let t = $('#storeToast'); if (!t) { t = document.createElement('div'); t.id = 'storeToast'; t.className = 'toast'; document.body.appendChild(t) } t.textContent = m; t.style.display = 'block'; setTimeout(() => t.style.display = 'none', 1800) }
+function openCart() { const rows = Object.entries(window.lojaCart || {}).filter(([, q]) => q > 0).map(([id, q]) => { const p = window.lojaProducts.find(x => x.id === id); if (!p) return ''; const price = priceForLine(p, q); const tName = esc(p.tabela_preco_nome || p.tabela_nome || 'Oferta'); const hasMin = p.preco_tabela != null && Number(p.quantidade_minima) > 1; return `<div class="cart-row"><div class="cart-product-info"><strong>${esc(p.nome)}</strong><small>${money(price)} por unidade</small>${hasMin && q < Number(p.quantidade_minima) ? `<button type="button" class="btn" style="margin-top:4px;padding:2px 8px;font-size:11px;font-weight:750;background:#fff7ed;color:var(--xv-orange,#fd5e02);border:1px solid #fdba74" onclick="setLojaCartQty('${id}',${Number(p.quantidade_minima)})">🏷️ ${tName}: ${money(p.preco_tabela)} (mín. ${p.quantidade_minima} un.) · Aplicar ${p.quantidade_minima} un.</button>` : (hasMin ? `<small style="color:#16a34a;font-weight:750;display:block">✓ ${tName} aplicado (${money(price)}/un)</small>` : '')}<div class="cart-qty-controls"><button type="button" aria-label="Diminuir quantidade" onclick="changeCartQty('${id}',-1)">−</button><span>${q}</span><button type="button" aria-label="Aumentar quantidade" onclick="changeCartQty('${id}',1)">＋</button></div></div><div class="cart-line-total"><strong>${money(q * price)}</strong><button class="btn cart-remove" onclick="removeFromCart('${id}')">Remover</button></div></div>` }).join(''); const total = Object.entries(window.lojaCart || {}).reduce((s, [id, q]) => { const p = window.lojaProducts.find(x => x.id === id); return s + (p ? Number(q) * priceForLine(p, q) : 0) }, 0); modalStoreCart(rows, total) }
+function modalStoreCart(rows, total) {
+  const d = $('#cartDrawer');
+  const minVal = Number(window.storeCfg?.['store.min_order_value'] || 0);
   const isBelowMin = minVal > 0 && total < minVal;
   const minWarnHtml = isBelowMin ? `
     <div style="background:#451a03;border:1px solid #f97316;border-radius:8px;padding:10px 12px;margin-top:10px;font-size:12px;color:#ffedd5;line-height:1.4">
@@ -1900,46 +1903,46 @@ function modalStoreCart(rows,total){
     </div>
   ` : '';
 
-  d.innerHTML=`<div class="cart-overlay" onclick="if(event.target===this)closeCart()"><aside class="cart-drawer"><div class="panel-title"><h2>Seu carrinho</h2><button type="button" class="btn" aria-label="Fechar carrinho" onclick="closeCart()">×</button></div>${rows||'<div class="empty-state">Seu carrinho está vazio.</div>'}<div class="cart-total"><span>Total</span><strong>${money(total)}</strong></div>${minWarnHtml}${rows?`<div class="field" style="margin-top:12px"><label>Forma de pagamento</label><select id="lojaPayment" onchange="window.lojaPaymentUI&&window.lojaPaymentUI()"><option value="" disabled selected>Selecionar</option><option value="DINHEIRO">Dinheiro</option><option value="DEBITO">Cartão de débito</option><option value="CREDITO">Cartão de crédito</option><option value="PIX">PIX</option></select></div><div id="lojaPaymentCard"></div>`:''}<button class="btn primary" style="width:100%;margin-top:12px;${isBelowMin?'opacity:0.8;background:#ea580c;':''}" onclick="submitLoja()" ${rows?'':'disabled'}>Finalizar pedido</button></aside></div>`;
+  d.innerHTML = `<div class="cart-overlay" onclick="if(event.target===this)closeCart()"><aside class="cart-drawer"><div class="panel-title"><h2>Seu carrinho</h2><button type="button" class="btn" aria-label="Fechar carrinho" onclick="closeCart()">×</button></div>${rows || '<div class="empty-state">Seu carrinho está vazio.</div>'}<div class="cart-total"><span>Total</span><strong>${money(total)}</strong></div>${minWarnHtml}${rows ? `<div class="field" style="margin-top:12px"><label>Forma de pagamento</label><select id="lojaPayment" onchange="window.lojaPaymentUI&&window.lojaPaymentUI()"><option value="" disabled selected>Selecionar</option><option value="DINHEIRO">Dinheiro</option><option value="DEBITO">Cartão de débito</option><option value="CREDITO">Cartão de crédito</option><option value="PIX">PIX</option></select></div><div id="lojaPaymentCard"></div>` : ''}<button class="btn primary" style="width:100%;margin-top:12px;${isBelowMin ? 'opacity:0.8;background:#ea580c;' : ''}" onclick="submitLoja()" ${rows ? '' : 'disabled'}>Finalizar pedido</button></aside></div>`;
 }
-function closeCart(){$('#cartDrawer').innerHTML=''}
-function changeCartQty(id,delta){const current=Number(window.lojaCart?.[id]||0);if(!current)return;window.lojaCart[id]=Math.max(1,Math.min(99999,current+delta));updateCartCount();openCart()}
-async function storeRepeatOrder(orderId){try{const detail=await api('/api/orders/'+orderId+'/detail');const currentProducts=[];let page=1,total=Infinity;while(currentProducts.length<total){const products=await api('/api/products?cliente_id='+encodeURIComponent(window.lojaClientId)+'&limit=100&page='+page);currentProducts.push(...(products.items||[]));total=Number(products.total||0);if(!products.items?.length)break;page++}const availability=await api('/api/store/availability?ids='+encodeURIComponent(detail.items.map(i=>i.produto_id).join(',')));window.lojaAvailability=new Map((availability.items||[]).map(x=>[x.produto_id,x]));window.lojaProducts=currentProducts;const active=new Map(currentProducts.map(p=>[p.id,p]));const valid=[],missing=[];for(const i of detail.items){const product=active.get(i.produto_id),a=window.lojaAvailability.get(i.produto_id),available=product&&a&&!Number(a.esgotado)?Math.max(0,Number(a.quantidade_disponivel)||0):0;if(!product||available<=0){missing.push(`${i.produto_nome}: indisponível/esgotado`);continue}const q=Math.min(Number(i.quantidade),available);valid.push({...i,quantidade_repetir:q});if(q<Number(i.quantidade))missing.push(`${i.produto_nome}: solicitado ${i.quantidade}, disponível ${q}`)}if(missing.length){if(!valid.length||!confirm(`Alguns itens não estão disponíveis na quantidade original:\n\n${missing.join('\n')}\n\nDeseja repetir apenas os itens disponíveis, respeitando o estoque atual?`))return}if(!valid.length)return alert('Nenhum item deste pedido está disponível no momento.');const merge=Object.values(window.lojaCart||{}).some(q=>Number(q)>0)?confirm('Deseja mesclar os itens deste pedido com o carrinho atual?\n\nOK = mesclar\nCancelar = substituir o carrinho atual'):false;if(!merge)window.lojaCart={};for(const i of valid){const q=Number(i.quantidade_repetir);if(Number.isInteger(q)&&q>0)window.lojaCart[i.produto_id]=Math.min(99999,Number(window.lojaCart[i.produto_id]||0)+q)}updateCartCount();lojaCatalogo();openCart()}catch(e){alert(e.message)}}
-function removeFromCart(id){delete window.lojaCart[id];updateCartCount();openCart()}
-window.lojaPaymentUI=function(){const f=$('#lojaPayment')?.value,c=$('#lojaPaymentCard');if(!c)return;if(f==='CREDITO'){c.innerHTML='<div class="field" style="margin-top:10px"><label>Modalidade Crédito</label><select id="lojaCreditMode" onchange="window.lojaCreditUI&&window.lojaCreditUI()"><option value="A_VISTA">À vista</option><option value="PARCELADO">Parcelado</option></select></div><div id="lojaParcelas"></div>';}else{c.innerHTML='';}};
-window.lojaCreditUI=function(){const x=$('#lojaParcelas');if(!x)return;x.innerHTML=$('#lojaCreditMode').value==='PARCELADO'?'<div class="field" style="margin-top:10px"><label>Parcelas</label><select id="lojaInstallments">'+Array.from({length:11},(_,i)=>`<option value="${i+2}">${i+2}x</option>`).join('')+'</select></div>':'';};
+function closeCart() { $('#cartDrawer').innerHTML = '' }
+function changeCartQty(id, delta) { const current = Number(window.lojaCart?.[id] || 0); if (!current) return; window.lojaCart[id] = Math.max(1, Math.min(99999, current + delta)); updateCartCount(); openCart() }
+async function storeRepeatOrder(orderId) { try { const detail = await api('/api/orders/' + orderId + '/detail'); const currentProducts = []; let page = 1, total = Infinity; while (currentProducts.length < total) { const products = await api('/api/products?cliente_id=' + encodeURIComponent(window.lojaClientId) + '&limit=100&page=' + page); currentProducts.push(...(products.items || [])); total = Number(products.total || 0); if (!products.items?.length) break; page++ } const availability = await api('/api/store/availability?ids=' + encodeURIComponent(detail.items.map(i => i.produto_id).join(','))); window.lojaAvailability = new Map((availability.items || []).map(x => [x.produto_id, x])); window.lojaProducts = currentProducts; const active = new Map(currentProducts.map(p => [p.id, p])); const valid = [], missing = []; for (const i of detail.items) { const product = active.get(i.produto_id), a = window.lojaAvailability.get(i.produto_id), available = product && a && !Number(a.esgotado) ? Math.max(0, Number(a.quantidade_disponivel) || 0) : 0; if (!product || available <= 0) { missing.push(`${i.produto_nome}: indisponível/esgotado`); continue } const q = Math.min(Number(i.quantidade), available); valid.push({ ...i, quantidade_repetir: q }); if (q < Number(i.quantidade)) missing.push(`${i.produto_nome}: solicitado ${i.quantidade}, disponível ${q}`) } if (missing.length) { if (!valid.length || !confirm(`Alguns itens não estão disponíveis na quantidade original:\n\n${missing.join('\n')}\n\nDeseja repetir apenas os itens disponíveis, respeitando o estoque atual?`)) return } if (!valid.length) return alert('Nenhum item deste pedido está disponível no momento.'); const merge = Object.values(window.lojaCart || {}).some(q => Number(q) > 0) ? confirm('Deseja mesclar os itens deste pedido com o carrinho atual?\n\nOK = mesclar\nCancelar = substituir o carrinho atual') : false; if (!merge) window.lojaCart = {}; for (const i of valid) { const q = Number(i.quantidade_repetir); if (Number.isInteger(q) && q > 0) window.lojaCart[i.produto_id] = Math.min(99999, Number(window.lojaCart[i.produto_id] || 0) + q) } updateCartCount(); lojaCatalogo(); openCart() } catch (e) { alert(e.message) } }
+function removeFromCart(id) { delete window.lojaCart[id]; updateCartCount(); openCart() }
+window.lojaPaymentUI = function () { const f = $('#lojaPayment')?.value, c = $('#lojaPaymentCard'); if (!c) return; if (f === 'CREDITO') { c.innerHTML = '<div class="field" style="margin-top:10px"><label>Modalidade Crédito</label><select id="lojaCreditMode" onchange="window.lojaCreditUI&&window.lojaCreditUI()"><option value="A_VISTA">À vista</option><option value="PARCELADO">Parcelado</option></select></div><div id="lojaParcelas"></div>'; } else { c.innerHTML = ''; } };
+window.lojaCreditUI = function () { const x = $('#lojaParcelas'); if (!x) return; x.innerHTML = $('#lojaCreditMode').value === 'PARCELADO' ? '<div class="field" style="margin-top:10px"><label>Parcelas</label><select id="lojaInstallments">' + Array.from({ length: 11 }, (_, i) => `<option value="${i + 2}">${i + 2}x</option>`).join('') + '</select></div>' : ''; };
 
-async function submitLoja(){
-  const itens=Object.entries(window.lojaCart||{}).filter(([,q])=>q>0).map(([produto_id,quantidade])=>({produto_id,quantidade}));
-  if(!itens.length)return toastRole('Seu carrinho está vazio.',true);
+async function submitLoja() {
+  const itens = Object.entries(window.lojaCart || {}).filter(([, q]) => q > 0).map(([produto_id, quantidade]) => ({ produto_id, quantidade }));
+  if (!itens.length) return toastRole('Seu carrinho está vazio.', true);
 
   // Calcula total atual do carrinho
-  const total=Object.entries(window.lojaCart||{}).reduce((s,[id,q])=>{
-    const p=window.lojaProducts?.find(x=>x.id===id);
-    return s+(p?Number(q)*priceForLine(p,q):0);
-  },0);
+  const total = Object.entries(window.lojaCart || {}).reduce((s, [id, q]) => {
+    const p = window.lojaProducts?.find(x => x.id === id);
+    return s + (p ? Number(q) * priceForLine(p, q) : 0);
+  }, 0);
 
   // Validação estrita do valor mínimo com exibição de card temporário
-  const minVal=Number(window.storeCfg?.['store.min_order_value']||0);
-  if(minVal>0 && total < minVal){
+  const minVal = Number(window.storeCfg?.['store.min_order_value'] || 0);
+  if (minVal > 0 && total < minVal) {
     showMinOrderToast(minVal);
     return;
   }
 
-  const forma=$('#lojaPayment')?.value;
-  if(!forma)return toastRole('Selecione uma forma de pagamento.',true);
+  const forma = $('#lojaPayment')?.value;
+  if (!forma) return toastRole('Selecione uma forma de pagamento.', true);
 
   // Obter perfil do cliente para saber o bairro e dia da rota de entrega
   let perfilCliente = null;
   let schedule = defaultDeliveryRoutesSchedule;
-  try{
+  try {
     const [profRes, schedRes] = await Promise.all([
       api('/api/store/profile'),
-      api('/api/logistics/delivery-routes-config').catch(()=>({items:[]}))
+      api('/api/logistics/delivery-routes-config').catch(() => ({ items: [] }))
     ]);
     perfilCliente = profRes?.item || null;
-    if(schedRes?.items?.length) schedule = schedRes.items;
-  }catch(e){}
+    if (schedRes?.items?.length) schedule = schedRes.items;
+  } catch (e) { }
 
   const bairroCliente = perfilCliente?.bairro || '';
   const previsao = getDeliveryForecastForBairro(bairroCliente, schedule);
@@ -1955,8 +1958,8 @@ async function submitLoja(){
       <h3 style="margin:0 0 8px;font-size:19px;text-align:center;color:#000000;font-weight:800">Previsão de Entrega do Seu Pedido</h3>
       <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin:14px 0;border-left:4px solid #f97316">
         <div style="font-size:13px;color:#000000;font-weight:700">Endereço de Entrega:</div>
-        <div style="font-size:14px;font-weight:700;color:#000000;margin-top:2px">${esc(perfilCliente?.endereco||'Endereço cadastrado')}</div>
-        <div style="font-size:13px;color:#f97316;font-weight:700;margin-top:2px">📍 Bairro: ${esc(bairroCliente||'Não especificado')}</div>
+        <div style="font-size:14px;font-weight:700;color:#000000;margin-top:2px">${esc(perfilCliente?.endereco || 'Endereço cadastrado')}</div>
+        <div style="font-size:13px;color:#f97316;font-weight:700;margin-top:2px">📍 Bairro: ${esc(bairroCliente || 'Não especificado')}</div>
         <hr style="border:none;border-top:1px solid #e2e8f0;margin:10px 0">
         <div style="font-size:13px;color:#000000;font-weight:700">Dia Previsto de Entrega:</div>
         <div style="font-size:18px;font-weight:800;color:#047857;margin-top:4px">📅 ${esc(previsao.dia)}</div>
@@ -1975,89 +1978,90 @@ async function submitLoja(){
 
   $('#btnFinalConfirmOrder').onclick = async () => {
     dlg.remove();
-    const observacaoPrevisao = `Previsão de entrega: ${previsao.dia} (${bairroCliente ? 'Bairro: '+bairroCliente : 'Centro/Região'})`;
-    const payload={
-      cliente_id:window.lojaClientId,
+    const observacaoPrevisao = `Previsão de entrega: ${previsao.dia} (${bairroCliente ? 'Bairro: ' + bairroCliente : 'Centro/Região'})`;
+    const payload = {
+      cliente_id: window.lojaClientId,
       itens,
-      origem:'WEB',
-      forma_pagamento:forma,
-      observacoes:observacaoPrevisao
+      origem: 'WEB',
+      forma_pagamento: forma,
+      observacoes: observacaoPrevisao
     };
-    if(forma==='CREDITO'){
-      payload.cartao_modalidade=$('#lojaCreditMode')?.value||'A_VISTA';
-      if(payload.cartao_modalidade==='PARCELADO'){
-        payload.parcelas=Number($('#lojaInstallments')?.value||2);
-      }else{
-        payload.parcelas=1;
+    if (forma === 'CREDITO') {
+      payload.cartao_modalidade = $('#lojaCreditMode')?.value || 'A_VISTA';
+      if (payload.cartao_modalidade === 'PARCELADO') {
+        payload.parcelas = Number($('#lojaInstallments')?.value || 2);
+      } else {
+        payload.parcelas = 1;
       }
     }
 
-    window.lojaCart={};
+    window.lojaCart = {};
     closeCart();
     updateCartCount();
     toastRole('Registrando seu pedido...');
     Realtime.emit('orders_changed');
     Realtime.emit('stock_changed');
 
-    try{
-      const x=await api('/api/orders',{
-        method:'POST',
-        headers:{'Idempotency-Key':`WEB-${Date.now()}-${Math.random().toString(36).slice(2,8)}`},
-        body:JSON.stringify(payload)
+    try {
+      const x = await api('/api/orders', {
+        method: 'POST',
+        headers: { 'Idempotency-Key': `WEB-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` },
+        body: JSON.stringify(payload)
       });
       toastRole(`✓ Pedido ${x.item.numero} registrado com sucesso! Entrega prevista: ${previsao.dia}.`);
       roleRealtimeRefresh('orders_changed');
-    }catch(e){toastRole(e.message,true)}
+    } catch (e) { toastRole(e.message, true) }
   };
 }
-async function driver(){
- let r,o;
- try{
-   [r,o]=await Promise.all([api('/api/logistics/routes'),api('/api/orders')]);
-   await offlinePut('kv','driverRoutes',r.items||[]);
-   await offlinePut('kv','driverOrders',o.items||[]);
- }catch(e){
-   const cr=await offlineGet('kv','driverRoutes');
-   const co=await offlineGet('kv','driverOrders');
-   if(!cr||!co)throw e;
-   r={items:cr,offline:true};
-   o={items:co,offline:true};
- }
- const byId=new Map(o.items.map(x=>[x.id,x]));const activeRoutes=r.items.filter(route=>route.status!=='CONCLUIDA');const stops=activeRoutes.flatMap(route=>{let ids=[];try{ids=JSON.parse(route.sequencia_json||'[]')}catch{};return ids.map((id,i)=>({id,order:byId.get(id),route,i}))}).filter(x=>x.order&&x.order.status!=='CONCLUIDO');const routeNames=new Map(activeRoutes.map(x=>[x.id,x]));document.body.innerHTML=`<div class="mobile-shell mobile-dark"><div class="mobile-content">${mobileHeader('Fila do dia',`${esc(me.nome)} · Logística interna`,'/assets/institucional/01_Logo_Xiquim_Vargas_HD.png',true)}<div class="mobile-nav driver-top-nav" style="margin-top:15px"><button class="btn primary" onclick="driver()">↻ Atualizar fila</button><button class="btn" onclick="driverCompletedRoutes()">✓ Rotas concluídas</button><button class="btn driver-logout-btn" onclick="logout()">Sair</button></div><div class="mobile-card" style="margin-bottom:12px"><div class="route-status">Operação de entrega</div><h2 style="margin:5px 0">${stops.length} parada(s) na fila</h2><div class="muted">A sequência foi definida pela Torre de Controle. Abra o mapa, entregue e conclua.</div></div>${stops.length?stops.map((s,idx)=>{const address=s.order.endereco||s.order.cliente_endereco||'Endereço não informado';const route=routeNames.get(s.route.id);const phone=s.order.cliente_telefone||s.order.telefone||'';const cleanPhone=String(phone).replace(/\D/g,'');const waUrl=cleanPhone.length>=10?`https://wa.me/55${cleanPhone}?text=${encodeURIComponent('Olá '+s.order.cliente_nome+', sou o motorista responsável pela entrega do seu pedido '+s.order.numero+'.')}`:'';return `<article class="route-card"><div class="route-row"><div class="route-number">${idx+1}</div><div style="flex:1"><div class="route-status">${esc(route?.nome||'Rota')} · Parada ${idx+1}</div><h3 style="margin:4px 0;color:#14203a">${esc(s.order.cliente_nome)}</h3><div style="color:#000000 !important;font-size:16px;font-weight:700;line-height:1.35;margin:3px 0">${esc(address)}</div><div class="muted" style="margin-top:5px">Pedido ${esc(s.order.numero)} · ${money(s.order.total)}</div></div></div><div class="route-contact">${cleanPhone?`<a class="btn" style="background:#25D366;color:#fff;border-color:#25D366;text-align:center" target="_blank" href="${waUrl}">💬 WhatsApp</a><a class="btn" style="background:#0284c7;color:#fff;border-color:#0284c7;text-align:center" href="tel:${cleanPhone}">📞 Ligar (${esc(phone)})</a>`:`<span class="badge driver-no-phone-badge">Sem telefone cadastrado</span>`}</div><div class="route-actions"><a class="btn" target="_blank" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}">⌖ Maps</a><label class="btn">📷 Canhoto<input type="file" accept="image/png,image/jpeg" capture="environment" hidden onchange="uploadProof('${s.id}',this)"></label><button class="btn danger" onclick="openFailStopModal('${s.id}','${esc(s.order.numero)}','${esc(s.order.cliente_nome)}')">✕ Não concluída</button><button class="btn good" onclick="completeDriver('${s.id}')">✓ Concluído</button></div></article>`}).join(''):'<div class="mobile-card empty-state">Nenhuma parada pendente. As rotas concluídas ficam disponíveis em <strong>Rotas concluídas</strong>.</div>'}</div></div>`}
-async function driverCompletedRoutes(){try{const x=await api('/api/logistics/completed-routes');const groups=x.groups||[];document.body.innerHTML=`<div class="mobile-shell mobile-dark"><div class="mobile-content">${mobileHeader('Rotas concluídas',`${esc(me.nome)} · Histórico de entregas`,'/assets/institucional/01_Logo_Xiquim_Vargas_HD.png',true)}<div class="mobile-nav driver-top-nav" style="margin-top:15px"><button class="btn" onclick="driver()">← Fila do dia</button><button class="btn primary" onclick="driverCompletedRoutes()">↻ Atualizar</button><button class="btn driver-logout-btn" onclick="logout()">Sair</button></div>${groups.length?groups.map(g=>`<section class="driver-history-day"><div class="section-title"><h2>${formatDriverDate(g.data)}</h2><span class="badge">${g.rotas.length} ${g.rotas.length===1?'rota':'rotas'}</span></div>${g.rotas.map(route=>`<article class="mobile-card completed-route-card"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start"><div><div class="route-status">Rota concluída</div><h3 style="margin:4px 0">${esc(route.nome||'Rota')}</h3><div class="muted">Realizada em ${formatDriverDateTime(route.concluida_em||route.updated_at)}</div></div><strong>${route.stops.length} ${route.stops.length===1?'parada':'paradas'}</strong></div><div class="completed-stop-list">${route.stops.map(stop=>`<div class="completed-stop"><span class="route-number">${stop.ordem}</span><div style="flex:1"><strong>${esc(stop.cliente_nome)}</strong><div class="muted">Pedido ${esc(stop.pedido_numero)} · ${money(stop.total)}</div><div style="color:#000000 !important;font-size:14.5px;font-weight:700;margin-top:2px">${esc(stop.endereco||'Endereço não informado')}${stop.bairro?` · ${esc(stop.bairro)}`:''}</div></div><span class="badge status-concluido">Concluída</span></div>`).join('')}</div></article>`).join('')}</section>`).join(''):'<div class="mobile-card empty-state">Nenhuma rota concluída registrada.</div>'}</div></div>`}catch(e){alert(e.message)}}
-function formatDriverDate(date){if(!date)return 'Data não informada';const d=new Date(String(date).length===10?date+'T12:00:00':date);return Number.isNaN(d.getTime())?esc(date):d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})}
-function formatDriverDateTime(date){if(!date)return 'Horário não informado';const d=new Date(date);return Number.isNaN(d.getTime())?esc(date):d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}
-async function uploadProof(id,input){const file=input.files?.[0];if(!file)return;if(file.size>8*1024*1024){alert('A foto precisa ter no mximo 8 MB.');input.value='';return}const reader=new FileReader();reader.onload=async()=>{try{await api('/api/logistics/orders/'+id+'/proof',{method:'POST',body:JSON.stringify({data_url:reader.result})});alert('Comprovante anexado.');driver()}catch(e){alert(e.message)}};reader.readAsDataURL(file)}
-async function completeDriver(id){
-  const btn=document.querySelector(`button[onclick*="completeDriver('${id}')"]`);
-  const card=btn?.closest('.route-card');
-  if(card){
-    card.querySelectorAll('button').forEach(b=>b.disabled=true);
-    card.style.pointerEvents='none';
-    card.style.transition='all 0.3s ease';
-    card.style.opacity='0';
-    card.style.transform='scale(0.95)';
-    setTimeout(()=>{
+async function driver() {
+  let r, o;
+  try {
+    [r, o] = await Promise.all([api('/api/logistics/routes'), api('/api/orders')]);
+    await offlinePut('kv', 'driverRoutes', r.items || []);
+    await offlinePut('kv', 'driverOrders', o.items || []);
+  } catch (e) {
+    const cr = await offlineGet('kv', 'driverRoutes');
+    const co = await offlineGet('kv', 'driverOrders');
+    if (!cr || !co) throw e;
+    r = { items: cr, offline: true };
+    o = { items: co, offline: true };
+  }
+  const byId = new Map(o.items.map(x => [x.id, x])); const activeRoutes = r.items.filter(route => route.status !== 'CONCLUIDA'); const stops = activeRoutes.flatMap(route => { let ids = []; try { ids = JSON.parse(route.sequencia_json || '[]') } catch { }; return ids.map((id, i) => ({ id, order: byId.get(id), route, i })) }).filter(x => x.order && x.order.status !== 'CONCLUIDO'); const routeNames = new Map(activeRoutes.map(x => [x.id, x])); document.body.innerHTML = `<div class="mobile-shell mobile-dark"><div class="mobile-content">${mobileHeader('Fila do dia', `${esc(me.nome)} · Logística interna`, '/assets/institucional/01_Logo_Xiquim_Vargas_HD.png', true)}<div class="mobile-nav driver-top-nav" style="margin-top:15px"><button class="btn primary" onclick="driver()">↻ Atualizar fila</button><button class="btn" onclick="driverCompletedRoutes()">✓ Rotas concluídas</button><button class="btn driver-logout-btn" onclick="logout()">Sair</button></div><div class="mobile-card" style="margin-bottom:12px"><div class="route-status">Operação de entrega</div><h2 style="margin:5px 0">${stops.length} parada(s) na fila</h2><div class="muted">A sequência foi definida pela Torre de Controle. Abra o mapa, entregue e conclua.</div></div>${stops.length ? stops.map((s, idx) => { const address = s.order.endereco || s.order.cliente_endereco || 'Endereço não informado'; const route = routeNames.get(s.route.id); const phone = s.order.cliente_telefone || s.order.telefone || ''; const cleanPhone = String(phone).replace(/\D/g, ''); const waUrl = cleanPhone.length >= 10 ? `https://wa.me/55${cleanPhone}?text=${encodeURIComponent('Olá ' + s.order.cliente_nome + ', sou o motorista responsável pela entrega do seu pedido ' + s.order.numero + '.')}` : ''; return `<article class="route-card"><div class="route-row"><div class="route-number">${idx + 1}</div><div style="flex:1"><div class="route-status">${esc(route?.nome || 'Rota')} · Parada ${idx + 1}</div><h3 style="margin:4px 0;color:#14203a">${esc(s.order.cliente_nome)}</h3><div style="color:#000000 !important;font-size:16px;font-weight:700;line-height:1.35;margin:3px 0">${esc(address)}</div><div class="muted" style="margin-top:5px">Pedido ${esc(s.order.numero)} · ${money(s.order.total)}</div></div></div><div class="route-contact">${cleanPhone ? `<a class="btn" style="background:#25D366;color:#fff;border-color:#25D366;text-align:center" target="_blank" href="${waUrl}">💬 WhatsApp</a><a class="btn" style="background:#0284c7;color:#fff;border-color:#0284c7;text-align:center" href="tel:${cleanPhone}">📞 Ligar (${esc(phone)})</a>` : `<span class="badge driver-no-phone-badge">Sem telefone cadastrado</span>`}</div><div class="route-actions"><a class="btn" target="_blank" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}">⌖ Maps</a><label class="btn">📷 Canhoto<input type="file" accept="image/png,image/jpeg" capture="environment" hidden onchange="uploadProof('${s.id}',this)"></label><button class="btn danger" onclick="openFailStopModal('${s.id}','${esc(s.order.numero)}','${esc(s.order.cliente_nome)}')">✕ Não concluída</button><button class="btn good" onclick="completeDriver('${s.id}')">✓ Concluído</button></div></article>` }).join('') : '<div class="mobile-card empty-state">Nenhuma parada pendente. As rotas concluídas ficam disponíveis em <strong>Rotas concluídas</strong>.</div>'}</div></div>`
+}
+async function driverCompletedRoutes() { try { const x = await api('/api/logistics/completed-routes'); const groups = x.groups || []; document.body.innerHTML = `<div class="mobile-shell mobile-dark"><div class="mobile-content">${mobileHeader('Rotas concluídas', `${esc(me.nome)} · Histórico de entregas`, '/assets/institucional/01_Logo_Xiquim_Vargas_HD.png', true)}<div class="mobile-nav driver-top-nav" style="margin-top:15px"><button class="btn" onclick="driver()">← Fila do dia</button><button class="btn primary" onclick="driverCompletedRoutes()">↻ Atualizar</button><button class="btn driver-logout-btn" onclick="logout()">Sair</button></div>${groups.length ? groups.map(g => `<section class="driver-history-day"><div class="section-title"><h2>${formatDriverDate(g.data)}</h2><span class="badge">${g.rotas.length} ${g.rotas.length === 1 ? 'rota' : 'rotas'}</span></div>${g.rotas.map(route => `<article class="mobile-card completed-route-card"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start"><div><div class="route-status">Rota concluída</div><h3 style="margin:4px 0">${esc(route.nome || 'Rota')}</h3><div class="muted">Realizada em ${formatDriverDateTime(route.concluida_em || route.updated_at)}</div></div><strong>${route.stops.length} ${route.stops.length === 1 ? 'parada' : 'paradas'}</strong></div><div class="completed-stop-list">${route.stops.map(stop => `<div class="completed-stop"><span class="route-number">${stop.ordem}</span><div style="flex:1"><strong>${esc(stop.cliente_nome)}</strong><div class="muted">Pedido ${esc(stop.pedido_numero)} · ${money(stop.total)}</div><div style="color:#000000 !important;font-size:14.5px;font-weight:700;margin-top:2px">${esc(stop.endereco || 'Endereço não informado')}${stop.bairro ? ` · ${esc(stop.bairro)}` : ''}</div></div><span class="badge status-concluido">Concluída</span></div>`).join('')}</div></article>`).join('')}</section>`).join('') : '<div class="mobile-card empty-state">Nenhuma rota concluída registrada.</div>'}</div></div>` } catch (e) { alert(e.message) } }
+function formatDriverDate(date) { if (!date) return 'Data não informada'; const d = new Date(String(date).length === 10 ? date + 'T12:00:00' : date); return Number.isNaN(d.getTime()) ? esc(date) : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) }
+function formatDriverDateTime(date) { if (!date) return 'Horário não informado'; const d = new Date(date); return Number.isNaN(d.getTime()) ? esc(date) : d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }
+async function uploadProof(id, input) { const file = input.files?.[0]; if (!file) return; if (file.size > 8 * 1024 * 1024) { alert('A foto precisa ter no mximo 8 MB.'); input.value = ''; return } const reader = new FileReader(); reader.onload = async () => { try { await api('/api/logistics/orders/' + id + '/proof', { method: 'POST', body: JSON.stringify({ data_url: reader.result }) }); alert('Comprovante anexado.'); driver() } catch (e) { alert(e.message) } }; reader.readAsDataURL(file) }
+async function completeDriver(id) {
+  const btn = document.querySelector(`button[onclick*="completeDriver('${id}')"]`);
+  const card = btn?.closest('.route-card');
+  if (card) {
+    card.querySelectorAll('button').forEach(b => b.disabled = true);
+    card.style.pointerEvents = 'none';
+    card.style.transition = 'all 0.3s ease';
+    card.style.opacity = '0';
+    card.style.transform = 'scale(0.95)';
+    setTimeout(() => {
       card.remove();
-      const remaining=document.querySelectorAll('.route-card').length;
-      const countHeader=document.querySelector('.mobile-card h2');
-      if(countHeader)countHeader.textContent=`${remaining} parada(s) na fila`;
-      if(!remaining){
-        const content=document.querySelector('.mobile-content');
-        if(content&&!content.querySelector('.empty-state')){
-          content.insertAdjacentHTML('beforeend','<div class="mobile-card empty-state">Nenhuma parada pendente. As rotas concluídas ficam disponíveis em <strong>Rotas concluídas</strong>.</div>');
+      const remaining = document.querySelectorAll('.route-card').length;
+      const countHeader = document.querySelector('.mobile-card h2');
+      if (countHeader) countHeader.textContent = `${remaining} parada(s) na fila`;
+      if (!remaining) {
+        const content = document.querySelector('.mobile-content');
+        if (content && !content.querySelector('.empty-state')) {
+          content.insertAdjacentHTML('beforeend', '<div class="mobile-card empty-state">Nenhuma parada pendente. As rotas concluídas ficam disponíveis em <strong>Rotas concluídas</strong>.</div>');
         }
       }
-    },280);
+    }, 280);
   }
   toastRole('✓ Entrega concluída com sucesso!');
-  Realtime.emit('orders_changed',{id,status:'CONCLUIDO'});
+  Realtime.emit('orders_changed', { id, status: 'CONCLUIDO' });
   Realtime.emit('routes_changed');
-  try{
-    await api('/api/logistics/orders/'+id+'/complete',{method:'POST',body:'{}'});
-  }catch(e){toastRole(e.message,true);roleRealtimeRefresh('routes_changed')}
+  try {
+    await api('/api/logistics/orders/' + id + '/complete', { method: 'POST', body: '{}' });
+  } catch (e) { toastRole(e.message, true); roleRealtimeRefresh('routes_changed') }
 }
-function openFailStopModal(id, numero, clienteNome){
+function openFailStopModal(id, numero, clienteNome) {
   modal('✕ Marcar Parada como Não Concluída', `
     <div style="display:flex;flex-direction:column;gap:14px;color:#1e293b">
       <div>
@@ -2089,44 +2093,44 @@ function openFailStopModal(id, numero, clienteNome){
     </div>
   `, '520px');
 }
-async function submitFailStop(id){
-  const sel=document.getElementById('failReasonSelect');
-  const descEl=document.getElementById('failReasonDesc');
-  const motivo=sel?.value || 'Outros motivos';
-  const descricao=descEl?.value?.trim() || '';
-  const btn=document.getElementById('btnConfirmFailStop');
-  if(btn){btn.disabled=true;btn.textContent='Registrando...';}
-  try{
-    await api('/api/logistics/orders/'+id+'/fail',{method:'POST',body:JSON.stringify({motivo,descricao})});
+async function submitFailStop(id) {
+  const sel = document.getElementById('failReasonSelect');
+  const descEl = document.getElementById('failReasonDesc');
+  const motivo = sel?.value || 'Outros motivos';
+  const descricao = descEl?.value?.trim() || '';
+  const btn = document.getElementById('btnConfirmFailStop');
+  if (btn) { btn.disabled = true; btn.textContent = 'Registrando...'; }
+  try {
+    await api('/api/logistics/orders/' + id + '/fail', { method: 'POST', body: JSON.stringify({ motivo, descricao }) });
     closeModal();
-    const targetCard=document.querySelector(`button[onclick*="openFailStopModal('${id}'"]`)?.closest('.route-card');
-    if(targetCard){
-      targetCard.style.transition='all 0.3s ease';
-      targetCard.style.opacity='0';
-      targetCard.style.transform='scale(0.95)';
-      setTimeout(()=>{
+    const targetCard = document.querySelector(`button[onclick*="openFailStopModal('${id}'"]`)?.closest('.route-card');
+    if (targetCard) {
+      targetCard.style.transition = 'all 0.3s ease';
+      targetCard.style.opacity = '0';
+      targetCard.style.transform = 'scale(0.95)';
+      setTimeout(() => {
         targetCard.remove();
-        const remaining=document.querySelectorAll('.route-card').length;
-        const countHeader=document.querySelector('.mobile-card h2');
-        if(countHeader)countHeader.textContent=`${remaining} parada(s) na fila`;
-        if(!remaining){
-          const content=document.querySelector('.mobile-content');
-          if(content&&!content.querySelector('.empty-state')){
-            content.insertAdjacentHTML('beforeend','<div class="mobile-card empty-state">Nenhuma parada pendente. As rotas concluídas ficam disponíveis em <strong>Rotas concluídas</strong>.</div>');
+        const remaining = document.querySelectorAll('.route-card').length;
+        const countHeader = document.querySelector('.mobile-card h2');
+        if (countHeader) countHeader.textContent = `${remaining} parada(s) na fila`;
+        if (!remaining) {
+          const content = document.querySelector('.mobile-content');
+          if (content && !content.querySelector('.empty-state')) {
+            content.insertAdjacentHTML('beforeend', '<div class="mobile-card empty-state">Nenhuma parada pendente. As rotas concluídas ficam disponíveis em <strong>Rotas concluídas</strong>.</div>');
           }
         }
-      },280);
+      }, 280);
     }
     toastRole('✕ Ocorrência registrada! Pedido retornou para a separação.');
-    Realtime.emit('orders_changed',{id,status:'SEPARACAO',action:'DELIVERY_FAILED'});
+    Realtime.emit('orders_changed', { id, status: 'SEPARACAO', action: 'DELIVERY_FAILED' });
     Realtime.emit('routes_changed');
     Realtime.emit('returns_changed');
-  }catch(e){
-    if(btn){btn.disabled=false;btn.textContent='Confirmar Não Concluído';}
-    toastRole(e.message,true);
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Confirmar Não Concluído'; }
+    toastRole(e.message, true);
   }
 }
-window.openFailStopModal=openFailStopModal;
-window.submitFailStop=submitFailStop;
-async function roleHome(){const r=document.body.dataset.role;if(r==='Vendedor Externo')return seller();if(r==='Frente de Loja / PDV')return pdv();if(r==='Loja Online')return loja();return driver()}
+window.openFailStopModal = openFailStopModal;
+window.submitFailStop = submitFailStop;
+async function roleHome() { const r = document.body.dataset.role; if (r === 'Vendedor Externo') return seller(); if (r === 'Frente de Loja / PDV') return pdv(); if (r === 'Loja Online') return loja(); return driver() }
 initRole();
