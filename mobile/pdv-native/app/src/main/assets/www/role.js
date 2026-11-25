@@ -168,17 +168,57 @@ async function roleRealtimeRefresh(type, payload) {
               const items = p.items.map(x => ({ ...x, ...(sm.get(x.id) || {}) }));
               if (window.sellerCatalogMode === 'DEMO') {
                 window.sellerCatalogItems = items;
-                if (typeof sellerCatalogRender === 'function') sellerCatalogRender(items);
-              } else {
-                window.sellerProducts = items;
-                const prodEl = $('#sellerProducts');
-                if (prodEl && typeof sellerRender === 'function') {
+                const ae = document.activeElement;
+                const isTyping = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT');
+                if (!isTyping && !document.getElementById('modal') && typeof sellerCatalogRender === 'function') {
                   let filtered = items;
                   if (window.sellerCurrentCatId) filtered = filtered.filter(x => x.categoria_id === window.sellerCurrentCatId);
                   if (window.sellerCurrentSubId) filtered = filtered.filter(x => x.subcategoria_id === window.sellerCurrentSubId);
-                  sellerRender(filtered);
+                  sellerCatalogRender(filtered);
                 }
-                if (typeof renderSellerNewOrderCart === 'function') renderSellerNewOrderCart();
+              } else {
+                window.sellerProducts = items;
+                if (window.sellerOrderItems instanceof Map && window.sellerOrderItems.size > 0) {
+                  const byId = new Map(items.map(x => [x.id, x]));
+                  for (const [prodId, cartItem] of window.sellerOrderItems.entries()) {
+                    const fresh = byId.get(prodId);
+                    if (!fresh) continue;
+                    const updatedItem = {
+                      ...cartItem,
+                      ...fresh,
+                      preco_tabela: fresh.preco_tabela ?? null,
+                      quantidade_minima: fresh.quantidade_minima ?? 1,
+                      tabela_preco_nome: fresh.tabela_preco_nome ?? null,
+                      tabela_nome: fresh.tabela_nome ?? null,
+                      promocao_preco: fresh.promocao_preco ?? null,
+                      promocao_nome: fresh.promocao_nome ?? null,
+                      produto_id: prodId,
+                      quantidade: cartItem.quantidade,
+                      nome: fresh.nome,
+                      estoque: Number(fresh.quantidade_disponivel || 0)
+                    };
+                    updatedItem.preco = priceForLine(updatedItem, updatedItem.quantidade);
+                    window.sellerOrderItems.set(prodId, updatedItem);
+                  }
+                }
+                const ae = document.activeElement;
+                const isTyping = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT');
+                const hasGenericModal = Boolean(document.getElementById('modal'));
+                if (!isTyping && !hasGenericModal) {
+                  const prodEl = $('#sellerProducts');
+                  if (prodEl && typeof sellerRender === 'function') {
+                    let filtered = items;
+                    if (window.sellerCurrentCatId) filtered = filtered.filter(x => x.categoria_id === window.sellerCurrentCatId);
+                    if (window.sellerCurrentSubId) filtered = filtered.filter(x => x.subcategoria_id === window.sellerCurrentSubId);
+                    sellerRender(filtered);
+                  }
+                  if (typeof renderSellerNewOrderCart === 'function') renderSellerNewOrderCart();
+                  if (document.getElementById('sellerFloatingCartModal') && typeof openSellerFloatingCart === 'function') {
+                    openSellerFloatingCart();
+                  }
+                } else {
+                  if (typeof updateFloatingCartTotals === 'function') updateFloatingCartTotals();
+                }
               }
             } catch (e) {
               console.warn('Erro ao atualizar produtos em segundo plano no pedido do vendedor:', e);
