@@ -229,7 +229,161 @@ export function makeOrderPdf(order,items,file){
   buildPdf(paginate(lines.filter(l=>l!==null&&l!==undefined),54,94),file,{fontSize:9.5,lineHeight:14,leftMargin:28,topMargin:810});
 }
 
-export function makeCatalogPdf(items,file){const sep='-'.repeat(116);const lines=['XIQUIM VARGAS','CATÁLOGO DE PRODUTOS',`Gerado em: ${formatBrasiliaDateTime(new Date())}`,`Total de produtos: ${items.length}`,'','PRODUTO                                          | SKU              | CATEGORIA        | SUBCATEGORIA     | PREÇO | PROMOÇÃO',sep];for(const x of items)lines.push(`${String(x.nome||'').slice(0,48).padEnd(48)} | ${String(x.sku||'').slice(0,16).padEnd(16)} | ${String(x.categoria_nome||'-').slice(0,16).padEnd(16)} | ${String(x.subcategoria_nome||'-').slice(0,16).padEnd(16)} | R$ ${Number(x.preco_base||0).toFixed(2)} | ${x.promocao_preco==null?'-':'R$ '+Number(x.promocao_preco).toFixed(2)}`);buildPdf(paginate(lines,72,116),file,{fontSize:8,lineHeight:11,leftMargin:14,topMargin:824})}
+function formatBrlCell(val, width = 11) {
+  if (val == null || !Number.isFinite(Number(val))) return '-'.padStart(width);
+  return `R$ ${Number(val).toFixed(2).replace('.', ',')}`.padStart(width);
+}
+
+function formatMinQtyCell(item, width = 9) {
+  if (item?.preco_tabela == null || item?.quantidade_minima == null) return '-'.padStart(width);
+  const qty = Math.max(1, Math.trunc(Number(item.quantidade_minima)));
+  const unit = formatUnitTag(item.unidade);
+  return `${qty} ${unit}`.slice(0, width).padStart(width);
+}
+
+function normCatalogText(s) {
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
+}
+
+const CATALOG_KEYWORD_GROUPS = [
+  { group: 'REFRIGERANTES', rx: /\b(REFRIGERANTES?|REFRI|COCA|GUARANA|FANTA|SPRITE|PEPSI|KUAT|SCHWEPPES|SODA|TONICA)\b/ },
+  { group: 'CERVEJAS', rx: /\b(CERVEJAS?|CHOPP|PILSEN|PILSNER|LAGER|IPA|BRAHMA|SKOL|ANTARCTICA|HEINEKEN|BUDWEISER|STELLA|CORONA|SPATEN|BOHEMIA|AMSTEL|ITAIPAVA|PETRA|EISENBAHN)\b/ },
+  { group: 'ÁGUAS', rx: /\b(AGUAS?)\b/ },
+  { group: 'SUCOS', rx: /\b(SUCOS?|NECTAR|DEL VALLE|TAMPICO|KAPPO)\b/ },
+  { group: 'ENERGÉTICOS', rx: /\b(ENERGETICOS?|ENERGY|RED BULL|REDBULL|MONSTER|TNT|FUSION|BALLY)\b/ },
+  { group: 'BALAS E CONFEITOS', rx: /\b(BALAS?|CHICLETES?|PIRULITOS?|CONFEITOS?|DROPS|HALLS|MENTOS|TRIDENT|FINI|GOMAS?)\b/ },
+  { group: 'DOCES E BISCOITOS', rx: /\b(DOCES?|BISCOITOS?|BOLACHAS?|CHOCOLATES?|BOMBONS?|WAFERS?|PACOCAS?)\b/ },
+  { group: 'SALGADINHOS E SNACKS', rx: /\b(SALGADINHOS?|SNACKS?|BATATAS?|CHIPS|DORITOS|CHEETOS|RUFFLES|AMENDOINS?|TORRESMOS?)\b/ },
+  { group: 'DESCARTÁVEIS E EMBALAGENS', rx: /\b(DESCARTAVE(L|IS)|EMBALAGENS?|COPOS?|PRATOS?|TALHERES?|GUARDANAPOS?|SACOLAS?|CANUDOS?|MARMITEX)\b/ },
+  { group: 'DESTILADOS E VINHOS', rx: /\b(DESTILADOS?|VINHOS?|VODKA|WHISKY|WHISKEY|CACHACA|GIN|RUM|TEQUILA|CATUABA|CAMPARI|CONHAQUE|LICOR|ESPUMANTE)\b/ }
+];
+
+const STOP_WORDS = new Set(['O', 'A', 'OS', 'AS', 'DE', 'DA', 'DO', 'DAS', 'DOS', 'E', 'EM', 'COM', 'SEM', 'PARA', 'POR']);
+
+function extractSignificantPrefix(nome) {
+  const rawTokens = String(nome || '').trim().split(/[^A-Za-zÀ-ÖØ-öø-ÿ0-9]+/).filter(Boolean);
+  for (const tok of rawTokens) {
+    const key = normCatalogText(tok);
+    if (key.length >= 2 && !STOP_WORDS.has(key)) {
+      return { key, label: tok.toUpperCase() };
+    }
+  }
+  const fallback = rawTokens[0] || '';
+  return { key: normCatalogText(fallback), label: fallback.toUpperCase() };
+}
+
+function classifyCatalogItemGroup(item, prefixInfoByKey) {
+  const explicit = String(item?.categoria_nome || '').trim();
+  if (explicit) return explicit.toUpperCase();
+  const normName = normCatalogText(item?.nome);
+  for (const rule of CATALOG_KEYWORD_GROUPS) {
+    if (rule.rx.test(normName)) return rule.group;
+  }
+  const pref = extractSignificantPrefix(item?.nome);
+  if (pref.key && (prefixInfoByKey.get(pref.key)?.count || 0) >= 2) {
+    return prefixInfoByKey.get(pref.key).label;
+  }
+  return 'OUTROS PRODUTOS';
+}
+
+export function makeCatalogPdf(items, file, options = {}) {
+  const sep = '-'.repeat(94);
+  const allItems = Array.isArray(items) ? items : [];
+  const tableLabel = options?.tableName ? String(options.tableName).trim() : '';
+  const lines = [
+    'XIQUIM VARGAS - DISTRIBUIDORA DE BEBIDAS',
+    'CATÁLOGO DE PRODUTOS',
+    `Gerado em: ${formatBrasiliaDateTime(new Date())}`,
+    `Tabela Geral vigente: ${tableLabel || 'Nenhuma ativa'}`,
+    ''
+  ];
+
+  const promoItems = allItems
+    .filter(x => x?.promocao_preco != null && Number(x.promocao_preco) > 0)
+    .slice()
+    .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR'));
+
+  const promoKeys = new Set(promoItems.map(x => x?.id ?? x));
+  const regularItems = allItems.filter(x => !promoKeys.has(x?.id ?? x));
+
+  if (promoItems.length > 0) {
+    lines.push('PROMOÇÃO');
+    lines.push(`${'PRODUTO'.padEnd(43)} ${'UN'.padEnd(4)} ${'PREÇO BASE'.padStart(11)} ${'PROMOÇÃO'.padStart(11)} ${'TAB. GERAL'.padStart(11)} ${'QTD.MÍN'.padStart(9)}`);
+    lines.push(sep);
+    for (const x of promoItems) {
+      const nameLines = wrap(String(x.nome || '').trim(), 43);
+      const unitCol = formatUnitTag(x.unidade).slice(0, 4).padEnd(4);
+      const baseCol = formatBrlCell(x.preco_base, 11);
+      const promoCol = formatBrlCell(x.promocao_preco, 11);
+      const tabCol = formatBrlCell(x.preco_tabela, 11);
+      const minCol = formatMinQtyCell(x, 9);
+      lines.push(`${(nameLines[0] || '').padEnd(43)} ${unitCol} ${baseCol} ${promoCol} ${tabCol} ${minCol}`);
+      for (let i = 1; i < nameLines.length; i++) {
+        lines.push(nameLines[i]);
+      }
+    }
+    lines.push('');
+  }
+
+  if (regularItems.length > 0) {
+    const prefixInfoByKey = new Map();
+    for (const x of regularItems) {
+      if (String(x?.categoria_nome || '').trim()) continue;
+      const normName = normCatalogText(x?.nome);
+      if (CATALOG_KEYWORD_GROUPS.some(rule => rule.rx.test(normName))) continue;
+      const pref = extractSignificantPrefix(x?.nome);
+      if (!pref.key) continue;
+      const prev = prefixInfoByKey.get(pref.key);
+      if (prev) prev.count += 1;
+      else prefixInfoByKey.set(pref.key, { count: 1, label: pref.label });
+    }
+
+    const groupsMap = new Map();
+    for (const x of regularItems) {
+      const groupName = classifyCatalogItemGroup(x, prefixInfoByKey);
+      if (!groupsMap.has(groupName)) groupsMap.set(groupName, []);
+      groupsMap.get(groupName).push(x);
+    }
+
+    const sortedGroupNames = Array.from(groupsMap.keys()).sort((a, b) => {
+      if (a === 'OUTROS PRODUTOS' && b !== 'OUTROS PRODUTOS') return 1;
+      if (b === 'OUTROS PRODUTOS' && a !== 'OUTROS PRODUTOS') return -1;
+      return a.localeCompare(b, 'pt-BR');
+    });
+
+    lines.push('DEMAIS PRODUTOS');
+    lines.push(`${'PRODUTO'.padEnd(55)} ${'UN'.padEnd(4)} ${'PREÇO BASE'.padStart(11)} ${'TAB. GERAL'.padStart(11)} ${'QTD.MÍN'.padStart(9)}`);
+    lines.push(sep);
+
+    sortedGroupNames.forEach((groupName, gi) => {
+      if (gi > 0) lines.push('');
+      lines.push(`[${groupName}]`);
+      const groupItems = groupsMap.get(groupName)
+        .slice()
+        .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR'));
+      for (const x of groupItems) {
+        const nameLines = wrap(String(x.nome || '').trim(), 55);
+        const unitCol = formatUnitTag(x.unidade).slice(0, 4).padEnd(4);
+        const baseCol = formatBrlCell(x.preco_base, 11);
+        const tabCol = formatBrlCell(x.preco_tabela, 11);
+        const minCol = formatMinQtyCell(x, 9);
+        lines.push(`${(nameLines[0] || '').padEnd(55)} ${unitCol} ${baseCol} ${tabCol} ${minCol}`);
+        for (let i = 1; i < nameLines.length; i++) {
+          lines.push(nameLines[i]);
+        }
+      }
+    });
+  } else if (promoItems.length === 0) {
+    lines.push('Nenhum produto ativo encontrado.');
+  }
+
+  lines.push(
+    sep,
+    '',
+    'Consulte condições comerciais vigentes no pedido.'
+  );
+  buildPdf(paginate(lines, 54, 94), file, { fontSize: 9.5, lineHeight: 14, leftMargin: 28, topMargin: 810 });
+}
 export function makeStockPdf(items,file){const sep='-'.repeat(116);const lines=['XIQUIM VARGAS','RELATÓRIO DE ESTOQUE INTELIGENTE',`Gerado em: ${formatBrasiliaDateTime(new Date())}`,`Total de produtos: ${items.length}`,'','PRODUTO                                                  | SKU             | DISPONÍVEL | RESERVADO | MÍNIMO | STATUS',sep];for(const x of items)lines.push(`${String(x.nome||'').slice(0,56).padEnd(56)} | ${String(x.sku||'').slice(0,15).padEnd(15)} | ${String(x.quantidade_disponivel).padStart(10)} | ${String(x.quantidade_reservada).padStart(9)} | ${String(x.estoque_minimo).padStart(6)} | ${x.status||'-'}`);buildPdf(paginate(lines,72,116),file,{fontSize:8,lineHeight:11,leftMargin:14,topMargin:824})}
 
 export function makeLoadingListPdf(data, file) {
