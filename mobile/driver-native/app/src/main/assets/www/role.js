@@ -30,6 +30,8 @@ function priceForLine(product, quantity = 1) { const minimum = Number(product?.q
 const $ = s => document.querySelector(s); function jsonArg(value) { const bytes = new TextEncoder().encode(JSON.stringify(value)); let binary = ''; for (const byte of bytes) binary += String.fromCharCode(byte); return btoa(binary) }
 function parseJsonArg(encoded) { return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(encoded), c => c.charCodeAt(0)))) }
 const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+const normSearch = (v) => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const productSearchHaystack = (p) => normSearch([p?.nome, p?.descricao, p?.categoria_nome, p?.subcategoria_nome, p?.marca, p?.sabor, p?.tamanho, p?.sku, p?.codigo_barras].filter(Boolean).join(' '));
 async function api(path, opt = {}) { const reqId = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10); try { const r = await fetch(API + path, { ...opt, headers: { 'x-request-id': reqId, 'content-type': 'application/json', ...(opt.headers || {}), ...(token ? { authorization: 'Bearer ' + token } : {}) } }); if (!r.ok) { if (r.status === 401 && token && !path.includes('/api/auth/login')) { localStorage.removeItem('xv_token'); localStorage.removeItem('xv_user'); token = null; me = null; alert('Sua sessão expirou. Faça login novamente.'); return loginPage() } let e; try { e = await r.json() } catch { }; throw new Error(e?.error || `HTTP ${r.status}`) } return r.headers.get('content-type')?.includes('application/json') ? r.json() : r.blob() } catch (e) { if (path.startsWith('/api/auth/') || path.startsWith('/api/setup/')) { throw new Error('Não foi possível conectar ao servidor ERP. Verifique sua conexão com a internet ou se o endereço do servidor está correto.'); } if ((!navigator.onLine || e instanceof TypeError || e?.name === 'TypeError' || e.message?.includes('fetch') || e.message?.includes('NetworkError') || e.message?.includes('Failed to fetch')) && opt.method && opt.method !== 'GET') { const q = await queueOffline(path, opt); return { offline: true, queued_id: q.id } } throw e } }
 function money(v) { const n = Number(v); return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number.isFinite(n) ? n : 0) }
 function offlineDb() { return new Promise((resolve, reject) => { const r = indexedDB.open('xv-offline-v1-' + encodeURIComponent(me?.id || 'anonymous'), 1); r.onupgradeneeded = () => { const d = r.result; if (!d.objectStoreNames.contains('kv')) d.createObjectStore('kv'); if (!d.objectStoreNames.contains('queue')) d.createObjectStore('queue', { keyPath: 'id' }) }; r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error) }) }
@@ -246,11 +248,11 @@ async function roleRealtimeRefresh(type, payload) {
             sellerDashboard();
           }
         } else if (document.querySelector('.mobile-header h1')?.textContent === 'Minhas Rotas') {
-          if (type === 'routes_changed' || type === 'tab_focused') {
+          if (type === 'routes_changed' || type === 'seller_routes_changed' || type === 'tab_focused') {
             sellerMyRoutes();
           }
         } else {
-          if (type === 'clients_changed' || type === 'orders_changed' || type === 'returns_changed' || type === 'tab_focused') {
+          if (type === 'clients_changed' || type === 'orders_changed' || type === 'returns_changed' || type === 'seller_routes_changed' || type === 'tab_focused') {
             if (typeof sellerRefreshCrm === 'function') sellerRefreshCrm();
           }
         }
@@ -524,31 +526,168 @@ window.sellerRepeatClient = async function (clientId) {
   }
 };
 
+const SELLER_ROUTE_DAYS = [
+  { value: 1, label: 'Segunda-feira', short: 'Seg' },
+  { value: 2, label: 'Terça-feira', short: 'Ter' },
+  { value: 3, label: 'Quarta-feira', short: 'Qua' },
+  { value: 4, label: 'Quinta-feira', short: 'Qui' },
+  { value: 5, label: 'Sexta-feira', short: 'Sex' },
+  { value: 6, label: 'Sábado', short: 'Sáb' },
+  { value: 0, label: 'Domingo', short: 'Dom' }
+];
+function getSellerRouteDayInfo(dia) {
+  const num = Number(dia) === 7 ? 0 : Number(dia);
+  return SELLER_ROUTE_DAYS.find(d => d.value === num) || { value: num, label: 'Dia ' + num, short: 'Dia ' + num };
+}
+function renderSellerRouteControlBarHtml() {
+  const route = window._sellerPersonalRoute;
+  const active = Boolean(window._sellerRouteFilterEnabled && route && Array.isArray(route.bairros) && route.bairros.length);
+  const dInfo = route ? getSellerRouteDayInfo(route.dia_semana) : null;
+  const count = route?.bairros?.length || 0;
+  return `
+    <div class="seller-route-bar" id="sellerRouteControlBar">
+      <button type="button" class="btn" style="font-size:12.5px;padding:7px 12px;font-weight:700" onclick="sellerMyRoutes()">📅 Programar Rota</button>
+      ${route && count ? (active
+        ? `<button type="button" class="seller-route-toggle-pill active" onclick="toggleSellerRouteMode(false)" title="Clique para desativar e voltar ao modo normal">🗺️ Rota: ${esc(dInfo.short)} (${count} ${count === 1 ? 'bairro' : 'bairros'}) · <u>Desativar</u></button>`
+        : `<button type="button" class="seller-route-toggle-pill" onclick="toggleSellerRouteMode(true)" title="Ativar filtro da sua rota programada">🗺️ Usar minha rota: ${esc(dInfo.short)} (${count} ${count === 1 ? 'bairro' : 'bairros'})</button>`
+      ) : `<span class="muted" style="font-size:12px">Modo normal ativo (filtro manual por bairro).</span>`}
+    </div>
+  `;
+}
+function updateSellerRouteControlBarUI() {
+  const bar = document.getElementById('sellerRouteControlBar');
+  if (bar) bar.outerHTML = renderSellerRouteControlBarHtml();
+}
+async function toggleSellerRouteMode(enable, opts = {}) {
+  const route = window._sellerPersonalRoute;
+  if (enable && (!route || !Array.isArray(route.bairros) || !route.bairros.length)) {
+    return sellerMyRoutes();
+  }
+  window._sellerRouteFilterEnabled = Boolean(enable && route && route.bairros?.length);
+  if (window._sellerRouteFilterEnabled) {
+    window._sellerSavedBairro = '';
+    const bairroEl = document.getElementById('sellerClientBairro');
+    if (bairroEl) bairroEl.value = '';
+  }
+  if (window._sellerPersonalRoute) {
+    window._sellerPersonalRoute = { ...window._sellerPersonalRoute, active: window._sellerRouteFilterEnabled };
+    try { await offlinePut('kv', 'sellerPersonalRoute', window._sellerPersonalRoute); } catch (_) { }
+  }
+  updateSellerRouteControlBarUI();
+  if (!opts.skipRerender && typeof renderSellerClientsUI === 'function') {
+    renderSellerClientsUI();
+  }
+  try {
+    const res = await api('/api/seller/personal-route/toggle', {
+      method: 'PATCH',
+      body: JSON.stringify({ active: window._sellerRouteFilterEnabled })
+    });
+    if (res?.current) {
+      window._sellerPersonalRoute = res.current;
+      window._sellerRouteFilterEnabled = Boolean(res.current.active);
+      try { await offlinePut('kv', 'sellerPersonalRoute', res.current); } catch (_) { }
+      updateSellerRouteControlBarUI();
+    }
+  } catch (_) { }
+}
+function onSellerManualBairroChange(val) {
+  window._sellerSavedBairro = val || '';
+  if (val && window._sellerRouteFilterEnabled) {
+    toggleSellerRouteMode(false, { skipRerender: true });
+  }
+  renderSellerClientsUI();
+}
+window.toggleSellerRouteMode = toggleSellerRouteMode;
+window.onSellerManualBairroChange = onSellerManualBairroChange;
+
+function captureSellerPortfolioState() {
+  if (!document.getElementById('sellerClientsContent')) return;
+  window._sellerSavedTab = window.sellerCurrentTab || 'list';
+  const bairroEl = document.getElementById('sellerClientBairro');
+  if (bairroEl) window._sellerSavedBairro = bairroEl.value || '';
+  const periodoEl = document.getElementById('sellerClientPeriodo');
+  if (periodoEl) window._sellerSavedPeriodo = periodoEl.value || '';
+  const searchEl = document.getElementById('sellerClientSearch');
+  if (searchEl) window._sellerSavedSearch = searchEl.value || '';
+  window._sellerRouteFilterEnabled = Boolean(window._sellerRouteFilterEnabled);
+  window._sellerPortfolioScrollTop = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+}
+
+function focusLastOrderedSellerClient(shouldHighlight = true) {
+  const lastId = window._sellerLastOrderedClientId;
+  if (lastId) {
+    const safeId = (typeof CSS !== 'undefined' && typeof CSS.escape === 'function')
+      ? CSS.escape(lastId)
+      : String(lastId).replace(/"/g, '\\"');
+    const el = document.querySelector(`#sellerClientsContent [data-client-id="${safeId}"]`);
+    if (el) {
+      requestAnimationFrame(() => {
+        el.scrollIntoView({ block: 'center', behavior: 'auto' });
+        window._sellerPortfolioScrollTop = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+        if (shouldHighlight) {
+          el.classList.remove('seller-client-highlight');
+          void el.offsetWidth;
+          el.classList.add('seller-client-highlight');
+          clearTimeout(el._sellerHighlightTimer);
+          el._sellerHighlightTimer = setTimeout(() => {
+            el.classList.remove('seller-client-highlight');
+          }, 1600);
+        }
+      });
+      return true;
+    }
+  }
+  if (typeof window._sellerPortfolioScrollTop === 'number' && window._sellerPortfolioScrollTop > 0) {
+    const savedTop = window._sellerPortfolioScrollTop;
+    requestAnimationFrame(() => window.scrollTo(0, savedTop));
+  }
+  return false;
+}
+
 async function seller(tab = null) {
+  captureSellerPortfolioState();
   window.sellerCatalogMode = null;
-  window.sellerCurrentTab = tab || 'list';
+  window.sellerCurrentTab = tab || window._sellerSavedTab || window.sellerCurrentTab || 'list';
+  window._sellerSavedTab = window.sellerCurrentTab;
   window.sellerCrmRfmFilter = window.sellerCrmRfmFilter || 'ALL';
 
-  let c, crm;
+  let c, crm, routeRes;
   try {
-    [c, crm] = await Promise.all([
+    [c, crm, routeRes] = await Promise.all([
       api('/api/clients'),
-      api('/api/crm/dashboard').catch(() => ({ summary: {}, items: [] }))
+      api('/api/crm/dashboard').catch(() => ({ summary: {}, items: [] })),
+      api('/api/seller/personal-route').catch(() => ({ current: null }))
     ]);
     await offlinePut('kv', 'sellerClients', c.items || []);
     await offlinePut('kv', 'sellerCrm', crm);
+    if (routeRes && 'current' in routeRes) {
+      await offlinePut('kv', 'sellerPersonalRoute', routeRes.current || null);
+    }
   } catch (e) {
     const cachedClients = await offlineGet('kv', 'sellerClients');
     const cachedCrm = await offlineGet('kv', 'sellerCrm');
+    const cachedRoute = await offlineGet('kv', 'sellerPersonalRoute').catch(() => null);
     if (!cachedClients) throw e;
     c = { items: cachedClients, offline: true };
     crm = cachedCrm || { summary: {}, items: [] };
+    routeRes = { current: cachedRoute || null };
   }
   window.sellerClients = (c.items || []).filter(x => x.id !== 'CLIENTE-BALCAO' && (me?.role !== 'seller' || !me?.id || x.vendedor_id === me.id));
   if (crm && Array.isArray(crm.items)) crm.items = crm.items.filter(x => x.id !== 'CLIENTE-BALCAO' && (me?.role !== 'seller' || !me?.id || x.vendedor_id === me.id));
   window.sellerCrmData = crm;
+  if (routeRes && routeRes.current) {
+    window._sellerPersonalRoute = routeRes.current;
+    window._sellerRouteFilterEnabled = Boolean(routeRes.current.active && Array.isArray(routeRes.current.bairros) && routeRes.current.bairros.length);
+  } else if (routeRes && 'current' in routeRes) {
+    window._sellerPersonalRoute = null;
+    window._sellerRouteFilterEnabled = false;
+  }
 
   const bairros = Array.from(new Set(window.sellerClients.map(x => x.bairro).filter(Boolean))).sort();
+  const savedBairro = !window._sellerRouteFilterEnabled && window._sellerSavedBairro && bairros.includes(window._sellerSavedBairro) ? window._sellerSavedBairro : '';
+  window._sellerSavedBairro = savedBairro;
+  const savedPeriodo = window._sellerSavedPeriodo || '';
+  const savedSearch = window._sellerSavedSearch || '';
 
   const body = `
     <div class="mobile-shell">
@@ -567,32 +706,33 @@ async function seller(tab = null) {
 
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:16px;margin-bottom:14px;">
           <div style="display:flex;gap:8px;align-items:center;">
-            <button type="button" class="crm-tab-btn ${window.sellerCurrentTab === 'list' ? 'active' : ''}" onclick="window.sellerCurrentTab='list';document.querySelectorAll('.crm-tab-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active');renderSellerClientsUI()">
+            <button type="button" class="crm-tab-btn ${window.sellerCurrentTab === 'list' ? 'active' : ''}" onclick="window.sellerCurrentTab='list';window._sellerSavedTab='list';document.querySelectorAll('.crm-tab-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active');renderSellerClientsUI()">
               📋 Cadastro & Carteira Geral
             </button>
-            <button type="button" class="crm-tab-btn ${window.sellerCurrentTab === 'crm' ? 'active' : ''}" onclick="window.sellerCurrentTab='crm';document.querySelectorAll('.crm-tab-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active');renderSellerClientsUI()">
+            <button type="button" class="crm-tab-btn ${window.sellerCurrentTab === 'crm' ? 'active' : ''}" onclick="window.sellerCurrentTab='crm';window._sellerSavedTab='crm';document.querySelectorAll('.crm-tab-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active');renderSellerClientsUI()">
               📊 Saúde da Carteira (CRM)
             </button>
           </div>
           <span class="muted" id="sellerClientCount" style="font-weight:750;font-size:13px;">${window.sellerClients.length} clientes na carteira</span>
         </div>
 
-        <div class="form" style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:14px;">
-          <input id="sellerClientSearch" class="search" placeholder="Buscar por cliente, documento, telefone, bairro..." oninput="renderSellerClientsUI()">
+        <div class="form" style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:10px;">
+          <input id="sellerClientSearch" class="search" value="${esc(savedSearch)}" placeholder="Buscar por cliente, documento, telefone, bairro..." oninput="window._sellerSavedSearch=this.value;renderSellerClientsUI()">
           <div style="display:flex;gap:8px;">
-            <select id="sellerClientBairro" class="search" style="flex:1;background:#fff;color:#172033;padding:8px;height:40px;border-radius:8px;border:1px solid #dbe3ec" onchange="renderSellerClientsUI()">
-              <option value="">Todos os bairros</option>
-              ${bairros.map(b => `<option value="${esc(b)}">${esc(b)}</option>`).join('')}
+            <select id="sellerClientBairro" class="search" style="flex:1;background:#fff;color:#172033;padding:8px;height:40px;border-radius:8px;border:1px solid #dbe3ec" onchange="onSellerManualBairroChange(this.value)">
+              <option value="" ${savedBairro === '' ? 'selected' : ''}>Todos os bairros</option>
+              ${bairros.map(b => `<option value="${esc(b)}" ${savedBairro === b ? 'selected' : ''}>${esc(b)}</option>`).join('')}
             </select>
-            <select id="sellerClientPeriodo" class="search" style="flex:1;background:#fff;color:#172033;padding:8px;height:40px;border-radius:8px;border:1px solid #dbe3ec;display:${window.sellerCurrentTab === 'list' ? 'block' : 'none'}" onchange="renderSellerClientsUI()">
-              <option value="">Qualquer período</option>
-              <option value="7">Últimos 7 dias</option>
-              <option value="15">De 8 a 15 dias</option>
-              <option value="30">De 16 a 30 dias</option>
-              <option value="99">+ 30 dias (ou nunca)</option>
+            <select id="sellerClientPeriodo" class="search" style="flex:1;background:#fff;color:#172033;padding:8px;height:40px;border-radius:8px;border:1px solid #dbe3ec;display:${window.sellerCurrentTab === 'list' ? 'block' : 'none'}" onchange="window._sellerSavedPeriodo=this.value;renderSellerClientsUI()">
+              <option value="" ${savedPeriodo === '' ? 'selected' : ''}>Qualquer período</option>
+              <option value="7" ${savedPeriodo === '7' ? 'selected' : ''}>Últimos 7 dias</option>
+              <option value="15" ${savedPeriodo === '15' ? 'selected' : ''}>De 8 a 15 dias</option>
+              <option value="30" ${savedPeriodo === '30' ? 'selected' : ''}>De 16 a 30 dias</option>
+              <option value="99" ${savedPeriodo === '99' ? 'selected' : ''}>+ 30 dias (ou nunca)</option>
             </select>
           </div>
         </div>
+        ${renderSellerRouteControlBarHtml()}
 
         <div id="sellerClientsContent"></div>
       </div>
@@ -601,12 +741,23 @@ async function seller(tab = null) {
   `;
   document.body.innerHTML = body;
   renderSellerClientsUI();
+  if (window._sellerPendingFocusAfterOrder) {
+    window._sellerPendingFocusAfterOrder = false;
+    focusLastOrderedSellerClient(true);
+  } else if (window._sellerLastOrderedClientId) {
+    focusLastOrderedSellerClient(false);
+  } else if (typeof window._sellerPortfolioScrollTop === 'number' && window._sellerPortfolioScrollTop > 0) {
+    const savedTop = window._sellerPortfolioScrollTop;
+    requestAnimationFrame(() => window.scrollTo(0, savedTop));
+  }
 }
 
 function renderSellerClientsUI() {
   const tab = window.sellerCurrentTab || 'list';
-  const sq = ($('#sellerClientSearch')?.value || '').trim().toLowerCase();
+  const sq = normSearch($('#sellerClientSearch')?.value).trim();
   const bairro = $('#sellerClientBairro')?.value || '';
+  const routeModeActive = Boolean(window._sellerRouteFilterEnabled && window._sellerPersonalRoute?.bairros?.length);
+  const routeBairroSet = routeModeActive ? new Set(window._sellerPersonalRoute.bairros.map(b => normSearch(b).trim()).filter(Boolean)) : null;
   const periodoSelect = $('#sellerClientPeriodo');
   if (periodoSelect) periodoSelect.style.display = (tab === 'list' ? 'block' : 'none');
 
@@ -626,18 +777,20 @@ function renderSellerClientsUI() {
       else if (rfmFilter === 'NOVO') filtered = filtered.filter(x => x.status_rfm === 'NOVO');
     }
 
-    if (bairro) {
+    if (routeBairroSet) {
+      filtered = filtered.filter(x => routeBairroSet.has(normSearch(x.bairro).trim()));
+    } else if (bairro) {
       filtered = filtered.filter(x => x.bairro === bairro);
     }
 
     if (sq) {
       filtered = filtered.filter(x =>
-        (x.razao_social || '').toLowerCase().includes(sq) ||
-        (x.nome_fantasia || '').toLowerCase().includes(sq) ||
-        (x.cnpj_cpf || '').toLowerCase().includes(sq) ||
-        (x.telefone || '').toLowerCase().includes(sq) ||
-        (x.bairro || '').toLowerCase().includes(sq) ||
-        (x.cidade || '').toLowerCase().includes(sq)
+        normSearch(x.razao_social).includes(sq) ||
+        normSearch(x.nome_fantasia).includes(sq) ||
+        normSearch(x.cnpj_cpf).includes(sq) ||
+        normSearch(x.telefone).includes(sq) ||
+        normSearch(x.bairro).includes(sq) ||
+        normSearch(x.cidade).includes(sq)
       );
     }
 
@@ -724,7 +877,7 @@ function renderSellerClientsUI() {
       const lastIntText = x.ultima_interacao ? `<small style="display:block;color:#1e293b;max-width:210px;white-space:normal;line-height:1.3;"><b>${esc(x.ultima_interacao.tipo)}:</b> ${esc(x.ultima_interacao.descricao.slice(0, 45))}${x.ultima_interacao.descricao.length > 45 ? '...' : ''}</small>` : '<small class="muted">Nenhum registro</small>';
 
       return `
-                <tr>
+                <tr data-client-id="${esc(x.id)}">
                   <td>
                     <button class="btn" style="text-align:left;padding:4px 8px;font-size:13px;" onclick="sellerClientProfile('${x.id}')">
                       <strong>${esc(x.razao_social || x.nome_fantasia)}</strong>
@@ -764,8 +917,12 @@ function renderSellerClientsUI() {
     const now = Date.now();
     const msInDay = 86400000;
     const filtered = (window.sellerClients || []).filter(c => {
-      if (sq && !(c.razao_social || '').toLowerCase().includes(sq) && !(c.nome_fantasia || '').toLowerCase().includes(sq) && !(c.cnpj_cpf || '').toLowerCase().includes(sq) && !(c.telefone || '').toLowerCase().includes(sq) && !(c.bairro || '').toLowerCase().includes(sq)) return false;
-      if (bairro && c.bairro !== bairro) return false;
+      if (sq && !normSearch(c.razao_social).includes(sq) && !normSearch(c.nome_fantasia).includes(sq) && !normSearch(c.cnpj_cpf).includes(sq) && !normSearch(c.telefone).includes(sq) && !normSearch(c.bairro).includes(sq)) return false;
+      if (routeBairroSet) {
+        if (!routeBairroSet.has(normSearch(c.bairro).trim())) return false;
+      } else if (bairro && c.bairro !== bairro) {
+        return false;
+      }
       if (periodo) {
         if (!c.ultima_compra) {
           if (periodo !== '99') return false;
@@ -787,7 +944,7 @@ function renderSellerClientsUI() {
     content.innerHTML = `
       <div id="sellerClientList">
         ${filtered.map(x => `
-          <article class="mobile-card client-card">
+          <article class="mobile-card client-card" data-client-id="${esc(x.id)}">
             <div class="client-icon">🛒</div>
             <div>
               <h3>${esc(x.razao_social || x.nome_fantasia)}</h3>
@@ -815,16 +972,33 @@ window.renderSellerClientsUI = renderSellerClientsUI;
 async function sellerRefreshCrm() {
   try {
     toastRole('Atualizando CRM da carteira...');
-    const [c, crm] = await Promise.all([
+    const [c, crm, routeRes] = await Promise.all([
       api('/api/clients'),
-      api('/api/crm/dashboard').catch(() => ({ summary: {}, items: [] }))
+      api('/api/crm/dashboard').catch(() => ({ summary: {}, items: [] })),
+      api('/api/seller/personal-route').catch(() => null)
     ]);
+    const prevScrollTop = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    window._sellerPortfolioScrollTop = prevScrollTop;
     window.sellerClients = (c.items || []).filter(x => x.id !== 'CLIENTE-BALCAO' && (me?.role !== 'seller' || !me?.id || x.vendedor_id === me.id));
     if (crm && Array.isArray(crm.items)) crm.items = crm.items.filter(x => x.id !== 'CLIENTE-BALCAO' && (me?.role !== 'seller' || !me?.id || x.vendedor_id === me.id));
     window.sellerCrmData = crm;
+    if (routeRes && 'current' in routeRes) {
+      window._sellerPersonalRoute = routeRes.current || null;
+      window._sellerRouteFilterEnabled = Boolean(routeRes.current?.active && routeRes.current?.bairros?.length);
+      try { await offlinePut('kv', 'sellerPersonalRoute', routeRes.current || null); } catch (_) { }
+      updateSellerRouteControlBarUI();
+    }
     await offlinePut('kv', 'sellerClients', window.sellerClients);
     await offlinePut('kv', 'sellerCrm', window.sellerCrmData);
     renderSellerClientsUI();
+    if (window._sellerPendingFocusAfterOrder) {
+      window._sellerPendingFocusAfterOrder = false;
+      focusLastOrderedSellerClient(true);
+    } else if (prevScrollTop > 0) {
+      requestAnimationFrame(() => window.scrollTo(0, prevScrollTop));
+    } else if (window._sellerLastOrderedClientId) {
+      focusLastOrderedSellerClient(false);
+    }
     toastRole('CRM e carteira atualizados!');
   } catch (err) {
     toastRole(err.message, true);
@@ -832,15 +1006,165 @@ async function sellerRefreshCrm() {
 }
 window.sellerRefreshCrm = sellerRefreshCrm;
 
-async function sellerCatalog() { let p, s, cats; try { [p, s, cats] = await Promise.all([api('/api/products'), api('/api/seller/stock'), api('/api/categories')]); await offlinePut('kv', 'sellerCatalogProducts', p.items); await offlinePut('kv', 'sellerCatalogStock', s.items); await offlinePut('kv', 'sellerCategories', cats) } catch (e) { const cp = await offlineGet('kv', 'sellerCatalogProducts'); const cs = await offlineGet('kv', 'sellerCatalogStock'); const ccats = await offlineGet('kv', 'sellerCategories'); if (!cp || !cs || !ccats) throw e; p = { items: cp }; s = { items: cs }; cats = ccats } const sm = new Map(s.items.map(x => [x.id, x])); const products = p.items.map(x => ({ ...x, ...(sm.get(x.id) || {}) })); window.sellerCatalogItems = products; window.sellerCategories = cats.categorias; window.sellerSubcategories = cats.subcategorias; window.sellerCatalogMode = 'DEMO'; window._sellerBackNavLevel = 'CATEGORIES'; window.sellerCurrentCatId = ''; window.sellerCurrentSubId = ''; document.body.innerHTML = `<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Catálogo', `${esc(me.nome)} · Demonstrativo`)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="seller()">← Voltar</button><button class="btn primary" onclick="exportSellerCatalogPdf()">⇩ Exportar catálogo completo (PDF)</button></div><div id="sellerCatalogRoot"></div></div></div>`; sellerShowCategories(); initSellerScrollFloatingBack() }
+async function sellerCatalog() { captureSellerPortfolioState(); let p, s, cats; try { [p, s, cats] = await Promise.all([api('/api/products'), api('/api/seller/stock'), api('/api/categories')]); await offlinePut('kv', 'sellerCatalogProducts', p.items); await offlinePut('kv', 'sellerCatalogStock', s.items); await offlinePut('kv', 'sellerCategories', cats) } catch (e) { const cp = await offlineGet('kv', 'sellerCatalogProducts'); const cs = await offlineGet('kv', 'sellerCatalogStock'); const ccats = await offlineGet('kv', 'sellerCategories'); if (!cp || !cs || !ccats) throw e; p = { items: cp }; s = { items: cs }; cats = ccats } const sm = new Map(s.items.map(x => [x.id, x])); const products = p.items.map(x => ({ ...x, ...(sm.get(x.id) || {}) })); window.sellerCatalogItems = products; window.sellerCategories = cats.categorias; window.sellerSubcategories = cats.subcategorias; window.sellerCatalogMode = 'DEMO'; window._sellerBackNavLevel = 'CATEGORIES'; window.sellerCurrentCatId = ''; window.sellerCurrentSubId = ''; document.body.innerHTML = `<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Catálogo', `${esc(me.nome)} · Demonstrativo`)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="seller()">← Voltar</button><button class="btn primary" onclick="exportSellerCatalogPdf()">⇩ Exportar catálogo completo (PDF)</button></div><div id="sellerCatalogRoot"></div></div></div>`; sellerShowCategories(); initSellerScrollFloatingBack() }
 function sellerShowCategories() { window._sellerBackNavLevel = 'CATEGORIES'; window.sellerCurrentCatId = ''; window.sellerCurrentSubId = ''; const cats = window.sellerCategories || []; const html = cats.length ? `<div class="grid" style="margin-top:14px;margin-bottom:24px;">${cats.map(c => `<div class="mobile-card" style="cursor:pointer" onclick="sellerShowSubcategories('${c.id}')"><h3>${esc(c.nome)}</h3><p class="muted">${esc(c.descricao || '')}</p></div>`).join('')}</div>` : ''; $('#sellerCatalogRoot').innerHTML = `<div class="section-title"><h2>Catálogo por Categoria</h2></div>${html}<div class="section-title"><h2>Todos os Produtos</h2></div><input class="search" style="margin-bottom:14px;background:#fff;color:#172033;border-color:#dbe3ec" placeholder="Pesquisar produto..." oninput="sellerFilterAll(this)"><div id="sellerProducts" class="product-grid"></div>`; const items = window.sellerCatalogMode === 'DEMO' ? window.sellerCatalogItems : window.sellerProducts; if (window.sellerCatalogMode === 'DEMO') sellerCatalogRender(items); else sellerRender(items); updateSellerScrollFloatingBackLabel() }
-function sellerFilterAll(input) { const q = (input.value || '').toLowerCase(); const items = window.sellerCatalogMode === 'DEMO' ? window.sellerCatalogItems : window.sellerProducts; const filtered = items.filter(p => (p.nome + ' ' + (p.sku || '') + ' ' + (p.marca || '')).toLowerCase().includes(q)); if (window.sellerCatalogMode === 'DEMO') sellerCatalogRender(filtered); else sellerRender(filtered) }
+function sellerFilterAll(input) { const q = normSearch(input.value).trim(); const items = window.sellerCatalogMode === 'DEMO' ? window.sellerCatalogItems : window.sellerProducts; const filtered = !q ? items : items.filter(p => productSearchHaystack(p).includes(q)); if (window.sellerCatalogMode === 'DEMO') sellerCatalogRender(filtered); else sellerRender(filtered) }
 function sellerShowSubcategories(catId) { const cat = window.sellerCategories.find(c => c.id === catId); const subs = (window.sellerSubcategories || []).filter(s => s.categoria_id === catId); window._sellerBackNavLevel = 'SUBCATEGORIES'; window.sellerCurrentCatId = catId; window.sellerCurrentSubId = ''; const allItems = window.sellerCatalogMode === 'DEMO' ? window.sellerCatalogItems : window.sellerProducts; const catItems = (allItems || []).filter(p => p.categoria_id === catId); $('#sellerCatalogRoot').innerHTML = `<div class="mobile-nav" style="margin-bottom:14px"><button class="btn" onclick="sellerShowCategories()">← Voltar às categorias</button></div><div class="section-title"><h2>Subcategorias de ${esc(cat?.nome || '')}</h2><span class="muted">${catItems.length} produtos</span></div><div class="grid" style="margin-top:14px;margin-bottom:20px;"><div class="mobile-card" style="cursor:pointer;border-left:4px solid #f97316" onclick="sellerShowProductsSub('','Todos os Produtos (${catItems.length})','${catId}')"><h3>Todos os Produtos</h3><p class="muted">Ver todos os produtos de ${esc(cat?.nome || '')}</p></div>${subs.length ? subs.map(s => { const cnt = (allItems || []).filter(p => p.subcategoria_id === s.id).length; return `<div class="mobile-card" style="cursor:pointer" onclick="sellerShowProductsSub('${s.id}','${esc(s.nome).replace(/'/g, "\\'").replace(/"/g, "&quot;")}','${catId}')"><h3>${esc(s.nome)}</h3><p class="muted">${cnt} produtos</p></div>` }).join('') : '<p class="muted">Nenhuma subcategoria.</p>'}</div><div class="section-title"><h2>Produtos em ${esc(cat?.nome || '')}</h2></div><div id="sellerProducts" class="product-grid" style="margin-top:14px"></div>`; if (window.sellerCatalogMode === 'DEMO') sellerCatalogRender(catItems); else sellerRender(catItems); window.scrollTo({ top: 0, behavior: 'smooth' }); updateSellerScrollFloatingBackLabel() }
 function sellerShowProductsSub(subId, subName, catId) { window._sellerBackNavLevel = 'PRODUCTS_SUB'; window.sellerCurrentSubId = subId; window.sellerCurrentCatId = catId; $('#sellerCatalogRoot').innerHTML = `<div class="mobile-nav" style="margin-bottom:14px;display:flex;gap:8px"><button class="btn" onclick="sellerShowSubcategories('${catId || ''}')">← Subcategorias</button><button class="btn" onclick="sellerShowCategories()">🏠 Categorias</button></div><div class="section-title"><h2>${esc(subName)}</h2></div><div class="form" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;"><input id="sellerSubSearch" class="search" style="grid-column:1/-1" placeholder="Pesquisar produto..." oninput="sellerFilterSub()"><div class="field"><label>Menor preço (R$)</label><input type="number" step="0.01" min="0" id="sellerSubMin" class="search" placeholder="0,00" oninput="sellerFilterSub()"></div><div class="field"><label>Maior preço (R$)</label><input type="number" step="0.01" min="0" id="sellerSubMax" class="search" placeholder="Sem limite" oninput="sellerFilterSub()"></div><div style="grid-column:1/-1;display:flex;gap:8px;margin-top:4px;"><button type="button" class="btn" onclick="const s=$('#sellerSubSearch');if(s)s.value='';const mn=$('#sellerSubMin');if(mn)mn.value='';const mx=$('#sellerSubMax');if(mx)mx.value='';sellerFilterSub()">Limpar filtros</button></div></div><div id="sellerProducts" class="product-grid" style="margin-top:14px"></div>`; sellerFilterSub(); window.scrollTo({ top: 0, behavior: 'smooth' }); updateSellerScrollFloatingBackLabel() }
-function sellerFilterSub() { const q = ($('#sellerSubSearch')?.value || '').trim().toLowerCase(); const minRaw = $('#sellerSubMin')?.value; const maxRaw = $('#sellerSubMax')?.value; const min = minRaw !== '' && minRaw != null ? Number(minRaw) : 0; const max = maxRaw !== '' && maxRaw != null ? Number(maxRaw) : Infinity; const subId = window.sellerCurrentSubId; const catId = window.sellerCurrentCatId; const items = window.sellerCatalogMode === 'DEMO' ? window.sellerCatalogItems : window.sellerProducts; const filtered = (items || []).filter(x => { if (catId && x.categoria_id !== catId) return false; if (subId && x.subcategoria_id !== subId) return false; const price = Number(x.promocao_preco != null ? x.promocao_preco : (x.preco_aplicado ?? x.preco_base)); if (price < min || price > max) return false; if (q && !(x.nome + ' ' + (x.sku || '') + ' ' + (x.codigo_barras || '')).toLowerCase().includes(q)) return false; return true }); if (window.sellerCatalogMode === 'DEMO') sellerCatalogRender(filtered); else sellerRender(filtered) }
+function sellerFilterSub() { const q = normSearch($('#sellerSubSearch')?.value).trim(); const minRaw = $('#sellerSubMin')?.value; const maxRaw = $('#sellerSubMax')?.value; const min = minRaw !== '' && minRaw != null ? Number(minRaw) : 0; const max = maxRaw !== '' && maxRaw != null ? Number(maxRaw) : Infinity; const subId = window.sellerCurrentSubId; const catId = window.sellerCurrentCatId; const items = window.sellerCatalogMode === 'DEMO' ? window.sellerCatalogItems : window.sellerProducts; const filtered = (items || []).filter(x => { if (catId && x.categoria_id !== catId) return false; if (subId && x.subcategoria_id !== subId) return false; const price = Number(x.promocao_preco != null ? x.promocao_preco : (x.preco_aplicado ?? x.preco_base)); if (price < min || price > max) return false; if (q && !productSearchHaystack(x).includes(q)) return false; return true }); if (window.sellerCatalogMode === 'DEMO') sellerCatalogRender(filtered); else sellerRender(filtered) }
 function sellerCatalogRender(items) { const el = $('#sellerProducts') || $('#sellerCatalogList'); if (el) el.innerHTML = items.map(p => { const tName = esc(p.tabela_preco_nome || p.tabela_nome || 'Oferta'); return `<article class="product-card">${productThumbHtml(p, p.marca || 'PRODUTO')}<h4>${esc(p.nome)}</h4><div class="muted">${esc(p.tamanho || p.sabor || p.sku || '')}</div>${p.preco_tabela != null ? `<div class="promo-label">🏷️ ${tName}: ${money(p.preco_tabela)}${Number(p.quantidade_minima) > 1 ? ` a partir de ${p.quantidade_minima} un.` : ''}</div>` : ''}<div class="product-price">${money(p.preco_aplicado ?? p.preco_base)}</div>${Number(p.esgotado) ? '<div class="promo-label" style="background:#b42318">ESGOTADO</div><button class="btn" disabled>Indisponível</button>' : ''}</article>` }).join('') }
-async function sellerDashboard(filterYm) { try { const url = '/api/seller/dashboard/monthly' + (filterYm ? '?mes=' + encodeURIComponent(filterYm) : ''); const x = await api(url); const ymParts = (x.ano_mes || new Date().toISOString().slice(0, 7)).split('-').map(Number); const curYear = ymParts[0] || new Date().getFullYear(); const curMonth = ymParts[1] || (new Date().getMonth() + 1); const meses = [{ v: 1, l: '01 - Jan' }, { v: 2, l: '02 - Fev' }, { v: 3, l: '03 - Mar' }, { v: 4, l: '04 - Abr' }, { v: 5, l: '05 - Mai' }, { v: 6, l: '06 - Jun' }, { v: 7, l: '07 - Jul' }, { v: 8, l: '08 - Ago' }, { v: 9, l: '09 - Set' }, { v: 10, l: '10 - Out' }, { v: 11, l: '11 - Nov' }, { v: 12, l: '12 - Dez' }]; const anos = [2024, 2025, 2026, 2027, 2028, 2029, 2030]; document.body.innerHTML = `<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Painel do mês', `${esc(me.nome)} · Vendas do mês`)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="seller()">← Minha carteira</button><button class="btn" onclick="sellerOrders()">▣ Pedidos</button><button class="btn primary" onclick="sellerDashboard('${filterYm || ''}')">↻ Atualizar</button></div><div class="mobile-card" style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><span style="font-size:13px;font-weight:700">📅 Filtrar Mês/Ano:</span><div style="display:flex;gap:6px"><select id="sellerSelfMonth" class="search" style="padding:6px 10px;font-size:13px;border-radius:8px" onchange="sellerDashboard($('#sellerSelfYear').value+'-'+String(this.value).padStart(2,'0'))">${meses.map(m => `<option value="${m.v}" ${m.v === curMonth ? 'selected' : ''}>${m.l}</option>`).join('')}</select><select id="sellerSelfYear" class="search" style="padding:6px 10px;font-size:13px;border-radius:8px" onchange="sellerDashboard(this.value+'-'+String($('#sellerSelfMonth').value).padStart(2,'0'))">${anos.map(y => `<option value="${y}" ${y === curYear ? 'selected' : ''}>${y}</option>`).join('')}</select></div></div><div class="grid" style="margin-top:12px"><div class="mobile-card"><small class="muted">Pedidos no mês (${esc(x.mes)})</small><h2>${Number(x.pedidos || 0)}</h2></div><div class="mobile-card"><small class="muted">Valor total dos pedidos (${esc(x.mes)})</small><h2 class="orange">${money(x.valor_total)}</h2><p class="muted" style="font-size:16px">Valor dos pedidos emitidos, não apenas pagamentos recebidos.</p></div></div><div class="mobile-card" style="margin-top:12px"><strong>${esc(x.mes || 'Mês atual')}</strong><p class="muted">Considera os pedidos emitidos por você e os pedidos da sua carteira de clientes neste mês.</p></div></div>${bottom('home')}</div>` } catch (e) { alert(e.message) } }
-async function sellerMyRoutes() { try { const x = await api('/api/seller/my-routes'); const dias = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']; const html = x.items.length ? x.items.map(r => `<article class="mobile-card"><div class="route-status">${dias[r.dia_semana] || 'Dia ' + r.dia_semana}</div><h3 style="margin:4px 0">${esc(r.nome)}</h3><div class="muted" style="margin-top:6px"><strong>Bairros:</strong> ${r.bairros.length ? r.bairros.map(b => esc(b)).join(', ') : 'Nenhum bairro cadastrado'}</div></article>`).join('') : '<div class="empty-state">Nenhuma rota designada para você.</div>'; document.body.innerHTML = `<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Minhas Rotas', `${esc(me.nome)} · Rotas Designadas`)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="seller()">← Voltar</button><button class="btn primary" onclick="sellerMyRoutes()">↻ Atualizar</button></div><div class="section-title"><h2>Planejamento da semana</h2><span class="muted">${x.items.length} rotas</span></div>${html}</div>${bottom('clients')}</div>` } catch (e) { alert(e.message) } }
+async function sellerDashboard(filterYm) { captureSellerPortfolioState(); try { const url = '/api/seller/dashboard/monthly' + (filterYm ? '?mes=' + encodeURIComponent(filterYm) : ''); const x = await api(url); const ymParts = (x.ano_mes || new Date().toISOString().slice(0, 7)).split('-').map(Number); const curYear = ymParts[0] || new Date().getFullYear(); const curMonth = ymParts[1] || (new Date().getMonth() + 1); const meses = [{ v: 1, l: '01 - Jan' }, { v: 2, l: '02 - Fev' }, { v: 3, l: '03 - Mar' }, { v: 4, l: '04 - Abr' }, { v: 5, l: '05 - Mai' }, { v: 6, l: '06 - Jun' }, { v: 7, l: '07 - Jul' }, { v: 8, l: '08 - Ago' }, { v: 9, l: '09 - Set' }, { v: 10, l: '10 - Out' }, { v: 11, l: '11 - Nov' }, { v: 12, l: '12 - Dez' }]; const anos = [2024, 2025, 2026, 2027, 2028, 2029, 2030]; document.body.innerHTML = `<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Painel do mês', `${esc(me.nome)} · Vendas do mês`)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="seller()">← Minha carteira</button><button class="btn" onclick="sellerOrders()">▣ Pedidos</button><button class="btn primary" onclick="sellerDashboard('${filterYm || ''}')">↻ Atualizar</button></div><div class="mobile-card" style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><span style="font-size:13px;font-weight:700">📅 Filtrar Mês/Ano:</span><div style="display:flex;gap:6px"><select id="sellerSelfMonth" class="search" style="padding:6px 10px;font-size:13px;border-radius:8px" onchange="sellerDashboard($('#sellerSelfYear').value+'-'+String(this.value).padStart(2,'0'))">${meses.map(m => `<option value="${m.v}" ${m.v === curMonth ? 'selected' : ''}>${m.l}</option>`).join('')}</select><select id="sellerSelfYear" class="search" style="padding:6px 10px;font-size:13px;border-radius:8px" onchange="sellerDashboard(this.value+'-'+String($('#sellerSelfMonth').value).padStart(2,'0'))">${anos.map(y => `<option value="${y}" ${y === curYear ? 'selected' : ''}>${y}</option>`).join('')}</select></div></div><div class="grid" style="margin-top:12px"><div class="mobile-card"><small class="muted">Pedidos no mês (${esc(x.mes)})</small><h2>${Number(x.pedidos || 0)}</h2></div><div class="mobile-card"><small class="muted">Valor total dos pedidos (${esc(x.mes)})</small><h2 class="orange">${money(x.valor_total)}</h2><p class="muted" style="font-size:16px">Valor dos pedidos emitidos, não apenas pagamentos recebidos.</p></div></div><div class="mobile-card" style="margin-top:12px"><strong>${esc(x.mes || 'Mês atual')}</strong><p class="muted">Considera os pedidos emitidos por você e os pedidos da sua carteira de clientes neste mês.</p></div></div>${bottom('home')}</div>` } catch (e) { alert(e.message) } }
+async function sellerMyRoutes() {
+  captureSellerPortfolioState();
+  try {
+    let routeRes = { current: null }, cityRes = { items: [] };
+    try {
+      [routeRes, cityRes] = await Promise.all([
+        api('/api/seller/personal-route').catch(() => ({ current: window._sellerPersonalRoute || null })),
+        api('/api/city-bairros').catch(() => ({ items: [] }))
+      ]);
+      if (routeRes && 'current' in routeRes) await offlinePut('kv', 'sellerPersonalRoute', routeRes.current || null);
+      if (Array.isArray(cityRes?.items) && cityRes.items.length) await offlinePut('kv', 'sellerCityBairros', cityRes.items);
+    } catch (_) {
+      routeRes = { current: await offlineGet('kv', 'sellerPersonalRoute').catch(() => window._sellerPersonalRoute || null) };
+      cityRes = { items: await offlineGet('kv', 'sellerCityBairros').catch(() => []) };
+    }
+    const current = routeRes?.current || window._sellerPersonalRoute || null;
+    if (current) {
+      window._sellerPersonalRoute = current;
+      window._sellerRouteFilterEnabled = Boolean(current.active && current.bairros?.length);
+    }
+    const clientBairros = (window.sellerClients || []).map(c => c.bairro).filter(Boolean);
+    const currentBairros = Array.isArray(current?.bairros) ? current.bairros : [];
+    const bairroMap = new Map();
+    [...(cityRes?.items || []), ...clientBairros, ...currentBairros].forEach(b => {
+      const val = String(b || '').trim();
+      if (!val || val.toLowerCase() === 'sem bairro') return;
+      const key = normSearch(val);
+      if (!bairroMap.has(key)) bairroMap.set(key, val);
+    });
+    const allBairros = Array.from(bairroMap.values()).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    const jsDay = new Date().getDay();
+    const selectedDia = current && Number.isInteger(Number(current.dia_semana)) ? Number(current.dia_semana) : jsDay;
+    const selectedSet = new Set(currentBairros.map(b => normSearch(b)));
+    const curDayInfo = current ? getSellerRouteDayInfo(current.dia_semana) : null;
+
+    const summaryHtml = current ? `
+      <div class="mobile-card" style="margin-bottom:14px;border-left:4px solid ${current.active ? '#fd5e02' : '#64748b'}">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+          <div>
+            <small class="muted">Rota atual salva</small>
+            <h3 style="margin:2px 0">${esc(curDayInfo.label)} · ${current.bairros.length} ${current.bairros.length === 1 ? 'bairro' : 'bairros'}</h3>
+          </div>
+          <span class="badge" style="background:${current.active ? '#fff7ed' : '#f1f5f9'};color:${current.active ? '#c2410c' : '#475569'};border:1px solid ${current.active ? '#fdba74' : '#cbd5e1'}">${current.active ? 'Ativa na carteira' : 'Pausada (modo normal)'}</span>
+        </div>
+        <div class="muted" style="margin-top:8px;font-size:13px">${current.bairros.map(b => esc(b)).join(' · ')}</div>
+      </div>
+    ` : '<div class="mobile-card" style="margin-bottom:14px"><span class="muted">Nenhuma rota programada ainda. Selecione um dia e os bairros abaixo se desejar filtrar sua carteira automaticamente, ou mantenha o modo normal.</span></div>';
+
+    document.body.innerHTML = `
+      <div class="mobile-shell">
+        <div class="mobile-content">
+          ${mobileHeader('Minhas Rotas', `${esc(me.nome)} · Minha Programação`)}
+          <div class="mobile-nav" style="margin-top:15px">
+            <button class="btn" onclick="seller()">← Voltar</button>
+            <button class="btn primary" onclick="sellerMyRoutes()">↻ Atualizar</button>
+          </div>
+          <div class="section-title">
+            <h2>Planejamento da semana</h2>
+            <span class="muted" id="sellerRouteSelectedCount">${selectedSet.size} selecionado(s)</span>
+          </div>
+          ${summaryHtml}
+          <form id="sellerPersonalRouteForm" class="mobile-card form" style="display:grid;grid-template-columns:1fr;gap:12px">
+            <div class="field">
+              <label>Dia da Semana</label>
+              <select id="sellerRouteDiaSelect" name="dia_semana" required>
+                ${SELLER_ROUTE_DAYS.map(d => `<option value="${d.value}" ${d.value === selectedDia ? 'selected' : ''}>${esc(d.label)}</option>`).join('')}
+              </select>
+            </div>
+            <div class="field">
+              <label>Bairros desejados</label>
+              <input id="sellerRouteBairroSearch" type="text" class="search" placeholder="🔍 Pesquisar bairro (sem precisar acento)..." oninput="filterSellerRouteBairros(this.value)" style="margin-bottom:8px">
+              <div id="sellerRouteBairrosGrid" class="seller-route-bairros-grid">
+                ${allBairros.length ? allBairros.map(b => {
+                  const key = normSearch(b);
+                  const isSel = selectedSet.has(key);
+                  return `<label class="seller-route-bairro-chip ${isSel ? 'selected' : ''}" data-bsearch="${esc(key)}"><input type="checkbox" class="seller-route-bairro-cb" value="${esc(b)}" ${isSel ? 'checked' : ''} onchange="onSellerRouteBairroCheck(this)"> <span>${esc(b)}</span></label>`;
+                }).join('') : '<span class="muted">Nenhum bairro encontrado.</span>'}
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button type="submit" class="btn primary" style="flex:1;min-width:200px">✓ Salvar e Ativar Rota</button>
+              ${current ? `<button type="button" class="btn" style="flex:1;min-width:180px" onclick="deactivateSellerPersonalRoute()">Desativar Modo Rota</button>` : ''}
+            </div>
+          </form>
+        </div>
+        ${bottom('clients')}
+      </div>
+    `;
+    const form = document.getElementById('sellerPersonalRouteForm');
+    if (form) {
+      form.onsubmit = async (e) => {
+        e.preventDefault();
+        const dia = Number(document.getElementById('sellerRouteDiaSelect')?.value);
+        const bairros = [...document.querySelectorAll('.seller-route-bairro-cb:checked')].map(cb => cb.value.trim()).filter(Boolean);
+        if (!bairros.length) return toastRole('Selecione pelo menos um bairro para salvar a rota.', true);
+        try {
+          toastRole('Salvando programação de rota...');
+          const res = await api('/api/seller/personal-route', {
+            method: 'PUT',
+            body: JSON.stringify({ dia_semana: dia, bairros, active: true })
+          });
+          window._sellerPersonalRoute = res.current;
+          window._sellerRouteFilterEnabled = true;
+          window._sellerSavedBairro = '';
+          try { await offlinePut('kv', 'sellerPersonalRoute', res.current); } catch (_) { }
+          toastRole('Rota programada e ativada na carteira!');
+          await seller();
+        } catch (err) {
+          toastRole(err.message, true);
+        }
+      };
+    }
+  } catch (e) {
+    alert(e.message);
+  }
+}
+function filterSellerRouteBairros(q) {
+  const nq = normSearch(q).trim();
+  document.querySelectorAll('#sellerRouteBairrosGrid .seller-route-bairro-chip').forEach(el => {
+    el.style.display = !nq || (el.dataset.bsearch || '').includes(nq) ? 'inline-flex' : 'none';
+  });
+}
+function onSellerRouteBairroCheck(cb) {
+  const chip = cb.closest('.seller-route-bairro-chip');
+  if (chip) chip.classList.toggle('selected', cb.checked);
+  const cnt = document.querySelectorAll('.seller-route-bairro-cb:checked').length;
+  const el = document.getElementById('sellerRouteSelectedCount');
+  if (el) el.textContent = `${cnt} selecionado(s)`;
+}
+async function deactivateSellerPersonalRoute() {
+  try {
+    toastRole('Desativando modo rota...');
+    const res = await api('/api/seller/personal-route/toggle', {
+      method: 'PATCH',
+      body: JSON.stringify({ active: false })
+    });
+    if (res?.current) {
+      window._sellerPersonalRoute = res.current;
+      try { await offlinePut('kv', 'sellerPersonalRoute', res.current); } catch (_) { }
+    }
+    window._sellerRouteFilterEnabled = false;
+    toastRole('Modo rota desativado. Voltando ao modo normal.');
+    await seller();
+  } catch (err) {
+    window._sellerRouteFilterEnabled = false;
+    toastRole(err.message, true);
+  }
+}
+window.filterSellerRouteBairros = filterSellerRouteBairros;
+window.onSellerRouteBairroCheck = onSellerRouteBairroCheck;
+window.deactivateSellerPersonalRoute = deactivateSellerPersonalRoute;
 async function sellerEditOrder(id) {
   try {
     const x = await api('/api/orders/' + id + '/detail'); const cidParam = x.order?.cliente_id ? '&cliente_id=' + encodeURIComponent(x.order.cliente_id) : ''; let products = { items: [], total: 0 }; for (let page = 1, done = false; !done; page++) { const pg = await api('/api/products?limit=100&page=' + page + cidParam); products.items.push(...pg.items); products.total = pg.total; done = products.items.length >= pg.total || !pg.items.length }
@@ -853,7 +1177,7 @@ async function sellerEditOrder(id) {
   } catch (e) { alert(e.message) }
 }
 function renderSellerOrderItems() { const h = $('#sellerOrderItems'); if (!h) return; h.innerHTML = [...window.sellerOrderItems.values()].map(i => { const catProd = (window.sellerOrderCatalog || []).find(x => x.id === i.produto_id) || i; const hasTier = catProd?.preco_tabela != null && Number(catProd?.quantidade_minima) > 1; const tName = esc(catProd?.tabela_preco_nome || catProd?.tabela_nome || 'Oferta'); return `<div class="seller-edit-item" style="flex-wrap:wrap;gap:6px"><div style="flex:1;min-width:160px"><strong>${esc(i.nome)}</strong>${hasTier ? `<small style="display:block;color:var(--xv-orange,#fd5e02);font-weight:750;cursor:pointer" onclick="window.sellerOrderItems.get('${i.produto_id}').quantidade=${Number(catProd.quantidade_minima)};renderSellerOrderItems()">🏷️ ${tName}: ${money(catProd.preco_tabela)} (mín. ${catProd.quantidade_minima} un.) · <u>Usar ${catProd.quantidade_minima} un.</u></small>` : ''}</div><input type="number" min="1" max="100000" value="${Number(i.quantidade)}" oninput="window.sellerOrderItems.get('${i.produto_id}').quantidade=Number(this.value)"><button type="button" class="btn danger" onclick="window.sellerOrderItems.delete('${i.produto_id}');renderSellerOrderItems()">Remover</button></div>` }).join('') || '<span class="muted">Adicione um item.</span>' }
-function filterSellerOrderCatalog(input) { const q = (input.value || '').toLowerCase().trim(); const items = (window.sellerOrderCatalog || []).filter(p => (p.nome + ' ' + (p.sku || '') + ' ' + (p.codigo_barras || '')).toLowerCase().includes(q)); $('#sellerOrderCatalog').innerHTML = items.map(p => { const tName = esc(p.tabela_preco_nome || p.tabela_nome || 'Oferta'); const hasMin = p.preco_tabela != null && Number(p.quantidade_minima) > 1; return `<div class="order-catalog-item" style="flex-wrap:wrap;gap:6px"><span><strong>${esc(p.nome)}</strong><small>${esc(p.sku || 'Sem SKU')} · ${money(p.preco_aplicado ?? p.preco_base)}</small>${p.preco_tabela != null ? `<small style="display:block;color:var(--xv-orange,#fd5e02);font-weight:750">🏷️ ${tName}: ${money(p.preco_tabela)}${hasMin ? ` (a partir de ${p.quantidade_minima} un.)` : ''}</small>` : ''}</span><div style="display:flex;gap:6px;flex-wrap:wrap">${hasMin ? `<button type="button" class="btn primary" style="padding:5px 10px;font-size:12px" onclick="addSellerOrderItem('${p.id}',${Number(p.quantidade_minima)})">⚡ Mín. ${p.quantidade_minima} un.</button>` : ''}<button type="button" class="btn" onclick="addSellerOrderItem('${p.id}',1)">Adicionar</button></div></div>` }).join('') || '<span class="muted">Nenhum produto encontrado.</span>' }
+function filterSellerOrderCatalog(input) { const q = normSearch(input.value).trim(); const items = (window.sellerOrderCatalog || []).filter(p => !q || productSearchHaystack(p).includes(q)); $('#sellerOrderCatalog').innerHTML = items.map(p => { const tName = esc(p.tabela_preco_nome || p.tabela_nome || 'Oferta'); const hasMin = p.preco_tabela != null && Number(p.quantidade_minima) > 1; return `<div class="order-catalog-item" style="flex-wrap:wrap;gap:6px"><span><strong>${esc(p.nome)}</strong><small>${esc(p.sku || 'Sem SKU')} · ${money(p.preco_aplicado ?? p.preco_base)}</small>${p.preco_tabela != null ? `<small style="display:block;color:var(--xv-orange,#fd5e02);font-weight:750">🏷️ ${tName}: ${money(p.preco_tabela)}${hasMin ? ` (a partir de ${p.quantidade_minima} un.)` : ''}</small>` : ''}</span><div style="display:flex;gap:6px;flex-wrap:wrap">${hasMin ? `<button type="button" class="btn primary" style="padding:5px 10px;font-size:12px" onclick="addSellerOrderItem('${p.id}',${Number(p.quantidade_minima)})">⚡ Mín. ${p.quantidade_minima} un.</button>` : ''}<button type="button" class="btn" onclick="addSellerOrderItem('${p.id}',1)">Adicionar</button></div></div>` }).join('') || '<span class="muted">Nenhum produto encontrado.</span>' }
 function addSellerOrderItem(id, qtyToAdd = 1) { const p = (window.sellerOrderCatalog || []).find(x => x.id === id); if (!p) return; const q = Math.max(1, Number(qtyToAdd) || 1); if (window.sellerOrderItems.has(id)) window.sellerOrderItems.get(id).quantidade += q; else window.sellerOrderItems.set(id, { ...p, produto_id: id, quantidade: q, nome: p.nome }); renderSellerOrderItems(); filterSellerOrderCatalog($('#sellerOrderSearch')) }
 // Miniatura padronizada usada pelo Vendedor Externo e pela Loja Online (object-fit: contain, nunca corta a imagem).
 function productThumbHtml(p, label) { return `<div class="product-thumb">${p.foto_url ? `<img src="${esc(p.foto_url)}" alt="${esc(p.nome)}" loading="lazy" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='grid'"><span class="product-image-fallback" style="display:none"></span>` : `<span class="product-image-fallback" style="display:grid"></span>`}</div>` }
@@ -1075,7 +1399,7 @@ async function sellerCancelOrder(id, numero, returnClientId = null) {
 }
 window.sellerCancelOrder = sellerCancelOrder;
 
-async function sellerClientProfile(id) { try { const x = await api('/api/clients/' + id + '/profile'); document.body.innerHTML = `<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Perfil do cliente', `${esc(me.nome)} · ${esc(x.client.razao_social)}`)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="seller()">← Carteira</button><button class="btn" style="background:#e0f2fe;color:#0369a1;border-color:#bae6fd;font-weight:700;" onclick="sellerEditClient('${x.client?.id || id}')">✏️ Editar dados</button><button class="btn primary" onclick="sellerNewOrder('${x.client?.id || id}')">＋ Novo pedido</button><button class="btn" onclick="sellerRepeatClient('${id}')">↻ Repetir último pedido</button><button class="btn" onclick="crmInteractionsModal('${id}', parseJsonArg('${jsonArg(x.client.razao_social || x.client.nome_fantasia)}'))">📝 CRM</button>${x.client.telefone ? `<button class="btn-crm-wpp" onclick="openCrmWhatsApp('${x.client.telefone}', parseJsonArg('${jsonArg(x.client.razao_social || x.client.nome_fantasia)}'), null, parseJsonArg('${jsonArg(JSON.stringify((x.topProdutos || []).map(p => p.nome)))}'))">📲 WhatsApp</button>` : ''}<button class="btn danger" onclick="sellerDeleteClient('${x.client?.id || id}', parseJsonArg('${jsonArg(x.client.razao_social || x.client.nome_fantasia)}'))">🗑️ Excluir cliente</button></div><div class="grid"><div class="mobile-card"><small>Pedidos</small><h2>${x.summary?.pedidos || 0}</h2></div><div class="mobile-card"><small>Faturado</small><h2>${money(x.summary?.faturado)}</h2></div><div class="mobile-card"><small>Em aberto</small><h2>${money(x.summary?.em_aberto)}</h2></div></div><div class="mobile-card"><h3>${esc(x.client.razao_social)}</h3><p class="muted">${esc(x.client.endereco || '')} · ${esc(x.client.bairro || '')} · ${esc(x.client.cidade || '')} ${x.client.telefone ? '· Tel: ' + esc(x.client.telefone) : ''}</p></div><div class="mobile-card"><h3>Mais comprados</h3>${x.topProdutos.map(p => `<p><strong>${esc(p.nome)}</strong> — ${p.quantidade} un. (${money(p.faturamento)})</p>`).join('') || '<p class="muted">Sem histórico concluído.</p>'}</div><div class="mobile-card"><h3>Histórico de pedidos</h3>${x.orders.map(o => `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f1f5f9;flex-wrap:wrap;gap:6px;"><div><strong>${esc(o.numero)}</strong> · <span class="badge status-${String(o.status).toLowerCase()}">${esc(o.status)}</span> · <strong>${money(o.total)}</strong></div><div style="display:flex;gap:5px;"><button class="btn" style="padding:4px 8px;font-size:12px;" onclick="downloadAuthFile('/api/orders/${o.id}/pdf','pedido-${o.numero}.pdf')">PDF</button>${['PENDENTE', 'SEPARACAO'].includes(o.status) ? `<button class="btn danger" style="padding:4px 8px;font-size:12px;" onclick="sellerCancelOrder('${o.id}','${esc(o.numero)}','${id}')">🗑️ Excluir</button>` : ''}</div></div>`).join('') || '<p class="muted">Nenhum pedido realizado.</p>'}</div></div>${bottom('clients')}</div>` } catch (e) { alert(e.message) } }
+async function sellerClientProfile(id) { captureSellerPortfolioState(); try { const x = await api('/api/clients/' + id + '/profile'); document.body.innerHTML = `<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Perfil do cliente', `${esc(me.nome)} · ${esc(x.client.razao_social)}`)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="seller()">← Carteira</button><button class="btn" style="background:#e0f2fe;color:#0369a1;border-color:#bae6fd;font-weight:700;" onclick="sellerEditClient('${x.client?.id || id}')">✏️ Editar dados</button><button class="btn primary" onclick="sellerNewOrder('${x.client?.id || id}')">＋ Novo pedido</button><button class="btn" onclick="sellerRepeatClient('${id}')">↻ Repetir último pedido</button><button class="btn" onclick="crmInteractionsModal('${id}', parseJsonArg('${jsonArg(x.client.razao_social || x.client.nome_fantasia)}'))">📝 CRM</button>${x.client.telefone ? `<button class="btn-crm-wpp" onclick="openCrmWhatsApp('${x.client.telefone}', parseJsonArg('${jsonArg(x.client.razao_social || x.client.nome_fantasia)}'), null, parseJsonArg('${jsonArg(JSON.stringify((x.topProdutos || []).map(p => p.nome)))}'))">📲 WhatsApp</button>` : ''}<button class="btn danger" onclick="sellerDeleteClient('${x.client?.id || id}', parseJsonArg('${jsonArg(x.client.razao_social || x.client.nome_fantasia)}'))">🗑️ Excluir cliente</button></div><div class="grid"><div class="mobile-card"><small>Pedidos</small><h2>${x.summary?.pedidos || 0}</h2></div><div class="mobile-card"><small>Faturado</small><h2>${money(x.summary?.faturado)}</h2></div><div class="mobile-card"><small>Em aberto</small><h2>${money(x.summary?.em_aberto)}</h2></div></div><div class="mobile-card"><h3>${esc(x.client.razao_social)}</h3><p class="muted">${esc(x.client.endereco || '')} · ${esc(x.client.bairro || '')} · ${esc(x.client.cidade || '')} ${x.client.telefone ? '· Tel: ' + esc(x.client.telefone) : ''}</p></div><div class="mobile-card"><h3>Mais comprados</h3>${x.topProdutos.map(p => `<p><strong>${esc(p.nome)}</strong> — ${p.quantidade} un. (${money(p.faturamento)})</p>`).join('') || '<p class="muted">Sem histórico concluído.</p>'}</div><div class="mobile-card"><h3>Histórico de pedidos</h3>${x.orders.map(o => `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f1f5f9;flex-wrap:wrap;gap:6px;"><div><strong>${esc(o.numero)}</strong> · <span class="badge status-${String(o.status).toLowerCase()}">${esc(o.status)}</span> · <strong>${money(o.total)}</strong></div><div style="display:flex;gap:5px;"><button class="btn" style="padding:4px 8px;font-size:12px;" onclick="downloadAuthFile('/api/orders/${o.id}/pdf','pedido-${o.numero}.pdf')">PDF</button>${['PENDENTE', 'SEPARACAO'].includes(o.status) ? `<button class="btn danger" style="padding:4px 8px;font-size:12px;" onclick="sellerCancelOrder('${o.id}','${esc(o.numero)}','${id}')">🗑️ Excluir</button>` : ''}</div></div>`).join('') || '<p class="muted">Nenhum pedido realizado.</p>'}</div></div>${bottom('clients')}</div>` } catch (e) { alert(e.message) } }
 
 function getSellerDiscountCalculations(subtotal) {
   const type = window._sellerCurrentDiscountType || 'VALOR';
@@ -1175,6 +1499,7 @@ async function sellerClearCartAndDraft() {
 }
 
 async function sellerNewOrder(clientOrId) {
+  captureSellerPortfolioState();
   try { getSellerOrderLocation().catch(() => { }); } catch (_) { }
 
   try {
@@ -1219,7 +1544,7 @@ async function sellerNewOrder(clientOrId) {
     window.sellerSubcategories = cats.subcategorias || [];
     window.sellerOrderItems = new Map();
     window.sellerCatalogMode = 'ORDER';
-    document.body.innerHTML = `<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Novo pedido', `${esc(client.razao_social || client.nome_fantasia || 'Cliente')} · Vendedor externo`)}<div class="mobile-nav" style="margin-top:15px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><button class="btn" onclick="seller()">← Voltar</button><button class="btn" onclick="sellerOrders()">Pedidos</button><button id="sellerFloatingCart" class="btn seller-floating-cart-btn" type="button" aria-label="Abrir carrinho do pedido" onclick="openSellerFloatingCart()"><span class="seller-cart-icon">🛒</span><span id="sellerFloatingCartLabel">Carrinho</span><b id="sellerFloatingCartCount">0</b></button></div><div id="sellerCatalogRoot" style="margin-top:12px"></div><section class="mobile-card seller-cart-dashboard" style="margin-top:18px"><div class="section-title"><h2>Carrinho do pedido</h2><span id="sellerCartCount" class="badge">0 itens</span></div><div id="sellerCartItems" class="seller-cart-items"><span class="muted">Nenhum produto selecionado.</span></div><div class="form" style="margin-top:14px"><div class="field"><label>Desconto</label><div style="display:flex;gap:6px"><select id="sellerDiscountType" style="width:110px" onchange="syncSellerCartDiscountFromPage()"><option value="VALOR">R$ valor</option><option value="PERCENTUAL">%</option></select><input id="sellerDiscount" type="number" min="0" step="0.01" value="0" style="flex:1" oninput="syncSellerCartDiscountFromPage()"></div></div><div class="field" style="grid-column:1/-1"><label>Observação</label><textarea id="sellerObs" rows="2" oninput="syncSellerCartObsFromPage()"></textarea></div></div><div class="seller-cart-summary-box" style="margin-top:14px;padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;"><div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:6px"><span>Subtotal dos itens:</span><strong id="sellerCartSubtotal">${money(0)}</strong></div><div id="sellerCartDiscountRow" style="display:none;justify-content:space-between;font-size:14px;color:#16a34a;margin-bottom:6px"><span>Desconto aplicado:</span><strong id="sellerCartDiscountDisplay">-R$ 0,00</strong></div><div class="seller-cart-total" style="display:flex;justify-content:space-between;font-size:17px;font-weight:800;border-top:1px solid #cbd5e1;padding-top:8px;color:var(--xv-brand-navy,#061a4f)"><span>Total a pagar:</span><strong id="sellerCartTotal" class="orange">${money(0)}</strong></div></div><button class="btn primary seller-finalize" style="width:100%;margin-top:14px;padding:12px;font-size:16px;font-weight:750" onclick="submitSellerOrder('${client.id}')">Finalizar pedido e gerar PDF</button></section></div></div>`;
+    document.body.innerHTML = `<div class="mobile-shell seller-order-shell"><div class="mobile-content">${mobileHeader('Novo pedido', `${esc(client.razao_social || client.nome_fantasia || 'Cliente')} · Vendedor externo`)}<div class="mobile-nav" style="margin-top:15px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><button class="btn" onclick="seller()">← Voltar</button><button class="btn" onclick="sellerOrders()">Pedidos</button><button id="sellerFloatingCart" class="btn seller-floating-cart-btn" type="button" aria-label="Abrir carrinho do pedido" onclick="openSellerFloatingCart()"><span class="seller-cart-icon">🛒</span><span id="sellerFloatingCartLabel">Carrinho</span><b id="sellerFloatingCartCount">0</b></button></div><div id="sellerCatalogRoot" style="margin-top:12px"></div><section class="mobile-card seller-cart-dashboard" style="margin-top:18px"><div class="section-title"><h2>Carrinho do pedido</h2><span id="sellerCartCount" class="badge">0 itens</span></div><div id="sellerCartItems" class="seller-cart-items"><span class="muted">Nenhum produto selecionado.</span></div><div class="form" style="margin-top:14px"><div class="field"><label>Desconto</label><div style="display:flex;gap:6px"><select id="sellerDiscountType" style="width:110px" onchange="syncSellerCartDiscountFromPage()"><option value="VALOR">R$ valor</option><option value="PERCENTUAL">%</option></select><input id="sellerDiscount" type="number" min="0" step="0.01" value="0" style="flex:1" oninput="syncSellerCartDiscountFromPage()"></div></div><div class="field" style="grid-column:1/-1"><label>Observação</label><textarea id="sellerObs" rows="2" oninput="syncSellerCartObsFromPage()"></textarea></div></div><div class="seller-cart-summary-box" style="margin-top:14px;padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;"><div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:6px"><span>Subtotal dos itens:</span><strong id="sellerCartSubtotal">${money(0)}</strong></div><div id="sellerCartDiscountRow" style="display:none;justify-content:space-between;font-size:14px;color:#16a34a;margin-bottom:6px"><span>Desconto aplicado:</span><strong id="sellerCartDiscountDisplay">-R$ 0,00</strong></div><div class="seller-cart-total" style="display:flex;justify-content:space-between;font-size:17px;font-weight:800;border-top:1px solid #cbd5e1;padding-top:8px;color:var(--xv-brand-navy,#061a4f)"><span>Total a pagar:</span><strong id="sellerCartTotal" class="orange">${money(0)}</strong></div></div><button class="btn primary seller-finalize" style="width:100%;margin-top:14px;padding:12px;font-size:16px;font-weight:750" onclick="submitSellerOrder('${client.id}')">Finalizar pedido e gerar PDF</button></section></div><button id="sellerMinimalCartFab" class="seller-cart-fab" type="button" aria-label="Abrir carrinho do pedido" onclick="openSellerFloatingCart()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2.5 3.5h2.5l2.3 11.2a1.5 1.5 0 0 0 1.5 1.2h8.8a1.5 1.5 0 0 0 1.45-1.1L21 7.5H6"/></svg></button></div>`;
     sellerShowCategories();
     renderSellerNewOrderCart();
     initSellerFloatingCart();
@@ -1380,7 +1705,7 @@ function initSellerScrollFloatingBack() {
 }
 window.handleSellerScrollFloatingBack = handleSellerScrollFloatingBack;
 window.initSellerScrollFloatingBack = initSellerScrollFloatingBack;
-function sellerFilter(i) { sellerRender(window.sellerProducts.filter(x => (x.nome + ' ' + x.sku + ' ' + (x.marca || '')).toLowerCase().includes(i.value.toLowerCase()))) }
+function sellerFilter(i) { const q = normSearch(i.value).trim(); sellerRender(!q ? window.sellerProducts : window.sellerProducts.filter(x => productSearchHaystack(x).includes(q))) }
 
 async function getSellerOrderLocation() {
   try {
@@ -1437,6 +1762,11 @@ async function submitSellerOrder(clientId) {
   const obs = (window._sellerCurrentObs !== undefined ? window._sellerCurrentObs : ($('#sellerObs')?.value || $('#sellerFloatingObs')?.value || '')).trim();
 
   const itens = items.map(x => ({ produto_id: x.produto_id, quantidade: Number(x.quantidade) }));
+  window._sellerLastOrderedClientId = targetClientId;
+  window._sellerPendingFocusAfterOrder = true;
+  window._sellerSavedSearch = '';
+  const searchInput = document.getElementById('sellerClientSearch');
+  if (searchInput) searchInput.value = '';
   window.sellerOrderItems = new Map();
   closeSellerFloatingCart();
   toastRole('Enviando pedido...');
@@ -1451,10 +1781,10 @@ async function submitSellerOrder(clientId) {
     roleRealtimeRefresh('orders_changed');
   } catch (e) { toastRole(e.message, true) }
 }
-async function sellerStock() { const x = await api('/api/seller/stock'); window._sellerBackNavLevel = 'STOCK'; document.body.innerHTML = `<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Estoque disponível', `${esc(me.nome)} · Somente consulta`)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="seller()">← Clientes</button><button class="btn" onclick="sellerOrders()">▣ Pedidos</button><button class="btn primary" onclick="sellerStock()">↻ Atualizar</button></div><div class="mobile-card"><input id="sellerStockSearch" class="search" style="background:#fff;color:#172033" placeholder="Pesquisar produto" oninput="sellerStockFilter(this)"></div><div id="sellerStockList">${x.items.map(sellerStockRow).join('')}</div></div></div>`; initSellerScrollFloatingBack() }
-function sellerStockRow(x) { return `<article class="mobile-card seller-stock-row" data-search="${esc((x.nome + ' ' + x.sku + ' ' + (x.descricao || '')).toLowerCase())}"><div class="route-row">${x.foto_url ? `<img class="catalog-mini-photo" src="${esc(x.foto_url)}" alt="${esc(x.nome)}" onerror="this.style.display='none'">` : `<div class="client-icon">◉</div>`}<div><h3>${esc(x.nome)}</h3><div class="muted">SKU: ${esc(x.sku)}</div><div class="muted">${esc(x.descricao || 'Sem descrição')}</div></div><strong class="orange">${x.quantidade_disponivel}</strong></div></article>` }
-function sellerStockFilter(i) { const q = i.value.toLowerCase(); document.querySelectorAll('.seller-stock-row').forEach(x => x.style.display = x.dataset.search.includes(q) ? '' : 'none') }
-async function sellerOrders() { let x; try { x = await api('/api/orders'); await offlinePut('kv', 'sellerOrders', x) } catch (e) { x = await offlineGet('kv', 'sellerOrders') || { items: [] } } document.body.innerHTML = `<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Meus pedidos', `${esc(me.nome)} · Apenas pedidos do vendedor`)}<div class="mobile-nav" style="margin-top:15px;display:flex;gap:6px;flex-wrap:wrap;"><button class="btn" onclick="seller()">♙ Clientes</button><button class="btn primary" onclick="sellerOrders()">↻ Atualizar</button><button class="btn" onclick="sellerDashboard()">▦ Painel do mês</button></div><div class="section-title"><h2>Histórico</h2><span class="muted">${x.items.length} pedidos</span></div>${x.items.map(o => `<article class="mobile-card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:10px"><strong>${esc(o.numero)}</strong><span class="badge status-${String(o.status).toLowerCase()}">${esc(({ PENDENTE: 'Pendente', SEPARACAO: 'Em separação', ROTA: 'Em rota', CONCLUIDO: 'Concluído', CANCELADO: 'Cancelado' })[o.status] || o.status)}</span></div><h3 style="margin-top:8px">${esc(o.cliente_nome)}</h3><div class="muted">${formatBrasiliaDateTime(o.created_at)} · ${esc(o.origem)}</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:8px"><strong class="orange" style="font-size:20px">${money(o.total)}</strong><div style="display:flex;gap:6px;flex-wrap:wrap">${o.status === 'PENDENTE' ? `<button class="btn primary" onclick="sellerEditOrder('${o.id}')">Editar pedido</button>` : ''}<button class="btn" onclick="downloadAuthFile('/api/orders/${o.id}/pdf','pedido-${o.numero}.pdf')">Ver PDF</button>${['PENDENTE', 'SEPARACAO'].includes(o.status) ? `<button class="btn danger" onclick="sellerCancelOrder('${o.id}','${esc(o.numero)}')">🗑️ Excluir pedido</button>` : ''}</div></div></article>`).join('') || '<div class="empty-state">Nenhum pedido encontrado.</div>'}</div>${bottom('orders')}</div>` }
+async function sellerStock() { captureSellerPortfolioState(); const x = await api('/api/seller/stock'); window._sellerBackNavLevel = 'STOCK'; document.body.innerHTML = `<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Estoque disponível', `${esc(me.nome)} · Somente consulta`)}<div class="mobile-nav" style="margin-top:15px"><button class="btn" onclick="seller()">← Clientes</button><button class="btn" onclick="sellerOrders()">▣ Pedidos</button><button class="btn primary" onclick="sellerStock()">↻ Atualizar</button></div><div class="mobile-card"><input id="sellerStockSearch" class="search" style="background:#fff;color:#172033" placeholder="Pesquisar produto" oninput="sellerStockFilter(this)"></div><div id="sellerStockList">${x.items.map(sellerStockRow).join('')}</div></div></div>`; initSellerScrollFloatingBack() }
+function sellerStockRow(x) { return `<article class="mobile-card seller-stock-row" data-search="${esc(productSearchHaystack(x))}"><div class="route-row">${x.foto_url ? `<img class="catalog-mini-photo" src="${esc(x.foto_url)}" alt="${esc(x.nome)}" onerror="this.style.display='none'">` : `<div class="client-icon">◉</div>`}<div><h3>${esc(x.nome)}</h3><div class="muted">SKU: ${esc(x.sku)}</div><div class="muted">${esc(x.descricao || 'Sem descrição')}</div></div><strong class="orange">${x.quantidade_disponivel}</strong></div></article>` }
+function sellerStockFilter(i) { const q = normSearch(i.value).trim(); document.querySelectorAll('.seller-stock-row').forEach(x => x.style.display = !q || x.dataset.search.includes(q) ? '' : 'none') }
+async function sellerOrders() { captureSellerPortfolioState(); let x; try { x = await api('/api/orders'); await offlinePut('kv', 'sellerOrders', x) } catch (e) { x = await offlineGet('kv', 'sellerOrders') || { items: [] } } document.body.innerHTML = `<div class="mobile-shell"><div class="mobile-content">${mobileHeader('Meus pedidos', `${esc(me.nome)} · Apenas pedidos do vendedor`)}<div class="mobile-nav" style="margin-top:15px;display:flex;gap:6px;flex-wrap:wrap;"><button class="btn" onclick="seller()">♙ Clientes</button><button class="btn primary" onclick="sellerOrders()">↻ Atualizar</button><button class="btn" onclick="sellerDashboard()">▦ Painel do mês</button></div><div class="section-title"><h2>Histórico</h2><span class="muted">${x.items.length} pedidos</span></div>${x.items.map(o => `<article class="mobile-card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:10px"><strong>${esc(o.numero)}</strong><span class="badge status-${String(o.status).toLowerCase()}">${esc(({ PENDENTE: 'Pendente', SEPARACAO: 'Em separação', ROTA: 'Em rota', CONCLUIDO: 'Concluído', CANCELADO: 'Cancelado' })[o.status] || o.status)}</span></div><h3 style="margin-top:8px">${esc(o.cliente_nome)}</h3><div class="muted">${formatBrasiliaDateTime(o.created_at)} · ${esc(o.origem)}</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:8px"><strong class="orange" style="font-size:20px">${money(o.total)}</strong><div style="display:flex;gap:6px;flex-wrap:wrap">${o.status === 'PENDENTE' ? `<button class="btn primary" onclick="sellerEditOrder('${o.id}')">Editar pedido</button>` : ''}<button class="btn" onclick="downloadAuthFile('/api/orders/${o.id}/pdf','pedido-${o.numero}.pdf')">Ver PDF</button>${['PENDENTE', 'SEPARACAO'].includes(o.status) ? `<button class="btn danger" onclick="sellerCancelOrder('${o.id}','${esc(o.numero)}')">🗑️ Excluir pedido</button>` : ''}</div></div></article>`).join('') || '<div class="empty-state">Nenhum pedido encontrado.</div>'}</div>${bottom('orders')}</div>` }
 function pdvGetDefaultClient() { return (window.pdvClients || []).find(x => x.id === 'CLIENTE-BALCAO' || x.razao_social === 'Cliente Balcão') || { id: 'CLIENTE-BALCAO', razao_social: 'Cliente Balcão' } }
 function pdvResetClient() { const def = pdvGetDefaultClient(); const hidden = $('#pdvClient'), search = $('#pdvClientSearch'), badge = $('#pdvClientBadge'), drop = $('#pdvClientDropdown'); if (hidden) hidden.value = def.id; if (search) { search.value = ''; search.focus() } if (badge) badge.textContent = 'Cliente Balcão (Padrão)'; if (drop) drop.style.display = 'none'; if (search) pdvClientInput(search) }
 async function pdvSelectClient(id) { const c = (window.pdvClients || []).find(x => x.id === id); if (!c) return; const hidden = $('#pdvClient'), search = $('#pdvClientSearch'), badge = $('#pdvClientBadge'), drop = $('#pdvClientDropdown'); if (hidden) hidden.value = c.id; const name = c.razao_social || c.nome_fantasia || 'Cliente'; if (search) search.value = name; const isDefault = c.id === 'CLIENTE-BALCAO' || name === 'Cliente Balcão'; if (badge) badge.textContent = isDefault ? 'Cliente Balcão (Padrão)' : name; if (drop) drop.style.display = 'none'; try { const result = await api('/api/products?cliente_id=' + encodeURIComponent(c.id)); const byId = new Map(result.items.map(product => [product.id, product])); window.pdvProducts = window.pdvProducts.map(product => ({ ...(byId.get(product.id) || product), quantidade_disponivel: product.quantidade_disponivel, quantidade_reservada: product.quantidade_reservada, estoque_minimo: product.estoque_minimo })); const curSearch = $('#pdvSearch'); if (curSearch && curSearch.value.trim()) pdvFilter(curSearch); else pdvRender([]); pdvCartRender() } catch (error) { toastRole('Nao foi possivel atualizar os precos deste cliente. O servidor recalculara ao finalizar.', true) } }
@@ -1501,7 +1831,7 @@ function pdvSetCartQty(id, minQty) { const p = window.pdvProducts.find(x => x.id
 function pdvChangeSearchQty(id, delta, max) { const el = $('#pdvSearchQty_' + id); if (!el) return; const cur = Math.max(1, Number(el.value || 1)); const maxVal = max != null && max > 0 ? Number(max) : 99999; el.value = Math.max(1, Math.min(maxVal, cur + delta)); updatePdvCardPriceDisplay(id) }
 function pdvAddWithQty(id, explicitQty) { const p = window.pdvProducts.find(x => x.id === id); if (!p || Number(p.esgotado)) return; let q = explicitQty != null ? Number(explicitQty) : Number($('#pdvSearchQty_' + id)?.value || 1); if (!Number.isInteger(q) || q <= 0) q = 1; const avail = Number(p.quantidade_disponivel || 0); const cur = Number(window.pdvCart[id] || 0); if (avail <= 0) { toastRole(`Produto sem estoque disponível: ${p.nome}`, true); return } if (cur + q > avail) { const diff = Math.max(0, avail - cur); if (diff <= 0) { toastRole(`Limite de estoque atingido para ${p.nome} (${avail} un).`, true); return } toastRole(`Quantidade ajustada para o saldo em estoque (${diff} un).`); q = diff } window.pdvCart[id] = cur + q; const s = $('#pdvSearch'); if (s) { s.value = ''; $('#pdvCount').textContent = '0 resultado(s)' } pdvRender([]); s?.focus(); pdvCartRender(); toastRole(`✓ ${q}x ${p.nome} adicionado(s)`) }
 function pdvAdd(id) { pdvAddWithQty(id) }
-function pdvFilter(i) { const q = i.value.trim().toLowerCase(); if (!q) { $('#pdvCount').textContent = '0 resultado(s)'; return pdvRender([]) } const items = window.pdvProducts.filter(x => (x.nome + ' ' + (x.sku || '') + ' ' + (x.codigo_barras || '')).toLowerCase().includes(q)); $('#pdvCount').textContent = items.length + ' resultado(s)'; pdvRender(items) }
+function pdvFilter(i) { const q = normSearch(i.value).trim(); if (!q) { $('#pdvCount').textContent = '0 resultado(s)'; return pdvRender([]) } const items = window.pdvProducts.filter(x => productSearchHaystack(x).includes(q)); $('#pdvCount').textContent = items.length + ' resultado(s)'; pdvRender(items) }
 function pdvRender(items) { const defaultQty = Math.max(1, Number($('#pdvBarcodeQty')?.value || 1)); $('#pdvProducts').innerHTML = items.map(p => { const esgotado = Number(p.esgotado) || Number(p.quantidade_disponivel) <= 0; const maxQty = Number(p.quantidade_disponivel || 0); const initialQty = Math.min(defaultQty, maxQty > 0 ? maxQty : 1); const tName = esc(p.tabela_preco_nome || p.tabela_nome || 'Oferta'); const hasMin = p.preco_tabela != null && Number(p.quantidade_minima) > 1; return `<article class="pdv-product" id="pdv_prod_${p.id}" ${esgotado ? 'style="opacity:.5;cursor:not-allowed" title="Produto esgotado"' : ''}><div class="pdv-thumb" ${!esgotado ? `onclick="pdvAddWithQty('${p.id}')"` : ''} style="${!esgotado ? 'cursor:pointer' : ''}">${p.foto_url ? `<img class="catalog-mini-photo" src="${esc(p.foto_url)}" alt="${esc(p.nome)}" onerror="this.parentElement.innerHTML='${esc(p.marca || '◉')}'">` : esc(p.marca || '◉')}</div><div class="pdv-product-info" ${!esgotado ? `onclick="pdvAddWithQty('${p.id}')"` : ''} style="${!esgotado ? 'cursor:pointer;flex:1' : ''}"><h4 style="margin:0 0 3px">${esc(p.nome)}${esgotado ? ' <span style="color:#ef4444;font-size:11px;font-weight:800;background:#fee2e2;padding:2px 6px;border-radius:4px">ESGOTADO</span>' : ''}</h4><small>${esc(p.tamanho || '')} · Estoque: <strong style="color:var(--xv-brand-navy,#061a4f)">${p.quantidade_disponivel} un</strong></small><br><small>Cód: ${esc(p.codigo_barras || p.sku || '-')}</small>${hasMin ? `<br><button type="button" class="btn" style="margin-top:4px;padding:3px 8px;font-size:11px;font-weight:800;background:#fff7ed;color:var(--xv-orange,#fd5e02);border:1px solid #fdba74;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap;text-align:left" onclick="event.stopPropagation();pdvSelectMinQty('${p.id}',${Number(p.quantidade_minima)},${maxQty})" title="Clique para selecionar ${p.quantidade_minima} un. com preço ${tName}"><span>🏷️ ${tName}: <strong>${money(p.preco_tabela)}</strong> a partir de ${p.quantidade_minima} un.</span><u style="margin-left:2px">Selecionar ${p.quantidade_minima} un.</u></button>` : (p.preco_tabela != null ? `<br><small style="color:#16a34a;font-weight:750">🏷️ ${tName}: ${money(p.preco_tabela)}</small>` : '')}</div><div class="pdv-product-right"><div class="price" id="pdv_price_${p.id}">${money(priceForLine(p, initialQty))}</div>${!esgotado ? `<div class="pdv-product-actions" onclick="event.stopPropagation()"><div class="pdv-qty-box"><button type="button" class="pdv-qty-btn" title="Diminuir quantidade" aria-label="Diminuir" onclick="pdvChangeSearchQty('${p.id}',-1,${maxQty})">−</button><input type="number" id="pdvSearchQty_${p.id}" class="pdv-search-qty-input" value="${initialQty}" min="1" max="${maxQty}" step="1" inputmode="numeric" onclick="this.select()" oninput="updatePdvCardPriceDisplay('${p.id}')" onkeydown="if(event.key==='Enter'){event.preventDefault();pdvAddWithQty('${p.id}')}"><button type="button" class="pdv-qty-btn" title="Aumentar quantidade" aria-label="Aumentar" onclick="pdvChangeSearchQty('${p.id}',1,${maxQty})">＋</button></div><button type="button" class="btn primary pdv-btn-add-item" onclick="pdvAddWithQty('${p.id}')">＋ Adicionar</button></div>` : ''}</div></article>` }).join('') }
 function pdvClear() { window.pdvCart = {}; pdvCartRender() }
 function pdvCartRender() { const rows = Object.entries(window.pdvCart).filter(([, q]) => q > 0).map(([id, q], i) => { const p = window.pdvProducts.find(x => x.id === id), unit = priceForLine(p, q), total = q * unit, tName = esc(p?.tabela_preco_nome || p?.tabela_nome || 'Oferta'), hasMin = p?.preco_tabela != null && Number(p?.quantidade_minima) > 1; return `<div class="pdv-row"><div class="pdv-row-header"><span class="num">${String(i + 1).padStart(2, '0')}</span><div class="pdv-row-title"><strong>${esc(p.nome)}</strong><small style="color:#64748b;display:block">Cód: ${esc(p.codigo_barras || p.sku || '-')}</small>${hasMin && q < Number(p.quantidade_minima) ? `<button type="button" class="btn" style="margin-top:4px;padding:2px 8px;font-size:11px;font-weight:750;background:#fff7ed;color:var(--xv-orange,#fd5e02);border:1px solid #fdba74;border-radius:6px" onclick="pdvSetCartQty('${id}',${Number(p.quantidade_minima)})">🏷️ ${tName}: ${money(p.preco_tabela)} (mín. ${p.quantidade_minima} un.) · Aplicar ${p.quantidade_minima} un.</button>` : (hasMin ? `<small style="color:#16a34a;font-weight:750;display:block">✓ ${tName} aplicado (${money(unit)}/un)</small>` : '')}</div><button type="button" class="pdv-btn-remove" title="Remover item" aria-label="Remover item" onclick="pdvRemoveItem('${id}')">✕</button></div><div class="pdv-row-actions"><div class="qty-control"><button type="button" aria-label="Diminuir quantidade" onclick="pdvQty('${id}',-1)">−</button><span>${q}</span><button type="button" aria-label="Aumentar quantidade" onclick="pdvQty('${id}',1)">＋</button></div><div class="pdv-row-totals"><span class="muted" style="font-size:12px;margin-right:6px">(${money(unit)} un)</span><strong class="pdv-subtotal" style="color:var(--xv-orange);font-size:16px">${money(total)}</strong></div></div></div>` }).join(''); $('#pdvOrderList').innerHTML = rows || '<div style="padding:30px;text-align:center;color:#64748b">Adicione produtos ao pedido usando a lista ao lado.</div>'; const total = Object.entries(window.pdvCart).reduce((s, [id, q]) => { const p = window.pdvProducts.find(x => x.id === id); return s + q * priceForLine(p, q) }, 0); const units = Object.values(window.pdvCart).reduce((s, x) => s + x, 0); $('#pdvTotal').textContent = money(total); $('#pdvUnits').textContent = units + ' (un)' }
@@ -1868,7 +2198,7 @@ async function lojaCatalogo() { lojaNav('cat'); const cats = window.lojaCategori
 function lojaClearFilters() { const s = $('#storeSearch'); if (s) s.value = ''; const mn = $('#storeMin'); if (mn) mn.value = ''; const mx = $('#storeMax'); if (mx) mx.value = ''; lojaFilter() }
 function lojaSubcategorias(catId) { const cat = window.lojaCategories.find(c => c.id === catId); const subs = (window.lojaSubcategories || []).filter(s => s.categoria_id === catId); window.lojaCurrentCatId = catId; const catItems = (window.lojaProducts || []).filter(p => p.categoria_id === catId); $('#storeMain').innerHTML = `${storeHeroHtml()}<section class="store-main"><div class="mobile-nav" style="margin-bottom:14px"><button class="btn" onclick="lojaCatalogo()">← Todas as Categorias</button></div><div class="section-title"><h2>${esc(cat?.nome || 'Categoria')}</h2><span class="badge">${catItems.length} produtos</span></div><div class="grid" style="margin-top:14px;margin-bottom:20px;"><div class="mobile-card" style="cursor:pointer;border-left:4px solid #f97316" onclick="lojaProdutosSub('','Todos os Produtos (${catItems.length})','${catId}')"><h3>Todos os Produtos</h3><p class="muted">Ver toda a linha de ${esc(cat?.nome || '')}</p></div>${subs.length ? subs.map(s => { const cnt = (window.lojaProducts || []).filter(p => p.subcategoria_id === s.id).length; return `<div class="mobile-card" style="cursor:pointer" onclick="lojaProdutosSub('${s.id}','${esc(s.nome).replace(/'/g, "\\'").replace(/"/g, "&quot;")}','${catId}')"><h3>${esc(s.nome)}</h3><p class="muted">${cnt} produtos</p></div>` }).join('') : '<p class="muted">Nenhuma subcategoria encontrada.</p>'}</div><div class="section-title"><h2>Produtos em ${esc(cat?.nome || '')}</h2></div><div id="storeProducts" class="product-grid" style="margin-top:14px"></div></section>`; lojaRender(catItems) }
 function lojaProdutosSub(subId, subName, catId) { window.lojaCurrentSubId = subId; window.lojaCurrentCatId = catId; $('#storeMain').innerHTML = `${storeHeroHtml()}<section class="store-main"><div class="mobile-nav" style="margin-bottom:14px;display:flex;gap:8px"><button class="btn" onclick="lojaSubcategorias('${catId || ''}')">← Subcategorias</button><button class="btn" onclick="lojaCatalogo()">🏠 Categorias</button></div><div class="section-title"><h2>${esc(subName)}</h2></div><div class="form" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;"><input id="storeSubSearch" class="search" style="grid-column:1/-1" placeholder="Pesquisar produto por nome, marca ou SKU..." oninput="lojaFilterSub()"><div class="field"><label>Menor preço (R$)</label><input type="number" step="0.01" min="0" id="storeSubMin" class="search" placeholder="0,00" oninput="lojaFilterSub()"></div><div class="field"><label>Maior preço (R$)</label><input type="number" step="0.01" min="0" id="storeSubMax" class="search" placeholder="Sem limite" oninput="lojaFilterSub()"></div><div style="grid-column:1/-1;display:flex;gap:8px;margin-top:4px;"><button type="button" class="btn primary" style="flex:1" onclick="lojaFilterSub()">🔍 Filtrar por preço</button><button type="button" class="btn" onclick="lojaClearSubFilters()">Limpar filtros</button></div></div><div id="storeProducts" class="product-grid" style="margin-top:14px"></div></section>`; lojaFilterSub() }
-function lojaFilterSub() { const q = ($('#storeSubSearch')?.value || '').trim().toLowerCase(); const minRaw = $('#storeSubMin')?.value; const maxRaw = $('#storeSubMax')?.value; const min = minRaw !== '' && minRaw != null ? Number(minRaw) : 0; const max = maxRaw !== '' && maxRaw != null ? Number(maxRaw) : Infinity; const subId = window.lojaCurrentSubId; const catId = window.lojaCurrentCatId; const filtered = (window.lojaProducts || []).filter(x => { if (catId && x.categoria_id !== catId) return false; if (subId && x.subcategoria_id !== subId) return false; const price = Number(x.promocao_preco != null ? x.promocao_preco : (x.preco_aplicado ?? x.preco_base)); if (price < min || price > max) return false; if (q && !(x.nome + ' ' + (x.sku || '') + ' ' + (x.marca || '') + ' ' + (x.codigo_barras || '')).toLowerCase().includes(q)) return false; return true; }); lojaRender(filtered) }
+function lojaFilterSub() { const q = normSearch($('#storeSubSearch')?.value).trim(); const minRaw = $('#storeSubMin')?.value; const maxRaw = $('#storeSubMax')?.value; const min = minRaw !== '' && minRaw != null ? Number(minRaw) : 0; const max = maxRaw !== '' && maxRaw != null ? Number(maxRaw) : Infinity; const subId = window.lojaCurrentSubId; const catId = window.lojaCurrentCatId; const filtered = (window.lojaProducts || []).filter(x => { if (catId && x.categoria_id !== catId) return false; if (subId && x.subcategoria_id !== subId) return false; const price = Number(x.promocao_preco != null ? x.promocao_preco : (x.preco_aplicado ?? x.preco_base)); if (price < min || price > max) return false; if (q && !productSearchHaystack(x).includes(q)) return false; return true; }); lojaRender(filtered) }
 function lojaClearSubFilters() { const s = $('#storeSubSearch'); if (s) s.value = ''; const mn = $('#storeSubMin'); if (mn) mn.value = ''; const mx = $('#storeSubMax') || $('#storeMax'); if (mx) mx.value = ''; lojaFilterSub() }
 async function lojaPedidos() {
   lojaNav('ped');
@@ -1928,7 +2258,7 @@ async function storeViewOrder(id) {
 function storeOrderModal(title, body) { const old = $('#storeOrderModal'); old?.remove(); const d = document.createElement('div'); d.id = 'storeOrderModal'; d.className = 'store-order-modal'; d.innerHTML = `<div class="store-order-overlay" onclick="if(event.target===this)document.querySelector('#storeOrderModal')?.remove()"><section class="store-order-dialog"><div class="panel-title"><h2>${title}</h2><button class="btn" onclick="document.querySelector('#storeOrderModal')?.remove()">×</button></div>${body}</section></div>`; document.body.appendChild(d) }
 async function lojaPerfil() { lojaNav('per'); try { const [x, baseBairros] = await Promise.all([api('/api/store/profile'), loadCityBairrosForRole()]); const p = x.item; const bairros = p.bairro && !baseBairros.some(b => b.toLowerCase() === String(p.bairro).trim().toLowerCase()) ? [String(p.bairro).trim(), ...baseBairros] : baseBairros; $('#storeMain').innerHTML = `<section class="store-main"><div class="mobile-card"><h2>Meu perfil</h2><p class="muted">${esc(p.email)}</p><form id="storeProfileForm" class="form" style="margin-top:14px"><div class="field"><label>Nome</label><input value="${esc(p.nome)}" disabled></div><div class="field"><label>Telefone</label><input name="telefone" type="tel" maxlength="40" value="${esc(p.telefone || p.cliente_telefone || '')}" required></div><div class="field" style="grid-column:1/-1"><label>Endereço</label><input name="endereco" autocomplete="street-address" maxlength="240" value="${esc(p.endereco || '')}" required></div><div class="field"><label>Bairro (Governador Valadares - MG)</label><select name="bairro" required><option value="" disabled ${!p.bairro ? 'selected' : ''}>Selecione o seu bairro...</option>${bairros.map(b => `<option value="${esc(b)}" ${String(p.bairro || '').trim().toLowerCase() === b.toLowerCase() ? 'selected' : ''}>${esc(b)}</option>`).join('')}</select></div><div class="field"><label>Cidade</label><select name="cidade" required><option value="Governador Valadares" selected>Governador Valadares - MG</option></select></div><div class="field"><label>Estado (UF)</label><select name="estado" required><option value="MG" selected>MG</option></select></div><div class="actions" style="grid-column:1/-1"><button class="btn primary">Salvar perfil</button></div></form></div></section>`; $('#storeProfileForm').onsubmit = async e => { e.preventDefault(); const b = Object.fromEntries(new FormData(e.currentTarget)); try { const saved = await api('/api/store/profile', { method: 'PUT', body: JSON.stringify(b) }); me.telefone = saved.item.telefone; toastStore('Perfil atualizado com sucesso.') } catch (err) { alert(err.message) } } } catch (e) { $('#storeMain').innerHTML = `<section class="store-main"><div class="mobile-card"><h2>Meu perfil</h2><p>${esc(e.message)}</p></div></section>` } }
 async function refreshStorePrices(clientId) { try { window.lojaClientId = clientId; const p = await api('/api/products?cliente_id=' + encodeURIComponent(clientId)); window.lojaProducts = p.items; lojaFilter() } catch (e) { alert(e.message) } }
-function lojaFilter() { const q = ($('#storeSearch')?.value || '').trim().toLowerCase(); const minRaw = $('#storeMin')?.value; const maxRaw = $('#storeMax')?.value; const min = minRaw !== '' && minRaw != null ? Number(minRaw) : 0; const max = maxRaw !== '' && maxRaw != null ? Number(maxRaw) : Infinity; const filtered = (window.lojaProducts || []).filter(x => { const price = Number(x.promocao_preco != null ? x.promocao_preco : (x.preco_aplicado ?? x.preco_base)); if (price < min || price > max) return false; if (q && !(x.nome + ' ' + (x.sku || '') + ' ' + (x.marca || '') + ' ' + (x.codigo_barras || '')).toLowerCase().includes(q)) return false; return true; }); lojaRender(filtered) }
+function lojaFilter() { const q = normSearch($('#storeSearch')?.value).trim(); const minRaw = $('#storeMin')?.value; const maxRaw = $('#storeMax')?.value; const min = minRaw !== '' && minRaw != null ? Number(minRaw) : 0; const max = maxRaw !== '' && maxRaw != null ? Number(maxRaw) : Infinity; const filtered = (window.lojaProducts || []).filter(x => { const price = Number(x.promocao_preco != null ? x.promocao_preco : (x.preco_aplicado ?? x.preco_base)); if (price < min || price > max) return false; if (q && !productSearchHaystack(x).includes(q)) return false; return true; }); lojaRender(filtered) }
 function updateLojaCardPriceDisplay(id) { const p = (window.lojaProducts || []).find(x => x.id === id); const el = $('#qty-' + id); const priceEl = $('#loja_price_' + id); if (!p || !priceEl) return; const q = Math.max(1, Number(el?.value || 1)); priceEl.textContent = money(priceForLine(p, q)) }
 function lojaSelectMinQty(id, minQty) { const el = $('#qty-' + id); if (!el) return; const target = Math.max(1, Number(minQty) || 1); el.value = target; updateLojaCardPriceDisplay(id); const p = (window.lojaProducts || []).find(x => x.id === id); const tName = p?.tabela_preco_nome || p?.tabela_nome || 'Oferta'; toastStore(`✓ ${target} un. selecionadas — ${tName}: ${money(priceForLine(p, target))}/un`) }
 function setLojaCartQty(id, minQty) { if (!window.lojaCart) window.lojaCart = {}; window.lojaCart[id] = Math.max(1, Math.min(99999, Number(minQty) || 1)); updateCartCount(); openCart() }

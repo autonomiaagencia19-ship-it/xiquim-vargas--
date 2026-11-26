@@ -126,6 +126,8 @@ try{const staleCaches=[];for(let i=0;i<localStorage.length;i++){const k=localSto
 function jsonArg(value){const bytes=new TextEncoder().encode(JSON.stringify(value));let binary='';for(const byte of bytes)binary+=String.fromCharCode(byte);return btoa(binary)}
 function parseJsonArg(encoded){return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(encoded),c=>c.charCodeAt(0))))}
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const normSearch = (v) => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const productSearchHaystack = (p) => normSearch([p?.nome, p?.descricao, p?.categoria_nome, p?.subcategoria_nome, p?.marca, p?.sabor, p?.tamanho, p?.sku, p?.codigo_barras].filter(Boolean).join(' '));
 const brl=value=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number.isFinite(Number(value))?Number(value):0);
 const ROLE_LABELS={admin:'Administrador',seller:'Vendedor',cashier:'Caixa',driver:'Motorista',web_client:'Loja Online'};
 
@@ -364,7 +366,11 @@ async function refreshCurrentViewSilently(eventType,payload){
           }
         }
       }else if(currentView==='logistics'){
-        if(!eventType||eventType==='routes_changed'||eventType==='orders_changed'||eventType==='returns_changed'||eventType==='tab_focused'){
+        if(eventType==='seller_routes_changed'){
+          if(!isStale()&&typeof window.renderSellerRoutesDashboardContent==='function'&&(document.getElementById('logisticsSellerRoutesInline')||document.getElementById('sellerRoutesDashboard')?.style.display==='block')){
+            window.renderSellerRoutesDashboardContent();
+          }
+        }else if(!eventType||eventType==='routes_changed'||eventType==='orders_changed'||eventType==='returns_changed'||eventType==='tab_focused'){
           const v=$('#view');
           if(v&&!isStale()){
             if(document.getElementById('returnedOrdersDashboard')?.style.display==='block'){
@@ -1354,7 +1360,7 @@ function catalogRow(x){
   const isSoldOut = Number(x.esgotado);
   const isPromo = x.promocao_preco != null;
   const isRecent = isCatalogProductRecent(x.created_at);
-  return `<tr data-product="${x.id}" data-cat="${x.categoria_id||''}" data-sub="${x.subcategoria_id||''}" data-sold-out="${isSoldOut?'1':'0'}" data-promo="${isPromo?'1':'0'}" data-recent="${isRecent?'1':'0'}" data-created="${x.created_at||''}" data-price="${isPromo?Number(x.promocao_preco):Number(x.preco_base)}"><td><div class="catalog-product-cell">${x.foto_url?`<img class="catalog-mini-photo" src="${esc(x.foto_url)}" alt="" onerror="this.onerror=null;this.replaceWith(Object.assign(document.createElement('div'),{className:'catalog-mini-photo placeholder',textContent:'XV'}))">`:'<div class="catalog-mini-photo placeholder">XV</div>'}<div><strong>${esc(x.nome)}</strong>${isSoldOut?' <span class="badge badge-sold-out" style="background:#fde2e2;color:#b42318;border-color:#f5b5b5">ESGOTADO</span>':''}${isPromo?' <span class="badge badge-promo" style="background:#fff7ed;color:#c2410c;border-color:#fed7aa">PROMOÇÃO</span>':''}${isRecent?' <span class="badge badge-recent" style="background:#f0f9ff;color:#0284c7;border-color:#bae6fd">NOVO</span>':''}<br><small>${esc([x.marca,x.sabor,x.tamanho].filter(Boolean).join(' · '))}</small></div></div></td><td>${esc(x.sku)}</td><td>${esc(x.categoria_nome||'-')}</td><td>${esc(x.subcategoria_nome||'-')}</td><td>${brl(x.preco_base)}</td><td>${x.promocao_preco!=null?`<strong class="orange">${brl(x.promocao_preco)}</strong>`:'—'}</td><td><button class="btn" onclick="editProduct(parseJsonArg('${jsonArg(x)}'))">Editar</button> <button class="btn" onclick="productCostHistoryModal('${x.id}',parseJsonArg('${jsonArg(x.nome)}'))" title="Ver linha do tempo de custos e lucros">💰 Custos & Lucro</button> <button class="btn" onclick="manageProductImages(parseJsonArg('${jsonArg(x)}'))">Fotos</button> <button class="btn" onclick="managePromotion(parseJsonArg('${jsonArg(x)}'))">Promoção</button> <button class="btn" onclick="productSuppliersModal('${x.id}',parseJsonArg('${jsonArg(x.nome)}'))">🏢 Fornecedores</button> <button class="btn" onclick="toggleSoldOut('${x.id}',${Number(x.esgotado)?0:1})">${Number(x.esgotado)?'✔ Disponível':'⊘ Esgotado'}</button> <button class="btn" style="color:#b42318" onclick="deleteProduct('${x.id}',parseJsonArg('${jsonArg(x.nome)}'))">🗑 Excluir</button></td></tr>`;
+  return `<tr data-product="${x.id}" data-search="${esc(productSearchHaystack(x))}" data-cat="${x.categoria_id||''}" data-sub="${x.subcategoria_id||''}" data-sold-out="${isSoldOut?'1':'0'}" data-promo="${isPromo?'1':'0'}" data-recent="${isRecent?'1':'0'}" data-created="${x.created_at||''}" data-price="${isPromo?Number(x.promocao_preco):Number(x.preco_base)}"><td><div class="catalog-product-cell">${x.foto_url?`<img class="catalog-mini-photo" src="${esc(x.foto_url)}" alt="" onerror="this.onerror=null;this.replaceWith(Object.assign(document.createElement('div'),{className:'catalog-mini-photo placeholder',textContent:'XV'}))">`:'<div class="catalog-mini-photo placeholder">XV</div>'}<div><strong>${esc(x.nome)}</strong>${isSoldOut?' <span class="badge badge-sold-out" style="background:#fde2e2;color:#b42318;border-color:#f5b5b5">ESGOTADO</span>':''}${isPromo?' <span class="badge badge-promo" style="background:#fff7ed;color:#c2410c;border-color:#fed7aa">PROMOÇÃO</span>':''}${isRecent?' <span class="badge badge-recent" style="background:#f0f9ff;color:#0284c7;border-color:#bae6fd">NOVO</span>':''}<br><small>${esc([x.marca,x.sabor,x.tamanho].filter(Boolean).join(' · '))}</small></div></div></td><td>${esc(x.sku)}</td><td>${esc(x.categoria_nome||'-')}</td><td>${esc(x.subcategoria_nome||'-')}</td><td>${brl(x.preco_base)}</td><td>${x.promocao_preco!=null?`<strong class="orange">${brl(x.promocao_preco)}</strong>`:'—'}</td><td><button class="btn" onclick="editProduct(parseJsonArg('${jsonArg(x)}'))">Editar</button> <button class="btn" onclick="productCostHistoryModal('${x.id}',parseJsonArg('${jsonArg(x.nome)}'))" title="Ver linha do tempo de custos e lucros">💰 Custos & Lucro</button> <button class="btn" onclick="manageProductImages(parseJsonArg('${jsonArg(x)}'))">Fotos</button> <button class="btn" onclick="managePromotion(parseJsonArg('${jsonArg(x)}'))">Promoção</button> <button class="btn" onclick="productSuppliersModal('${x.id}',parseJsonArg('${jsonArg(x.nome)}'))">🏢 Fornecedores</button> <button class="btn" onclick="toggleSoldOut('${x.id}',${Number(x.esgotado)?0:1})">${Number(x.esgotado)?'✔ Disponível':'⊘ Esgotado'}</button> <button class="btn" style="color:#b42318" onclick="deleteProduct('${x.id}',parseJsonArg('${jsonArg(x.nome)}'))">🗑 Excluir</button></td></tr>`;
 }
 async function toggleSoldOut(id,flag){
   const row=document.querySelector(`tr[data-product="${id}"]`);
@@ -1404,7 +1410,7 @@ async function deleteProduct(id,nome){
   try{await api('/api/products/'+id,{method:'DELETE'})}catch(e){toast(e.message,true);refreshCurrentViewSilently('products_changed')}
 }
 function catalogFilter(input){
-  const q=(input?.value??$('#pq')?.value??'').toLowerCase();
+  const q=normSearch(input?.value??$('#pq')?.value).trim();
   const isSubView=!!document.getElementById('adminSubMin');
   let cat='';let sub='';let min=0;let max=Infinity;
   if(isSubView){
@@ -1421,7 +1427,7 @@ function catalogFilter(input){
   let visibleCount=0;
   const rows=document.querySelectorAll('#catalogTable tbody tr[data-product]');
   rows.forEach(r=>{
-    const okText=r.innerText.toLowerCase().includes(q);
+    const okText=!q||(r.dataset.search||normSearch(r.innerText)).includes(q);
     const okCat=!cat||r.dataset.cat===cat;
     const okSub=!sub||r.dataset.sub===sub;
     const price=Number(r.dataset.price||0);
@@ -1816,7 +1822,7 @@ function stockRow(x){
   }
 
   return `
-    <tr data-stock-text="${esc(((x.nome||'')+' '+(x.sku||'')+' '+(x.descricao||'')).toLowerCase())}"
+    <tr data-stock-text="${esc(productSearchHaystack(x))}"
         data-stock-status="${esc(x.status)}"
         data-stock-critical="${isCritical ? '1' : '0'}"
         style="${isZero ? 'background:rgba(239,68,68,0.06);' : (isCritical ? 'background:rgba(249,115,22,0.04);' : '')}">
@@ -1846,7 +1852,7 @@ function stockRow(x){
   `;
 }
 function stockFilter(elem){
-  const q = ($('#stockSearch')?.value || '').toLowerCase().trim();
+  const q = normSearch($('#stockSearch')?.value).trim();
   const stFilter = $('#stockStatusFilter')?.value || (window._stockOnlyCritical ? 'CRITICAL' : 'ALL');
   const isCriticalOnly = stFilter === 'CRITICAL' || window._stockOnlyCritical;
   
@@ -2401,8 +2407,8 @@ function renderOrderEditItems(){
  host.innerHTML=[...window.orderEditItems.values()].map(i=>{const catProd=(window.orderEditAllProducts||window.orderEditCatalog||[]).find(p=>p.id===i.produto_id)||{};const hasMinOffer=catProd.preco_tabela!=null&&Number(catProd.quantidade_minima)>1;const tName=esc(catProd.tabela_preco_nome||catProd.tabela_nome||'Oferta');return `<div class="actions order-edit-line" style="margin-bottom:6px;border-bottom:1px solid #e5eaf1;padding-bottom:7px"><span style="flex:1">${esc(i.nome)}${hasMinOffer?`<div style="font-size:11px;color:#0f766e;margin-top:2px">🏷️ ${tName}: ${brl(catProd.preco_tabela)} (mín. ${catProd.quantidade_minima} un.) ${Number(i.quantidade)<Number(catProd.quantidade_minima)?`· <button type="button" onclick="window.orderEditItems.get('${i.produto_id}').quantidade=${Number(catProd.quantidade_minima)};renderOrderEditItems()" style="background:none;border:none;color:#0f766e;text-decoration:underline;font-weight:700;cursor:pointer;padding:0;font-size:11px">Usar ${catProd.quantidade_minima} un.</button>`:'✓ Aplicado'}</div>`:''}</span><input class="order-q" data-product="${i.produto_id}" type="number" min="1" max="100000" value="${Number(i.quantidade)}" style="width:100px" oninput="window.orderEditItems.get('${i.produto_id}').quantidade=Number(this.value)"><button type="button" class="btn danger order-remove" data-product="${i.produto_id}" onclick="window.orderEditItems.delete('${i.produto_id}');renderOrderEditItems()">Remover</button></div>`}).join('')||'<span class="muted">Adicione ao menos um item.</span>';
 }
 function filterOrderCatalog(input){
- const q=(input.value||'').toLowerCase().trim();
- const items=(window.orderEditCatalog||[]).filter(p=>(p.nome+' '+(p.sku||'')+' '+(p.codigo_barras||'')).toLowerCase().includes(q));
+ const q=normSearch(input.value).trim();
+ const items=(window.orderEditCatalog||[]).filter(p=>!q||productSearchHaystack(p).includes(q));
  $('#orderCatalog').innerHTML=items.slice(0,40).map(p=>`<label class="order-catalog-item"><span><strong>${esc(p.nome)}</strong><small>${esc(p.sku||'Sem SKU')} · ${brl(p.preco_aplicado??p.preco_base)}${p.preco_tabela!=null?` · <strong style="color:#0f766e">🏷️ ${esc(p.tabela_preco_nome||p.tabela_nome||'Oferta')}: ${brl(p.preco_tabela)}${Number(p.quantidade_minima)>1?` (a partir de ${p.quantidade_minima} un.)`:''}</strong>`:''}</small></span><span style="display:flex;gap:6px">${p.preco_tabela!=null&&Number(p.quantidade_minima)>1?`<button type="button" class="btn" style="background:#f0fdf4;color:#0f766e;border-color:#99f6e4;font-weight:700" onclick="addOrderCatalogItem('${p.id}',${Number(p.quantidade_minima)})">⚡ Mín. ${p.quantidade_minima} un.</button>`:''}<button type="button" class="btn" onclick="addOrderCatalogItem('${p.id}',1)">Adicionar</button></span></label>`).join('')||'<span class="muted">Nenhum produto encontrado.</span>';
 }
 function addOrderCatalogItem(id,qtyToAdd=1){
@@ -3397,12 +3403,12 @@ async function prices(v){
   $('#applyTableForm').onsubmit=async e=>{e.preventDefault();const target=$('#applyTarget').value;const vid=target==='VENDEDOR'?$('#applySellerId').value:null;const targetLabel=target==='VENDEDOR'&&vid?`clientes do vendedor "${$('#applySellerId').options[$('#applySellerId').selectedIndex]?.text}"`:'clientes escolhidos';if(!confirm(`Deseja aplicar a tabela selecionada aos ${targetLabel}?\n\nNota: Clientes que possuem tabela aplicada individualmente manterão sua tabela individual.`))return;toast('Aplicando tabela em massa...');try{await api('/api/price-tables/apply',{method:'POST',body:JSON.stringify({tabela_id:$('#applyTid').value,target,vendedor_id:vid||undefined})});toast('Tabela aplicada em massa com sucesso (respeitando tabelas individuais)');Realtime.emit('prices_changed');Realtime.emit('products_changed');refreshCurrentViewSilently('prices_changed')}catch(z){toast(z.message,true)}}
   $('#applyIndivForm').onsubmit=async e=>{e.preventDefault();if(!$('#applyIndivId').value)return toast('Selecione um cliente na lista');toast('Aplicando tabela ao cliente...');try{await api('/api/price-tables/apply',{method:'POST',body:JSON.stringify({tabela_id:$('#applyIndivTid').value,target:'INDIVIDUAL',cliente_id:$('#applyIndivId').value})});toast('Tabela aplicada ao cliente com sucesso');$('#applyIndivId').value='';$('#applyIndivSearch').value='';Realtime.emit('prices_changed');Realtime.emit('products_changed');refreshCurrentViewSilently('prices_changed')}catch(z){toast(z.message,true)}}
 }
-window.filterPriceTableModalProducts=function(q){const sq=(q||'').toLowerCase().trim();document.querySelectorAll('#priceItemsForm tbody tr[data-pt-prod]').forEach(tr=>{tr.style.display=!sq||tr.dataset.ptProd.includes(sq)?'':'none'})};
+window.filterPriceTableModalProducts=function(q){const sq=normSearch(q).trim();document.querySelectorAll('#priceItemsForm tbody tr[data-pt-prod]').forEach(tr=>{tr.style.display=!sq||tr.dataset.ptProd.includes(sq)?'':'none'})};
 async function priceTableItems(id,name){
  const x=await api('/api/price-tables/'+id+'/items');
  let page=1,total=Infinity,items=[];
  while(items.length<total){const p=await api('/api/products?limit=100&page='+page);items.push(...p.items);total=p.total;if(!p.items.length)break;page++}
- modal('Tabela: '+esc(name),`<form id="priceItemsForm"><div style="position:sticky;top:0;z-index:10;background:#ffffff;padding:8px 0 12px;margin-bottom:12px;border-bottom:2px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div style="flex:1;min-width:220px"><input type="text" class="search" placeholder="🔍 Filtrar produto por nome ou SKU..." oninput="filterPriceTableModalProducts(this.value)" style="width:100%;padding:8px 12px"><small class="muted" style="display:block;margin-top:4px">Defina o preço diferenciado e a <strong>Quantidade Mínima</strong> (em unidades) para que o preço da tabela seja aplicado ao pedido. <span style="color:#2563eb;font-weight:700">Linhas com borda azul indicam produtos com preço especial configurado.</span></small></div><div style="display:flex;gap:8px;align-items:center"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button type="submit" class="btn primary" style="padding:10px 18px;font-weight:800">💾 Salvar tabela</button></div></div><div class="tablewrap" style="max-height:74vh;overflow:auto"><table class="table"><thead><tr><th>Produto</th><th>Preço Base</th><th>Preço na Tabela (R$)</th><th>Qtd. Mínima (un)</th></tr></thead><tbody>${items.map(pr=>{const it=x.items.find(i=>i.produto_id===pr.id);const hasSpecial=Boolean(it&&it.preco);return `<tr data-pt-prod="${esc((pr.nome+' '+(pr.sku||'')).toLowerCase())}" style="${hasSpecial?'box-shadow:inset 4px 0 0 #2563eb;background:#f0f7ff;border-top:2px solid #2563eb;border-bottom:2px solid #2563eb':''}"><td><div style="display:flex;align-items:center;gap:8px"><strong>${esc(pr.nome)}</strong>${hasSpecial?'<span class="badge" style="background:#2563eb;color:#fff;font-weight:800;font-size:10px;padding:2px 6px">★ ESPECIAL</span>':''}</div>${pr.sku?`<small class="muted">SKU: ${esc(pr.sku)}</small>`:''}</td><td><span class="muted" style="${hasSpecial?'text-decoration:line-through':''}">${brl(pr.preco_base)}</span></td><td><input class="field-input" data-price-product="${pr.id}" value="${it?Number(it.preco).toFixed(2):''}" placeholder="${Number(pr.preco_base||0).toFixed(2)}" type="number" step="0.01" min="0" style="width:120px;${hasSpecial?'border:2px solid #2563eb;font-weight:800;color:#1d4ed8;background:#ffffff':''}" oninput="const tr=this.closest('tr');const val=Number(this.value);if(val>0){tr.style.boxShadow='inset 4px 0 0 #2563eb';tr.style.background='#f0f7ff';tr.style.borderTop='2px solid #2563eb';tr.style.borderBottom='2px solid #2563eb';this.style.border='2px solid #2563eb';this.style.fontWeight='800';this.style.color='#1d4ed8'}else{tr.style.boxShadow='';tr.style.background='';tr.style.borderTop='';tr.style.borderBottom='';this.style.border='';this.style.fontWeight='';this.style.color=''}"></td><td><div style="display:flex;align-items:center;gap:6px"><input class="field-input" data-qty-product="${pr.id}" value="${it?Math.max(1,Number(it.quantidade_minima||1)):1}" type="number" step="1" min="1" style="width:90px;${hasSpecial?'border:2px solid #2563eb;font-weight:700':''}"><small class="muted">un.</small></div></td></tr>`}).join('')}</tbody></table></div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button type="submit" class="btn primary">💾 Salvar tabela</button></div></form>`,'96vw');
+ modal('Tabela: '+esc(name),`<form id="priceItemsForm"><div style="position:sticky;top:0;z-index:10;background:#ffffff;padding:8px 0 12px;margin-bottom:12px;border-bottom:2px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div style="flex:1;min-width:220px"><input type="text" class="search" placeholder="🔍 Filtrar produto por nome ou SKU..." oninput="filterPriceTableModalProducts(this.value)" style="width:100%;padding:8px 12px"><small class="muted" style="display:block;margin-top:4px">Defina o preço diferenciado e a <strong>Quantidade Mínima</strong> (em unidades) para que o preço da tabela seja aplicado ao pedido. <span style="color:#2563eb;font-weight:700">Linhas com borda azul indicam produtos com preço especial configurado.</span></small></div><div style="display:flex;gap:8px;align-items:center"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button type="submit" class="btn primary" style="padding:10px 18px;font-weight:800">💾 Salvar tabela</button></div></div><div class="tablewrap" style="max-height:74vh;overflow:auto"><table class="table"><thead><tr><th>Produto</th><th>Preço Base</th><th>Preço na Tabela (R$)</th><th>Qtd. Mínima (un)</th></tr></thead><tbody>${items.map(pr=>{const it=x.items.find(i=>i.produto_id===pr.id);const hasSpecial=Boolean(it&&it.preco);return `<tr data-pt-prod="${esc(productSearchHaystack(pr))}" style="${hasSpecial?'box-shadow:inset 4px 0 0 #2563eb;background:#f0f7ff;border-top:2px solid #2563eb;border-bottom:2px solid #2563eb':''}"><td><div style="display:flex;align-items:center;gap:8px"><strong>${esc(pr.nome)}</strong>${hasSpecial?'<span class="badge" style="background:#2563eb;color:#fff;font-weight:800;font-size:10px;padding:2px 6px">★ ESPECIAL</span>':''}</div>${pr.sku?`<small class="muted">SKU: ${esc(pr.sku)}</small>`:''}</td><td><span class="muted" style="${hasSpecial?'text-decoration:line-through':''}">${brl(pr.preco_base)}</span></td><td><input class="field-input" data-price-product="${pr.id}" value="${it?Number(it.preco).toFixed(2):''}" placeholder="${Number(pr.preco_base||0).toFixed(2)}" type="number" step="0.01" min="0" style="width:120px;${hasSpecial?'border:2px solid #2563eb;font-weight:800;color:#1d4ed8;background:#ffffff':''}" oninput="const tr=this.closest('tr');const val=Number(this.value);if(val>0){tr.style.boxShadow='inset 4px 0 0 #2563eb';tr.style.background='#f0f7ff';tr.style.borderTop='2px solid #2563eb';tr.style.borderBottom='2px solid #2563eb';this.style.border='2px solid #2563eb';this.style.fontWeight='800';this.style.color='#1d4ed8'}else{tr.style.boxShadow='';tr.style.background='';tr.style.borderTop='';tr.style.borderBottom='';this.style.border='';this.style.fontWeight='';this.style.color=''}"></td><td><div style="display:flex;align-items:center;gap:6px"><input class="field-input" data-qty-product="${pr.id}" value="${it?Math.max(1,Number(it.quantidade_minima||1)):1}" type="number" step="1" min="1" style="width:90px;${hasSpecial?'border:2px solid #2563eb;font-weight:700':''}"><small class="muted">un.</small></div></td></tr>`}).join('')}</tbody></table></div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button type="submit" class="btn primary">💾 Salvar tabela</button></div></form>`,'96vw');
  $('#priceItemsForm').onsubmit=async e=>{e.preventDefault();const itens=[...document.querySelectorAll('[data-price-product]')].filter(i=>String(i.value).trim()!==''&&Number(i.value)>0).map(i=>{const q=document.querySelector(`[data-qty-product="${i.dataset.priceProduct}"]`);return {produto_id:i.dataset.priceProduct,preco:Number(i.value),quantidade_minima:Math.max(1,parseInt(q?.value,10)||1)};});try{await api('/api/price-tables/'+id,{method:'PUT',body:JSON.stringify({itens,replace_all:true})});closeModal();toast('Tabela de preços salva com sucesso!');show('prices')}catch(z){toast(z.message,true)}}
 }
 async function deletePriceTable(id,nome='esta tabela'){
@@ -3697,7 +3703,7 @@ function renderPriceTableDashboard(id,name,data){
             ? 'border: 2.5px solid #2563eb; background: #f0f7ff; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);'
             : 'border: 1px solid #e2e8f0; background: #ffffff;';
           return `
-            <div class="card ptd-product-card" data-special="${isSpecial ? '1' : '0'}" data-search="${esc((pr.nome + ' ' + (pr.sku || '')).toLowerCase())}" style="${borderStyle} border-radius:10px; padding:12px; display:flex; flex-direction:column; justify-content:space-between; transition:all 0.15s">
+            <div class="card ptd-product-card" data-special="${isSpecial ? '1' : '0'}" data-search="${esc(productSearchHaystack(pr))}" style="${borderStyle} border-radius:10px; padding:12px; display:flex; flex-direction:column; justify-content:space-between; transition:all 0.15s">
               <div>
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px">
                   <strong style="font-size:13px; color:#061a4f; line-height:1.3">${esc(pr.nome)}</strong>
@@ -3892,7 +3898,7 @@ window.setPriceTableProductFilter=function(filter){
   window.filterPriceTableDashboardProducts(document.getElementById('ptdProductSearch')?.value||'');
 };
 window.filterPriceTableDashboardProducts=function(q){
-  const term=(q||'').trim().toLowerCase();
+  const term=normSearch(q).trim();
   const filter=window._ptdProductFilter||'all';
   const cards=document.querySelectorAll('#ptdProductsGrid .ptd-product-card');
   cards.forEach(card=>{
@@ -4298,11 +4304,10 @@ function newUser(){modal('Novo usuário',`<form id="userForm" class="form"><div 
 function editUser(u){modal('Editar usuário',`<form id="userEditForm" class="form"><div class="field"><label>Nome</label><input name="nome" required value="${esc(u.nome)}"></div><div class="field"><label>Email</label><input name="email" type="email" required value="${esc(u.email)}"></div><div class="field"><label>Nova senha (opcional)</label><div style="display:flex;gap:6px"><input name="password" type="password" placeholder="Deixe vazio para manter" style="flex:1"><button type="button" class="btn" tabindex="-1" onclick="const x=this.previousElementSibling; x.type=x.type==='password'?'text':'password'">👁</button></div></div><div class="field"><label>Função / Perfil</label><select name="role">${[['seller','Vendedor'],['cashier','Caixa'],['driver','Motorista'],['web_client','Loja Online'],['admin','Administrador']].map(([v,l])=>`<option value="${v}" ${u.role===v?'selected':''}>${l}</option>`).join('')}</select></div><div class="field"><label>Ativo</label><select name="ativo"><option value="1" ${u.ativo?'selected':''}>Sim</option><option value="0" ${!u.ativo?'selected':''}>Não</option></select></div><div class="actions"><button type="button" class="btn" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar</button></div></form>`);$('#userEditForm').onsubmit=async e=>{e.preventDefault();const b=Object.fromEntries(new FormData(e.currentTarget));b.ativo=b.ativo==='1';if(!b.password)delete b.password;try{await api('/api/users/'+u.id,{method:'PUT',body:JSON.stringify(b)});closeModal();toast('Usuário atualizado');show('users')}catch(x){toast(x.message)}}}
 async function deleteUser(id,nome){if(id===me?.id)return toast('Não é possível excluir o próprio usuário.');if(!confirm(`Excluir o usuário "${nome}"?\\n\\nO acesso será removido. Histórico operacional será preservado sem o vínculo com este usuário.`))return;try{await api('/api/users/'+id,{method:'DELETE'});toast('Usuário excluído');show('users')}catch(e){toast(e.message)}}
 async function logistics(v){
-  const [r,o,drivers,u,sett,ret]=await Promise.all([
+  const [r,o,drivers,sett,ret]=await Promise.all([
     api('/api/logistics/routes'),
     api('/api/logistics/grouped-orders'),
     api('/api/users'),
-    api('/api/logistics/route-config'),
     api('/api/settings'),
     api('/api/logistics/returned-orders').catch(()=>({items:[]}))
   ]);
@@ -5000,21 +5005,37 @@ window.closeSellerRoutesDashboard = function(){
   window.scrollTo({top:0, behavior:'smooth'});
 };
 
+const ADMIN_SELLER_ROUTE_DAYS = {
+  0: 'Domingo',
+  1: 'Segunda-feira',
+  2: 'Terça-feira',
+  3: 'Quarta-feira',
+  4: 'Quinta-feira',
+  5: 'Sexta-feira',
+  6: 'Sábado',
+  7: 'Domingo'
+};
+function formatAdminSellerRouteDate(iso){
+  if(!iso) return '—';
+  const d = new Date(iso);
+  if(Number.isNaN(d.getTime())) return esc(iso);
+  return d.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
 window.renderSellerRoutesDashboardContent = async function(){
   const fullDb = document.getElementById('sellerRoutesDashboard');
   const isInline = !(fullDb && fullDb.style.display === 'block');
   const container = isInline ? document.getElementById('logisticsSellerRoutesInline') : document.getElementById('sellerRoutesDashboardContainer');
   if(!container) return;
-  container.innerHTML = '<div class="panel">Carregando rotas de vendedores...</div>';
+  if(!container.innerHTML || container.innerHTML.includes('Carregando')) {
+    container.innerHTML = '<div class="panel">Carregando monitoramento de rotas dos vendedores...</div>';
+  }
   try {
-    const [u, usersReq] = await Promise.all([
-      api('/api/logistics/route-config'),
-      api('/api/users')
-    ]);
-    const sellers = usersReq.items.filter(x => x.role === 'seller' && x.ativo === 1);
-    const routes = u.routes || [];
-    const assignments = u.assignments || [];
-    const diasSemana = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+    const res = await api('/api/admin/seller-routes');
+    const items = res.items || [];
+    window._adminSellerRoutesCache = items;
+    const comRota = items.filter(s => s.current && Array.isArray(s.current.bairros) && s.current.bairros.length > 0).length;
+    const ativas = items.filter(s => s.current && s.current.active && Array.isArray(s.current.bairros) && s.current.bairros.length > 0).length;
 
     container.innerHTML = `
       <div class="panel" style="margin-bottom:18px;border-left:4px solid #fd5e02">
@@ -5027,181 +5048,182 @@ window.renderSellerRoutesDashboardContent = async function(){
               <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
                 <h2 style="margin:0;font-size:22px;letter-spacing:-0.5px">👔 Rotas de Vendedor</h2>
                 <span class="badge" style="background:rgba(253,94,2,0.15);color:#fd5e02;border:1px solid rgba(253,94,2,0.3);font-size:12px;font-weight:700">
-                  Carteira Comercial
+                  Monitoramento em Tempo Real
                 </span>
               </div>
               <p class="muted" style="margin-top:4px;font-size:13px">
-                Designar vendedores para rota / carteira de atendimento. <span style="color:#fd5e02;font-weight:600">Não causa nenhuma mudança na parte de entregas ou logística física.</span>
+                Acompanhe a rota atual programada opcionalmente por cada vendedor. <span style="color:#fd5e02;font-weight:600">Somente leitura — não altera entregas nem rotas de motoristas.</span>
               </p>
             </div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <button type="button" class="btn primary" style="background:#021d60;border-color:#021d60;font-weight:700" onclick="openSellerRoutesHistoryModal()">📜 Histórico de Rotas por Vendedor</button>
+            <button type="button" class="btn" onclick="renderSellerRoutesDashboardContent()">↻ Atualizar</button>
           </div>
         </div>
       </div>
 
       <div class="grid" style="margin-bottom:18px">
-        <div class="card" style="border-top:3px solid #3b82f6">
-          <small class="muted">Rotas de Visitas Cadastradas</small>
-          <h2 style="color:#3b82f6;margin:4px 0">${routes.length}</h2>
-          <small class="muted">Regiões e agrupamentos</small>
-        </div>
         <div class="card" style="border-top:3px solid #fd5e02">
           <small class="muted">Vendedores Ativos</small>
-          <h2 style="color:#fd5e02;margin:4px 0">${sellers.length}</h2>
-          <small class="muted">Equipe externa disponível</small>
+          <h2 style="color:#fd5e02;margin:4px 0">${items.length}</h2>
+          <small class="muted">Equipe externa monitorada</small>
+        </div>
+        <div class="card" style="border-top:3px solid #3b82f6">
+          <small class="muted">Com Rota Programada</small>
+          <h2 style="color:#3b82f6;margin:4px 0">${comRota}</h2>
+          <small class="muted">Planejamento registrado pelo vendedor</small>
         </div>
         <div class="card" style="border-top:3px solid #10b981">
-          <small class="muted">Designações Ativas</small>
-          <h2 style="color:#10b981;margin:4px 0">${assignments.length}</h2>
-          <small class="muted">Vendedor ➔ Rota ➔ Dia</small>
-        </div>
-      </div>
-
-      <div class="panel" style="margin-bottom:18px">
-        <div class="panel-title">
-          <div>
-            <h3>🗺️ Rotas e Bairros Comerciais</h3>
-            <p class="muted">Cadastros de rotas e suas listas de bairros.</p>
-          </div>
-          <button class="btn primary" onclick="newRouteConfig()">+ Nova Rota</button>
-        </div>
-        <div class="tablewrap">
-          <table class="table" style="width:100%;table-layout:fixed;min-width:760px">
-            <colgroup>
-              <col style="width:25%">
-              <col style="width:15%">
-              <col style="width:48%">
-              <col style="width:12%">
-            </colgroup>
-            <thead>
-              <tr>
-                <th>Nome da Rota</th>
-                <th>Qtd. Bairros</th>
-                <th>Bairros Cadastrados</th>
-                <th style="text-align:right;width:110px">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${routes.map(x => `
-                <tr>
-                  <td><strong>${esc(x.nome)}</strong></td>
-                  <td><span class="badge">${(x.bairros||[]).length}</span></td>
-                  <td style="white-space:normal!important;vertical-align:middle;line-height:1.4;padding:12px">${(x.bairros||[]).map(b => esc(b.bairro)).join(' · ') || '<span class="muted">Sem bairros</span>'}</td>
-                  <td style="text-align:right;white-space:nowrap;vertical-align:middle;padding:12px">
-                    <button class="btn" style="padding:6px 14px;font-size:12px;font-weight:700;margin:0;display:inline-block;white-space:nowrap" onclick="editRouteConfig(parseJsonArg('${jsonArg(x)}'))">Editar</button>
-                  </td>
-                </tr>
-              `).join('') || '<tr><td colspan="4" class="empty-state">Nenhuma rota cadastrada.</td></tr>'}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="panel" style="margin-bottom:18px">
-        <div class="panel-title">
-          <div>
-            <h3>➕ Designar Vendedor para Rota</h3>
-            <p class="muted">Defina em qual dia da semana o vendedor visita e atende os clientes desta rota comercial.</p>
-          </div>
-        </div>
-        <div class="form">
-          <div class="field">
-            <label>Vendedor</label>
-            <select id="dashAssignSeller">
-              ${sellers.map(s => `<option value="${s.id}">${esc(s.nome)} (${esc(s.email)})</option>`).join('') || '<option value="">Nenhum vendedor cadastrado</option>'}
-            </select>
-          </div>
-          <div class="field">
-            <label>Dia da Semana de Atendimento</label>
-            <select id="dashAssignDay">
-              ${diasSemana.map((x, i) => `<option value="${i+1}">${x}</option>`).join('')}
-            </select>
-          </div>
-          <div class="field">
-            <label>Rota / Região</label>
-            <select id="dashAssignRoute">
-              ${routes.map(r => `<option value="${r.id}">${esc(r.nome)} (${r.bairros.length} bairros)</option>`).join('') || '<option value="">Nenhuma rota cadastrada</option>'}
-            </select>
-          </div>
-          <div class="actions">
-            <button class="btn primary" style="background:#fd5e02;border-color:#fd5e02" onclick="assignSellerRouteFromDash()">Designar Rota ao Vendedor</button>
-          </div>
+          <small class="muted">Com Filtro Ativo na Carteira</small>
+          <h2 style="color:#10b981;margin:4px 0">${ativas}</h2>
+          <small class="muted">Filtrando carteira pela rota agora</small>
         </div>
       </div>
 
       <div class="panel">
         <div class="panel-title">
           <div>
-            <h3>📋 Designações de Vendedores Ativas</h3>
-            <p class="muted">Vendedores associados aos dias da semana para atendimento aos clientes das rotas.</p>
+            <h3>📍 Rota Atual Programada por Vendedor</h3>
+            <p class="muted">Atualizada automaticamente via SSE sempre que um vendedor programa ou alterna sua rota.</p>
           </div>
         </div>
         <div class="tablewrap">
-          <table class="table" style="width:100%;table-layout:fixed;min-width:760px">
+          <table class="table" style="width:100%;table-layout:fixed;min-width:860px">
             <colgroup>
               <col style="width:20%">
-              <col style="width:16%">
-              <col style="width:22%">
-              <col style="width:30%">
-              <col style="width:12%">
+              <col style="width:14%">
+              <col style="width:28%">
+              <col style="width:14%">
+              <col style="width:13%">
+              <col style="width:11%">
             </colgroup>
             <thead>
               <tr>
-                <th style="white-space:nowrap">Vendedor</th>
-                <th style="white-space:nowrap">Dia da Semana</th>
-                <th style="white-space:nowrap">Rota Comercial</th>
-                <th style="white-space:normal">Bairros Abrangidos</th>
-                <th style="text-align:right;width:110px">Ações</th>
+                <th>Vendedor</th>
+                <th>Dia da Semana</th>
+                <th>Bairros Programados</th>
+                <th>Status na Carteira</th>
+                <th>Programada em</th>
+                <th style="text-align:right">Histórico</th>
               </tr>
             </thead>
             <tbody>
-              ${assignments.map(a => {
-                const rt = routes.find(r => r.id === a.rota_config_id);
-                const bList = rt ? rt.bairros.map(b => b.bairro).join(', ') : '-';
+              ${items.map(s => {
+                const cur = s.current;
+                const hasRoute = Boolean(cur && Array.isArray(cur.bairros) && cur.bairros.length > 0);
+                const dayLabel = hasRoute ? (ADMIN_SELLER_ROUTE_DAYS[Number(cur.dia_semana)] || 'Dia ' + cur.dia_semana) : '';
+                const statusBadge = hasRoute
+                  ? (cur.active
+                    ? '<span class="badge" style="background:rgba(16,185,129,0.16);color:#047857;font-weight:750">● Ativa na carteira</span>'
+                    : '<span class="badge" style="background:#f1f5f9;color:#475569;font-weight:700">○ Inativa</span>')
+                  : '<span class="badge" style="background:#f8fafc;color:#64748b;border:1px solid #e2e8f0">Nenhuma rota programada</span>';
                 return `<tr>
-                  <td><strong>👤 ${esc(a.vendedor_nome)}</strong></td>
-                  <td><span class="badge" style="background:rgba(253,94,2,0.15);color:#fd5e02;font-weight:700">📅 ${diasSemana[a.dia_semana-1]}</span></td>
-                  <td style="white-space:nowrap;vertical-align:middle;overflow:hidden;text-overflow:ellipsis;padding:12px"><strong>${esc(a.rota_nome)}</strong></td>
-                  <td style="white-space:normal!important;vertical-align:middle;line-height:1.4;padding:12px"><small class="muted" style="line-height:1.4;display:block;word-break:break-word">${esc(bList)}</small></td>
-                  <td style="text-align:right;white-space:nowrap;vertical-align:middle;padding:12px">
-                    <button class="btn danger" style="padding:6px 14px;font-size:12px;font-weight:700;margin:0;display:inline-block;white-space:nowrap" onclick="removeRouteAssignmentFromDash('${a.vendedor_id}',${a.dia_semana})">Remover</button>
+                  <td>
+                    <strong>👤 ${esc(s.nome)}</strong>
+                    ${s.email ? `<div class="muted" style="font-size:11px;margin-top:2px">${esc(s.email)}</div>` : ''}
+                  </td>
+                  <td>${hasRoute ? `<span class="badge" style="background:rgba(253,94,2,0.15);color:#fd5e02;font-weight:700">📅 ${esc(dayLabel)}</span>` : '<span class="muted">—</span>'}</td>
+                  <td style="white-space:normal!important;line-height:1.45">${hasRoute ? `<small style="display:block;word-break:break-word">${cur.bairros.map(b => esc(b)).join(' · ')}</small>` : '<span class="muted">Nenhuma rota programada</span>'}</td>
+                  <td>${statusBadge}</td>
+                  <td><small class="muted">${hasRoute ? formatAdminSellerRouteDate(cur.started_at) : '—'}</small></td>
+                  <td style="text-align:right">
+                    <button type="button" class="btn" style="padding:6px 10px;font-size:12px;font-weight:700" onclick="openSellerRoutesHistoryModal('${s.id}')">📜 (${Number(s.history_count || 0)})</button>
                   </td>
                 </tr>`;
-              }).join('') || '<tr><td colspan="5" class="empty-state">Nenhuma designação de rota configurada para vendedores.</td></tr>'}
+              }).join('') || '<tr><td colspan="6" class="empty-state">Nenhum vendedor ativo cadastrado.</td></tr>'}
             </tbody>
           </table>
         </div>
       </div>
     `;
   } catch(e) {
-    container.innerHTML = `<div class="panel"><p class="muted">Erro ao carregar dados: ${esc(e.message)}</p></div>`;
+    container.innerHTML = `<div class="panel"><p class="muted">Erro ao carregar monitoramento de rotas: ${esc(e.message)}</p></div>`;
   }
 };
 
-window.assignSellerRouteFromDash = async function(){
-  const s = document.getElementById('dashAssignSeller')?.value;
-  const d = Number(document.getElementById('dashAssignDay')?.value);
-  const r = document.getElementById('dashAssignRoute')?.value;
-  if(!s || !d || !r) return toast('Preencha todos os campos.');
+window.loadSellerRouteHistoryInModal = async function(vid){
+  const host = document.getElementById('sellerHistoryContent');
+  if(!host) return;
+  if(!vid){
+    host.innerHTML = '<div class="empty-state">Selecione um vendedor acima para visualizar o histórico.</div>';
+    return;
+  }
+  host.innerHTML = '<div class="panel">Carregando histórico de rotas...</div>';
   try {
-    await api('/api/logistics/route-assignments', {
-      method: 'POST',
-      body: JSON.stringify({ vendedor_id: s, dia_semana: d, rota_config_id: r })
-    });
-    toast('Rota designada ao vendedor com sucesso!');
-    await renderSellerRoutesDashboardContent();
-  } catch(e) {
-    toast(e.message, true);
+    const data = await api('/api/admin/seller-routes/' + encodeURIComponent(vid) + '/history');
+    const cur = data.current;
+    const hist = data.history || [];
+    const curHtml = cur && Array.isArray(cur.bairros) && cur.bairros.length ? `
+      <div class="panel" style="margin-bottom:14px;border-left:4px solid ${cur.active ? '#10b981' : '#fd5e02'};background:#f8fafc">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+          <div>
+            <small class="muted">ROTA ATUAL PROGRAMADA</small>
+            <h3 style="margin:2px 0;color:#061a4f">📅 ${esc(ADMIN_SELLER_ROUTE_DAYS[Number(cur.dia_semana)] || 'Dia ' + cur.dia_semana)}</h3>
+          </div>
+          <span class="badge" style="background:${cur.active ? 'rgba(16,185,129,0.16)' : '#e2e8f0'};color:${cur.active ? '#047857' : '#475569'};font-weight:750">${cur.active ? 'Ativa na carteira' : 'Inativa'}</span>
+        </div>
+        <div style="margin-top:8px;font-size:13px"><strong>Bairros:</strong> ${cur.bairros.map(b => esc(b)).join(' · ')}</div>
+        <div class="muted" style="margin-top:6px;font-size:12px">Iniciada em: <strong>${formatAdminSellerRouteDate(cur.started_at)}</strong></div>
+      </div>
+    ` : '<div class="panel" style="margin-bottom:14px"><span class="muted">Este vendedor não possui rota atual programada.</span></div>';
+
+    const histRows = hist.length ? `
+      <div class="tablewrap" style="max-height:48vh;overflow:auto">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Dia da Semana</th>
+              <th>Bairros</th>
+              <th>Início</th>
+              <th>Encerramento</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${hist.map(h => `
+              <tr>
+                <td><span class="badge" style="background:rgba(253,94,2,0.12);color:#c2410c;font-weight:700">${esc(ADMIN_SELLER_ROUTE_DAYS[Number(h.dia_semana)] || 'Dia ' + h.dia_semana)}</span></td>
+                <td style="white-space:normal!important;line-height:1.4">${(h.bairros || []).map(b => esc(b)).join(' · ') || '—'}</td>
+                <td><small>${formatAdminSellerRouteDate(h.started_at)}</small></td>
+                <td><small>${formatAdminSellerRouteDate(h.ended_at)}</small></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    ` : '<div class="empty-state">Nenhuma rota anterior registrada no histórico deste vendedor.</div>';
+
+    host.innerHTML = `${curHtml}<h4 style="margin:0 0 8px">Linha do Tempo de Rotas Anteriores (${hist.length})</h4>${histRows}`;
+  } catch(err) {
+    host.innerHTML = `<div class="panel"><p class="muted">Erro ao consultar histórico: ${esc(err.message)}</p></div>`;
   }
 };
 
-window.removeRouteAssignmentFromDash = async function(vid, dia){
-  if(!confirm('Remover designação de rota deste vendedor neste dia?')) return;
-  try {
-    await api('/api/logistics/route-assignments/' + vid + '/' + dia, { method: 'DELETE' });
-    toast('Designação removida com sucesso!');
-    await renderSellerRoutesDashboardContent();
-  } catch(e) {
-    toast(e.message, true);
+window.openSellerRoutesHistoryModal = async function(preselectedSellerId = ''){
+  let sellers = window._adminSellerRoutesCache || [];
+  if(!sellers.length){
+    try {
+      const r = await api('/api/admin/seller-routes');
+      sellers = r.items || [];
+      window._adminSellerRoutesCache = sellers;
+    } catch(_) { sellers = []; }
+  }
+  const initialId = preselectedSellerId || sellers[0]?.id || '';
+  modal('📜 Histórico de Rotas por Vendedor', `
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="field">
+        <label>Selecione o Vendedor</label>
+        <select id="sellerHistorySelect" class="field-input" onchange="loadSellerRouteHistoryInModal(this.value)">
+          ${sellers.length ? sellers.map(s => `<option value="${esc(s.id)}" ${s.id === initialId ? 'selected' : ''}>${esc(s.nome)} (${Number(s.history_count || 0)} registro(s))</option>`).join('') : '<option value="">Nenhum vendedor ativo</option>'}
+        </select>
+      </div>
+      <div id="sellerHistoryContent"></div>
+    </div>
+  `, '880px');
+  if(initialId) await window.loadSellerRouteHistoryInModal(initialId);
+  else {
+    const host = document.getElementById('sellerHistoryContent');
+    if(host) host.innerHTML = '<div class="empty-state">Nenhum vendedor ativo encontrado.</div>';
   }
 };
 
@@ -6265,7 +6287,7 @@ async function reports(v,periodParam){
           </thead>
           <tbody>
             ${(r.topProdutos||[]).map(p=>`
-              <tr data-ptext="${esc((p.nome+' '+(p.sku||'')).toLowerCase())}">
+              <tr data-ptext="${esc(productSearchHaystack(p))}">
                 <td><strong>${esc(p.nome)}</strong></td>
                 <td><small class="muted">${esc(p.sku||'-')}</small></td>
                 <td><strong>${p.quantidade} un</strong></td>
@@ -6442,7 +6464,7 @@ async function renderProfitReportModalContent(periodParam){
             </thead>
             <tbody>
               ${(r.topProdutos||[]).map(p=>`
-                <tr data-ptext="${esc((p.nome+' '+(p.sku||'')).toLowerCase())}">
+                <tr data-ptext="${esc(productSearchHaystack(p))}">
                   <td><strong style="font-size:14px;color:#fff">${esc(p.nome)}</strong></td>
                   <td><small class="muted" style="font-size:12px">${esc(p.sku||'-')}</small></td>
                   <td><strong>${p.quantidade} un</strong></td>
@@ -6470,14 +6492,14 @@ async function renderProfitReportModalContent(periodParam){
 }
 
 function filterProfitModalTable(q){
-  const sq=(q||'').toLowerCase().trim();
+  const sq=normSearch(q).trim();
   document.querySelectorAll('#profitModalTable tbody tr').forEach(r=>{
     r.style.display=sq&&r.dataset.ptext&&!r.dataset.ptext.includes(sq)?'none':'';
   });
 }
 
 function filterProfitTable(q){
-  const sq=(q||'').toLowerCase().trim();
+  const sq=normSearch(q).trim();
   document.querySelectorAll('#profitReportTable tbody tr').forEach(r=>{
     r.style.display=sq&&r.dataset.ptext&&!r.dataset.ptext.includes(sq)?'none':'';
   });
@@ -6784,7 +6806,7 @@ async function askAI(){
     if(spinner) spinner.style.display = 'none';
   }
 }
-function filterTable(input,id){const q=input.value.toLowerCase();document.querySelectorAll(`#${id} tbody tr`).forEach(r=>r.style.display=r.innerText.toLowerCase().includes(q)?'':'none')}
+function filterTable(input,id){const q=normSearch(input.value).trim();document.querySelectorAll(`#${id} tbody tr`).forEach(r=>r.style.display=!q||normSearch(r.innerText).includes(q)?'':'none')}
 function modal(title,body,width='700px'){document.querySelectorAll('#modal').forEach(m=>m.remove());const x=document.createElement('div');x.id='modal';x.style='position:fixed;inset:0;background:#000b;display:grid;place-items:center;z-index:100';x.innerHTML=`<div class="panel" style="width:min(${width},94vw);max-height:90vh;overflow:auto"><div class="top"><h2>${title}</h2><button class="btn" onclick="closeModal()">×</button></div>${body}</div>`;document.body.appendChild(x)}function closeModal(){window.inboundBarcodeActive=false;window.ptdCurrentTableId=null;document.querySelectorAll('#modal').forEach(m=>m.remove())}
 function roleLoginPage(role){
   const srvUrl = (typeof API !== 'undefined' && API) ? API : (window.location.origin || 'https://xiquim-vargas-erp.onrender.com');
@@ -6935,14 +6957,14 @@ function renderSuppliersTable(list){
 }
 
 function filterSuppliers(q){
-  const sq = (q||'').toLowerCase().trim();
+  const sq = normSearch(q).trim();
   const filtered = (window._suppliersData||[]).filter(f =>
-    (f.nome||'').toLowerCase().includes(sq) ||
-    (f.razao_social||'').toLowerCase().includes(sq) ||
-    (f.nome_fantasia||'').toLowerCase().includes(sq) ||
-    (f.cnpj_cpf||'').toLowerCase().includes(sq) ||
-    (f.telefone_whatsapp||'').toLowerCase().includes(sq) ||
-    (f.cidade||'').toLowerCase().includes(sq)
+    normSearch(f.nome).includes(sq) ||
+    normSearch(f.razao_social).includes(sq) ||
+    normSearch(f.nome_fantasia).includes(sq) ||
+    normSearch(f.cnpj_cpf).includes(sq) ||
+    normSearch(f.telefone_whatsapp).includes(sq) ||
+    normSearch(f.cidade).includes(sq)
   );
   const wrap = document.getElementById('supplierTableWrap');
   if(wrap) wrap.innerHTML = renderSuppliersTable(filtered);
@@ -7169,7 +7191,7 @@ async function linkProductsToSupplierModal(fid, fnome){
         <input id="linkProdSearch" class="po-input" placeholder="🔍 Digite para filtrar por nome, SKU ou código..." oninput="filterCatalogForLink(this.value)" autocomplete="off">
         <select id="linkProdSelect" name="produto_id" size="7" style="margin-top:4px;width:100%;font-size:13.5px;padding:8px;border-radius:9px;border:1.5px solid #cbd5e1;background:#ffffff;color:#17233d;font-weight:600;box-sizing:border-box" onchange="onLinkProductSelectChange(this.value)">
           <option value="" disabled selected>-- Clique em um produto abaixo para selecionar --</option>
-          ${catalog.map(p=>`<option value="${p.id}" data-text="${esc(((p.nome||'')+' '+(p.sku||'')+' '+(p.codigo_barras||'')).toLowerCase())}">${esc(p.nome)} (${esc(p.sku||'S/ SKU')}) — Venda: ${brl(p.preco_base)}${p.preco_custo ? ' · Custo base: '+brl(p.preco_custo) : ''}</option>`).join('')}
+          ${catalog.map(p=>`<option value="${p.id}" data-text="${esc(productSearchHaystack(p))}">${esc(p.nome)} (${esc(p.sku||'S/ SKU')}) — Venda: ${brl(p.preco_base)}${p.preco_custo ? ' · Custo base: '+brl(p.preco_custo) : ''}</option>`).join('')}
         </select>
         <div id="linkProdSelectedBox" style="margin-top:4px;padding:10px 14px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:9px;display:none">
           <div style="font-weight:800;color:#166534;font-size:14px" id="linkProdSelectedTitle"></div>
@@ -7239,7 +7261,7 @@ function onLinkProductSelectChange(val){
 }
 
 function filterCatalogForLink(q){
-  const sq = (q||'').toLowerCase().trim();
+  const sq = normSearch(q).trim();
   const select = document.getElementById('linkProdSelect');
   if(!select) return;
   const opts = select.querySelectorAll('option');
@@ -7397,7 +7419,7 @@ async function linkSupplierToProductModal(pid, pnome){
         <input id="linkSuppSearch" class="po-input" placeholder="🔍 Digite o nome, CNPJ ou cidade do fornecedor..." oninput="filterSupplierForLink(this.value)" autocomplete="off">
         <select id="linkSuppSelect" name="fornecedor_id" size="6" style="margin-top:4px;width:100%;font-size:13.5px;padding:8px;border-radius:9px;border:1.5px solid #cbd5e1;background:#ffffff;color:#17233d;font-weight:600;box-sizing:border-box" onchange="onLinkSupplierSelectChange(this.value)">
           <option value="" disabled selected>-- Clique em um fornecedor abaixo para selecionar --</option>
-          ${suppliers.map(s=>`<option value="${s.id}" data-text="${esc(((s.nome||'')+' '+(s.cnpj_cpf||'')+' '+(s.cidade||'')).toLowerCase())}">${esc(s.nome)} — Prazo médio: ${s.lead_time_padrao_dias||5}d ${s.telefone_whatsapp ? ' · '+esc(s.telefone_whatsapp) : ''}</option>`).join('')}
+          ${suppliers.map(s=>`<option value="${s.id}" data-text="${esc(normSearch((s.nome||'')+' '+(s.cnpj_cpf||'')+' '+(s.cidade||'')))}">${esc(s.nome)} — Prazo médio: ${s.lead_time_padrao_dias||5}d ${s.telefone_whatsapp ? ' · '+esc(s.telefone_whatsapp) : ''}</option>`).join('')}
         </select>
         <div id="linkSuppSelectedBox" style="margin-top:4px;padding:10px 14px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:9px;display:none">
           <div style="font-weight:800;color:#166534;font-size:14px" id="linkSuppSelectedTitle"></div>
@@ -7463,7 +7485,7 @@ function onLinkSupplierSelectChange(val){
 }
 
 function filterSupplierForLink(q){
-  const sq = (q||'').toLowerCase().trim();
+  const sq = normSearch(q).trim();
   const select = document.getElementById('linkSuppSelect');
   if(!select) return;
   const opts = select.querySelectorAll('option');
@@ -7654,12 +7676,12 @@ function renderInboundTable(list){
 }
 
 function filterInbound(){
-  const q = ($('#inboundSearch')?.value || '').toLowerCase().trim();
+  const q = normSearch($('#inboundSearch')?.value).trim();
   const st = $('#inboundStatusFilter')?.value || 'ALL';
   const filtered = (window._purchasesData || []).filter(c => {
-    const matchText = (c.numero||'').toLowerCase().includes(q) ||
-                      (c.fornecedor_nome||'').toLowerCase().includes(q) ||
-                      (c.numero_nota_fiscal||'').toLowerCase().includes(q);
+    const matchText = normSearch(c.numero).includes(q) ||
+                      normSearch(c.fornecedor_nome).includes(q) ||
+                      normSearch(c.numero_nota_fiscal).includes(q);
     if(!matchText) return false;
     if(st === 'ALL') return true;
     if(st === 'PENDENTES') return (c.status !== 'CONCLUIDO' && c.status !== 'CANCELADO');

@@ -7686,3 +7686,126 @@ body[data-role="Motorista"] .mobile-nav .btn.driver-logout-btn,
 .seller-scroll-back-btn:active {
   transform: scale(0.96) !important;
 }
+
+@keyframes sellerClientHighlight {
+  0% {
+    box-shadow: 0 0 0 3px rgba(253, 94, 2, 0.85), 0 8px 24px rgba(253, 94, 2, 0.25);
+    background-color: #fff7ed;
+  }
+  70% {
+    box-shadow: 0 0 0 3px rgba(253, 94, 2, 0.65), 0 6px 18px rgba(253, 94, 2, 0.16);
+    background-color: #fff7ed;
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(253, 94, 2, 0);
+    background-color: inherit;
+  }
+}
+
+.seller-client-highlight {
+  animation: sellerClientHighlight 1.6s ease-out;
+  outline: 2.5px solid #fd5e02;
+  outline-offset: -2px;
+}
+
+.seller-order-shell .mobile-content {
+  padding-bottom: 96px;
+}
+
+.seller-cart-fab {
+  position: fixed;
+  right: 16px;
+  bottom: max(72px, calc(env(safe-area-inset-bottom, 16px) + 56px));
+  z-index: 90;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fd5e02 0%, #ea580c 100%);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 24px rgba(234, 88, 12, 0.38), 0 2px 6px rgba(6, 26, 79, 0.18);
+  cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.seller-cart-fab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(234, 88, 12, 0.45), 0 4px 10px rgba(6, 26, 79, 0.22);
+}
+
+.seller-cart-fab:active {
+  transform: scale(0.95);
+}
+
+.seller-cart-fab svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+.seller-route-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.seller-route-toggle-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 750;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  color: #061a4f;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.seller-route-toggle-pill.active {
+  background: #fff7ed;
+  border-color: #fd5e02;
+  color: #c2410c;
+  box-shadow: 0 2px 8px rgba(253, 94, 2, 0.14);
+}
+
+.seller-route-bairros-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 10px;
+  border: 1px solid #dbe3ec;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.seller-route-bairro-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #172033;
+  font-size: 12.5px;
+  font-weight: 650;
+  cursor: pointer;
+  user-select: none;
+}
+
+.seller-route-bairro-chip.selected {
+  background: #fff7ed;
+  border-color: #fd5e02;
+  color: #c2410c;
+}
